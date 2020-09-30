@@ -4,7 +4,7 @@ from channel import Channel
 from collections import defaultdict
 import asyncio
 from messages import Message, ChannelEvents, PHOENIX_CHANNEL, HEARTBEAT_PAYLOAD
-from exceptions import NotConnectedError
+from Exceptions import NotConnectedError
 
 class Socket:
 
