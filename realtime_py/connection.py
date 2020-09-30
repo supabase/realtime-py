@@ -1,10 +1,10 @@
 import json
 import websockets
-from channel import Channel
+from realtime_py.channel import Channel
 from collections import defaultdict
 import asyncio
-from messages import Message, ChannelEvents, PHOENIX_CHANNEL, HEARTBEAT_PAYLOAD
-from Exceptions import NotConnectedError
+from realtime_py.message import Message, ChannelEvents, PHOENIX_CHANNEL, HEARTBEAT_PAYLOAD
+from realtime_py.exceptions import NotConnectedError
 
 class Socket:
 

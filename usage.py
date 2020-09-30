@@ -1,4 +1,4 @@
-from connection import Socket
+from realtime_py.connection import Socket
 
 def callback1(payload):
     print("Callback 1: ", payload)
@@ -16,6 +16,4 @@ channel_1.join().on("UPDATE", callback1)
 channel_2 = s.set_channel("realtime:public:users")
 channel_2.join().on("*", callback2)
 
-if __name__ == "__main__":
-
-    s.listen()
+s.listen()
