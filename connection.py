@@ -5,23 +5,22 @@ from collections import defaultdict
 import asyncio
 from messages import Message, ChannelEvents, PHOENIX_CHANNEL, HEARTBEAT_PAYLOAD
 
+
 class Socket:
 
     def __init__(self, url: str, params: dict = {}, hb_interval: int = 5):
         self.url = url
         self.channels = defaultdict(list)
         self.connected = False
-        self.params: dict= params
+        self.params: dict = params
         self.hb_interval: int = hb_interval
         self.ws_connection: websockets.client.WebSocketClientProtocol = None
-        self.kept_alive = False
-
+        self.kept_alive: bool = False
 
     def listen(self):
 
         loop = asyncio.get_event_loop()
         loop.run_until_complete(asyncio.gather(self._listen(), self._keep_alive()))
-
 
     async def _listen(self):
         while True:
@@ -29,7 +28,7 @@ class Socket:
                 msg = await self.ws_connection.recv()
                 # TODO: Load msg into some class with expected schema
                 msg = Message(**json.loads(msg))
-                if msg.event== ChannelEvents.reply:
+                if msg.event == ChannelEvents.reply:
                     continue
                 # TODO: use a named tuple?
                 for channel in self.channels.get(msg.topic, []):
@@ -41,17 +40,14 @@ class Socket:
                 print('Connection Closed')
                 break
 
-
     def connect(self):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self._connect())
-
 
     async def _connect(self):
         ws_connection = await websockets.connect(self.url)
         if ws_connection.open:
             # TODO: Include a logger to indicate successful connection
-            print(type(ws_connection))
             self.ws_connection = ws_connection
             self.connected = True
 
@@ -88,8 +84,6 @@ class Socket:
     # TODO: Implement this to show summary to subscriptions
     def summary(self):
         # print a summary of subscriptions from the socket
-            for topic, chans in self.channels.items():
-                for chan in chans:
-                    print(f"Topic: {topic} | Events: {[e for e, _ in chan.callbacks]}]")
-
-
+        for topic, chans in self.channels.items():
+            for chan in chans:
+                print(f"Topic: {topic} | Events: {[e for e, _ in chan.callbacks]}]")
