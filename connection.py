@@ -3,7 +3,7 @@ import websockets
 from channel import Channel
 from collections import defaultdict
 import asyncio
-from constants import *
+from messages import Message, ChannelEvents, PHOENIX_CHANNEL, HEARTBEAT_PAYLOAD
 
 class Socket:
 
@@ -11,9 +11,9 @@ class Socket:
         self.url = url
         self.channels = defaultdict(list)
         self.connected = False
-        self.params = params
-        self.hb_interval = hb_interval
-        self.ws_connection = None
+        self.params: dict= params
+        self.hb_interval: int = hb_interval
+        self.ws_connection: websockets.client.WebSocketClientProtocol = None
         self.kept_alive = False
 
 
@@ -28,17 +28,17 @@ class Socket:
             try:
                 msg = await self.ws_connection.recv()
                 # TODO: Load msg into some class with expected schema
-                msg = json.loads(msg)
-                if msg["event"] == ChannelEvents.reply:
+                msg = Message(**json.loads(msg))
+                if msg.event== ChannelEvents.reply:
                     continue
                 # TODO: use a named tuple?
-                for channel in self.channels.get(msg["topic"], []):
+                for channel in self.channels.get(msg.topic, []):
                     for event, callback in channel.callbacks:
-                        if event == msg["event"]:
-                            callback(msg["payload"])
+                        if event == msg.event:
+                            callback(msg.payload)
 
             except websockets.exceptions.ConnectionClosed:
-                print('ConnectionClosed')
+                print('Connection Closed')
                 break
 
 
@@ -51,11 +51,12 @@ class Socket:
         ws_connection = await websockets.connect(self.url)
         if ws_connection.open:
             # TODO: Include a logger to indicate successful connection
+            print(type(ws_connection))
             self.ws_connection = ws_connection
             self.connected = True
 
         else:
-            raise Exception("Connection failed")
+            raise Exception("Connection Failed")
 
     async def _keep_alive(self):
         '''
@@ -87,6 +88,8 @@ class Socket:
     # TODO: Implement this to show summary to subscriptions
     def summary(self):
         # print a summary of subscriptions from the socket
+            for topic, chans in self.channels.items():
+                for chan in chans:
+                    print(f"Topic: {topic} | Events: {[e for e, _ in chan.callbacks]}]")
 
-        pass
 
