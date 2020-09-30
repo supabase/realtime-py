@@ -1,7 +1,5 @@
 from enum import Enum
 from dataclasses import dataclass
-from typing import Any
-
 
 @dataclass
 class Message:
@@ -12,12 +10,6 @@ class Message:
 
     def __hash__(self):
         return hash((self.event, tuple(list(self.payload.values())), self.ref, self.topic))
-    #
-    # def __init__(self, msg: dict):
-    #     self.event = msg["event"]
-    #     self.payload = msg["payload"]
-    #     self.ref = msg["ref"]
-    #     self.topic = msg["topic"]
 
 
 class ChannelEvents(str, Enum):
