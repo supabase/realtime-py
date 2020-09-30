@@ -1,6 +1,9 @@
 import asyncio
 import json
 from typing import List
+from collections import namedtuple
+
+CallbackListener = namedtuple("CallbackListener", "event callback")
 
 
 class Channel:
@@ -8,7 +11,7 @@ class Channel:
         self.socket = socket
         self.topic: str = topic
         self.params: dict = params
-        self.callbacks: List[function] = []
+        self.listeners: List[CallbackListener] = []
         self.joined: bool = False
 
     def join(self):
@@ -23,13 +26,14 @@ class Channel:
             await self.socket.ws_connection.send(json.dumps(join_req))
 
         except Exception as e:
-            # TODO: this needs some work.
-            print("Failed to join. Check if Phoenix server is running")
+            print(str(e))
+            return
 
     def on(self, event: str, callback):
 
         # TODO: Should I return self so that I can allow chaining?
-        self.callbacks.append((event, callback))
+        cl = CallbackListener(event=event, callback=callback)
+        self.listeners.append(cl)
 
     def off(self, event: str):
-        self.callbacks = [callback for callback in self.callbacks if callback[0] != event]
+        self.listeners = [callback for callback in self.listeners if callback.event != event]

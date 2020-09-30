@@ -26,15 +26,14 @@ class Socket:
         while True:
             try:
                 msg = await self.ws_connection.recv()
-                # TODO: Load msg into some class with expected schema
                 msg = Message(**json.loads(msg))
                 if msg.event == ChannelEvents.reply:
                     continue
                 # TODO: use a named tuple?
                 for channel in self.channels.get(msg.topic, []):
-                    for event, callback in channel.callbacks:
-                        if event == msg.event:
-                            callback(msg.payload)
+                    for cl in channel.listeners:
+                        if cl.event == msg.event:
+                            cl.callback(msg.payload)
 
             except websockets.exceptions.ConnectionClosed:
                 print('Connection Closed')
@@ -59,12 +58,6 @@ class Socket:
         Sending heartbeat to server every 5 seconds
         Ping - pong messages to verify connection is alive
         '''
-        if self.kept_alive:
-            return
-
-        else:
-            self.kept_alive = True
-
         while True:
             try:
                 data = dict(topic=PHOENIX_CHANNEL, event=ChannelEvents.heartbeat, payload=HEARTBEAT_PAYLOAD, ref=None)
