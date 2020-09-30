@@ -3,6 +3,9 @@ from dataclasses import dataclass
 
 @dataclass
 class Message:
+    """
+    Dataclass abstraction for message
+    """
     event: str
     payload: dict
     ref: any
@@ -13,6 +16,10 @@ class Message:
 
 
 class ChannelEvents(str, Enum):
+    """
+    ChannelEvents are a bunch of constant strings that are defined according to
+    what the Phoenix realtime server expects.
+    """
     close = "phx_close"
     error = "phx_error"
     join = "phx_join"
