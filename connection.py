@@ -4,9 +4,18 @@ from channel import Channel
 from collections import defaultdict
 import asyncio
 from messages import Message, ChannelEvents, PHOENIX_CHANNEL, HEARTBEAT_PAYLOAD
-
+from exceptions import NotConnectedError
 
 class Socket:
+
+    def ensure_connection(func):
+        def wrapper(*args):
+            if not args[0].connected:
+                raise NotConnectedError(func.__name__)
+
+            func()
+
+        return wrapper
 
     def __init__(self, url: str, params: dict = {}, hb_interval: int = 5):
         """
@@ -25,6 +34,7 @@ class Socket:
         self.ws_connection: websockets.client.WebSocketClientProtocol = None
         self.kept_alive: bool = False
 
+    @ensure_connection
     def listen(self):
         """
         Wrapper for async def _listen() to expose a non-async interface
@@ -88,12 +98,12 @@ class Socket:
                 print('Connection with server closed')
                 break
 
+    @ensure_connection
     def set_channel(self, topic: str):
         """
         :param topic: Initializes a channel and creates a two-way association with the socket
         :return: None
         """
-        assert self.connected, "Socket must be connected before trying to set a channel!"
 
         chan = Channel(self, topic, self.params)
         self.channels[topic].append(chan)
