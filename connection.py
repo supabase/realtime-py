@@ -9,11 +9,11 @@ from Exceptions import NotConnectedError
 class Socket:
 
     def ensure_connection(func):
-        def wrapper(*args):
+        def wrapper(*args, **kwargs):
             if not args[0].connected:
                 raise NotConnectedError(func.__name__)
 
-            func()
+            return func(*args, **kwargs)
 
         return wrapper
 
