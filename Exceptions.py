@@ -7,4 +7,4 @@ class NotConnectedError(Exception):
         self.offending_func_name: str = func_name
 
     def __str__(self):
-        return F"A WS connection has not been established. Ensure you call Socket.connect() before calling Socket.{self.offending_func_name}()"
+        return f"A WS connection has not been established. Ensure you call Socket.connect() before calling Socket.{self.offending_func_name}()"
