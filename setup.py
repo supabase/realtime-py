@@ -31,6 +31,7 @@ setup(
         'Programming Language :: Python :: 3.8',
     ],
     description="Python Client for Phoenix Channels",
+    download_url="https://github.com/lionellloh/realtime-py/archive/0.1.0-alpha.tar.gz",
     install_requires=requirements,
     license="MIT license",
     long_description=readme + '\n\n' + history,
