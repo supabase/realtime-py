@@ -1,9 +1,19 @@
 # realtime-py
 Python Client Library to interface with the Phoenix Realtime Server 
 
+## Requirements
+**Python 3 higher**
+
 ## Installation
 ```bash
 pip3 install realtime_py==0.1.1a0
+```
+
+## Installation from source 
+```bash
+pip3 install -r requirements.txt
+python3 usage.py 
+
 ```
 
 ## Quick Start 
@@ -30,9 +40,4 @@ if __name__ == "__main__":
     s.listen()
 ```
 
-## Installation from source 
-```bash
-pip3 install -r requirements.txt
-python3 usage.py 
 
-```
