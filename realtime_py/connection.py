@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from collections import defaultdict
 from functools import wraps
 
@@ -8,6 +9,8 @@ import websockets
 from realtime_py.channel import Channel
 from realtime_py.exceptions import NotConnectedError
 from realtime_py.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, Message
+
+logging.basicConfig(format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO)
 
 
 class Socket:
@@ -65,7 +68,7 @@ class Socket:
                             cl.callback(msg.payload)
 
             except websockets.exceptions.ConnectionClosed:
-                print("Connection Closed")
+                logging.exception("Connection closed")
                 break
 
     def connect(self):
@@ -80,7 +83,7 @@ class Socket:
 
         ws_connection = await websockets.connect(self.url)
         if ws_connection.open:
-            # TODO: Include a logger to indicate successful connection
+            logging.info("Connection was successful")
             self.ws_connection = ws_connection
             self.connected = True
 
@@ -103,8 +106,7 @@ class Socket:
                 await self.ws_connection.send(json.dumps(data))
                 await asyncio.sleep(self.hb_interval)
             except websockets.exceptions.ConnectionClosed:
-                # TODO: use logger instead
-                print("Connection with server closed")
+                logging.exception("Connection with server closed")
                 break
 
     @ensure_connection
