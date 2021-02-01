@@ -1,14 +1,21 @@
-import json
-import websockets
-from realtime_py.channel import Channel
-from collections import defaultdict
 import asyncio
-from realtime_py.message import Message, ChannelEvents, PHOENIX_CHANNEL, HEARTBEAT_PAYLOAD
+import json
+import logging
+from collections import defaultdict
+from functools import wraps
+
+import websockets
+
+from realtime_py.channel import Channel
 from realtime_py.exceptions import NotConnectedError
+from realtime_py.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, Message
+
+logging.basicConfig(format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO)
+
 
 class Socket:
-
     def ensure_connection(func):
+        @wraps(func)
         def wrapper(*args, **kwargs):
             if not args[0].connected:
                 raise NotConnectedError(func.__name__)
@@ -61,7 +68,7 @@ class Socket:
                             cl.callback(msg.payload)
 
             except websockets.exceptions.ConnectionClosed:
-                print('Connection Closed')
+                logging.exception("Connection closed")
                 break
 
     def connect(self):
@@ -76,7 +83,7 @@ class Socket:
 
         ws_connection = await websockets.connect(self.url)
         if ws_connection.open:
-            # TODO: Include a logger to indicate successful connection
+            logging.info("Connection was successful")
             self.ws_connection = ws_connection
             self.connected = True
 
@@ -84,18 +91,22 @@ class Socket:
             raise Exception("Connection Failed")
 
     async def _keep_alive(self):
-        '''
+        """
         Sending heartbeat to server every 5 seconds
         Ping - pong messages to verify connection is alive
-        '''
+        """
         while True:
             try:
-                data = dict(topic=PHOENIX_CHANNEL, event=ChannelEvents.heartbeat, payload=HEARTBEAT_PAYLOAD, ref=None)
+                data = dict(
+                    topic=PHOENIX_CHANNEL,
+                    event=ChannelEvents.heartbeat,
+                    payload=HEARTBEAT_PAYLOAD,
+                    ref=None,
+                )
                 await self.ws_connection.send(json.dumps(data))
                 await asyncio.sleep(self.hb_interval)
             except websockets.exceptions.ConnectionClosed:
-                # TODO: use logger instead
-                print('Connection with server closed')
+                logging.exception("Connection with server closed")
                 break
 
     @ensure_connection
@@ -109,7 +120,6 @@ class Socket:
         self.channels[topic].append(chan)
 
         return chan
-
 
     def summary(self):
         """
