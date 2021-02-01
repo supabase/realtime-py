@@ -1,7 +1,7 @@
 import asyncio
 import json
-from typing import List
 from collections import namedtuple
+from typing import List
 
 """
 Callback Listener is a tuple with `event` and `callback` 
@@ -19,7 +19,6 @@ class Channel:
 
     def __init__(self, socket, topic: str, params: dict = {}):
         """
-
         :param socket: Socket object
         :param topic: Topic that it subscribes to on the realtime server
         :param params:
@@ -56,7 +55,6 @@ class Channel:
 
     def on(self, event: str, callback):
         """
-
         :param event: A specific event will have a specific callback
         :param callback: Callback that takes msg payload as its first argument
         :return: NOne
@@ -68,7 +66,6 @@ class Channel:
 
     def off(self, event: str):
         """
-
         :param event: Stop responding to a certain event
         :return: None
         """
