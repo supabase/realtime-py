@@ -57,12 +57,12 @@ class Channel:
         """
         :param event: A specific event will have a specific callback
         :param callback: Callback that takes msg payload as its first argument
-        :return: NOne
+        :return: None
         """
 
-        # TODO: Should I return self so that I can allow chaining?
         cl = CallbackListener(event=event, callback=callback)
         self.listeners.append(cl)
+        return self
 
     def off(self, event: str):
         """
