@@ -4,6 +4,7 @@ Converts the change Paylaod into native Python types.
 from enum import Enum
 import datetime
 import json
+from dateutil.parser import parse
 
 
 class PostgresTypes(Enum):
@@ -52,8 +53,12 @@ def convert_change_data(columns, records, options):
 
 
 def convert_column(column_name, columns, records, skip_types):
-    return 1
-    pass
+    # TODO: [Joel](Figure out if this is accurate)
+    column = list(filter(lambda x: x.name == column_name, columns))[0]
+    if not column or column.type in skip_types:
+        return noop(records[column_name])
+    else:
+        return convert_cell(column.type, records[column_name])
 
 
 def convert_cell(_type: str, string_value: str):
@@ -65,6 +70,56 @@ def convert_cell(_type: str, string_value: str):
             array_value = _type[1, len(_type)]
             return to_array(string_value, array_value)
         # If it's not null then we need to convert it to the correct type
+        if type == PostgresTypes.abstime:
+            return noop(string_value)
+        elif type == PostgresTypes._bool:
+            return to_boolean(string_value)
+        elif type == PostgresTypes.date:
+            return noop(string_value)
+        elif type == PostgresTypes.daterange:
+            return to_date_range(string_value)
+        elif type == PostgresTypes.float4:
+            return to_float(string_value)
+        elif type == PostgresTypes.float8:
+            return to_float(string_value)
+        elif type == PostgresTypes.int2:
+            return to_int(string_value)
+        elif type == PostgresTypes.int4:
+            return to_int(string_value)
+        elif type == PostgresTypes.int4range:
+            return to_int_range(string_value)
+        elif type == PostgresTypes.int8:
+            return to_int_range(string_value)
+        elif type == PostgresTypes.int8range:
+            return to_int(string_value)
+        elif type == PostgresTypes.json:
+            return to_json(string_value)
+        elif type == PostgresTypes.jsonb:
+            return to_json(string_value)
+        elif type == PostgresTypes.money:
+            return to_float(string_value)
+        elif type == PostgresTypes.numeric:
+            return to_float(string_value)
+        elif type == PostgresTypes.oid:
+            return to_int(string_value)
+        elif type == PostgresTypes.reltime:
+            return noop(string_value)  # To allow users to cast it based on Timezone
+        elif type == PostgresTypes.time:
+            return noop(string_value)  # To allow users to cast it based on Timezone
+        elif type == PostgresTypes.timestamp:
+            return to_timestamp_string(
+                string_value
+            )  # Format to be consistent with PostgREST
+        elif type == PostgresTypes.timestamptz:
+            return noop(string_value)  # To allow users to cast it based on Timezone
+        elif type == PostgresTypes.timetz:
+            return noop(string_value)  # To allow users to cast it based on Timezone
+        elif type == PostgresTypes.tsrange:
+            return to_date_range(string_value)
+        elif type == PostgresTypes.tstzrange:
+            return to_date_range(string_value)
+        else:
+            return noop(string_value)  # All the rest will be returned as strings
 
     except Exception as e:
         print(f"Could not convert cell of type {_type} and value {string_value}")
@@ -86,12 +141,12 @@ def to_boolean(string_value: str):
 
 
 def to_date(string_value: str):
-    # return datetime.datetime(string_value )
-    pass
+    return parse(string_value)
 
 
 def to_date_range(string_value: str):
-    pass
+    arr = json.dumps(string_value)
+    return [parse(arr[0]), parse(arr[1])]
 
 
 def to_float(string_value):
