@@ -49,8 +49,8 @@ Here's how you could connect to your realtime endpoint using Supabase endpoint. 
 ```python
 from realtime_py.connection import Socket
 
-SUPABASE_ID = dlzlllxhaakqdmaapvji
-API_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MT
+SUPABASE_ID = "dlzlllxhaakqdmaapvji"
+API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MT"
 
 
 def callback1(payload):
