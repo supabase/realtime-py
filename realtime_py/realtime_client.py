@@ -2,18 +2,22 @@ from realtime_py.connection import Socket
 from realtime_py.constants import TRANSPORT_WEBSOCKET
 from realtime_py.serializer import Serializer
 from typing import Optional, Dict, Callable
+import json
 
 
 class RealtimeClient:
-    def __init__(self, endpoint_url: str):
+    def __init__(self, endpoint_url: str, options={}):
         """
         Initializes the socket
         """
-        self.endpoint = f"{endpoint_url}/{TRANSPORT_WEBSOCKET}"
-        self.decode = lambda payload, callback: Serializer.decode(
-            payload)
-
-        # self.headers = {}
+        self.endpoint_url = endpoint_url
+        # self.decode = lambda payload, callback: Serializer.decode(
+        #     payload)
+        # TODO: Joel -- Implement the binary string encoder
+        self.transport = Socket
+        self.options = json.dumps if options.get("encode") == None else None
+        self.send_buffer: list[Callable] = []
+        self.conn: Optional[Socket] = None
 
     def connect(self):
         """
@@ -21,10 +25,12 @@ class RealtimeClient:
         """
         if self.conn:
             return
-        self.conn = self.transport(self.endpoint_url, [], None, self.headers)
+        self.conn = self.transport(self.endpoint_url)
+        print(self.endpoint_url)
         self.conn.connect()
         if self.conn:
             self.conn.binary_type = 'arraybuffer'
+            print("this works kinda")
 
     def disconnect():
         """
@@ -65,8 +71,18 @@ class RealtimeClient:
         self.channels.push(chan)
         return chan
 
-    def push(data):
-        pass
+    def push(self, data):
+        encoded_data = json.dumps(data)
+        topic = data.get("topic")
+        event = data.get("event")
+        payload = data.get("payload")
+        ref = data.get("ref")
+
+        def callback(self):
+            self.encode(data, lambda result: self.conn.send(result))
+
+        print(f" Push {topic} {event} {ref}")
+        self.send_buffer.push(callback)
 
     def on_conn_message(self, raw_message):
         # TODO : Joel -- implement decode

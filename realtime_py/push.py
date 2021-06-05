@@ -7,8 +7,10 @@ class Push:
         self.event = event
         self.payload = payload
         self.timeout = timeout
+        self.recHooks: list = []
 
     def send(self):
+        print(self)
         self.channel.socket.push({
             "topic": self.channel.topic,
             "event": self.event,
@@ -19,7 +21,7 @@ class Push:
         print("sent")
 
     def receive(self, status, callback):
-        self.channel.listeners.append([status, callback])
+        self.recHooks.append([status, callback])
         return self
 
     def start_timeout(self):
