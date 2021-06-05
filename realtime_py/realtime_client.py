@@ -1,6 +1,7 @@
 from realtime_py.connection import Socket
 from realtime_py.constants import TRANSPORT_WEBSOCKET
 from realtime_py.serializer import Serializer
+from realtime_py.realtime_subscription import RealtimeSubscription
 from typing import Optional, Dict, Callable
 import json
 
@@ -18,6 +19,7 @@ class RealtimeClient:
         self.options = json.dumps if options.get("encode") == None else None
         self.send_buffer: list[Callable] = []
         self.conn: Optional[Socket] = None
+        self.channels = []
 
     def connect(self):
         """
@@ -26,11 +28,10 @@ class RealtimeClient:
         if self.conn:
             return
         self.conn = self.transport(self.endpoint_url)
-        print(self.endpoint_url)
         self.conn.connect()
+        print(self.conn)
         if self.conn:
             self.conn.binary_type = 'arraybuffer'
-            print("this works kinda")
 
     def disconnect():
         """
@@ -66,9 +67,10 @@ class RealtimeClient:
         """
         pass
 
-    def channel(topic, chan_params={}):
-        chan = RealtimeSubscription(topic, chan_params, self)
-        self.channels.push(chan)
+    def channel(self, topic, chan_params={}):
+
+        chan = RealtimeSubscription(topic, chan_params, self.conn)
+        self.channels.append(chan)
         return chan
 
     def push(self, data):
