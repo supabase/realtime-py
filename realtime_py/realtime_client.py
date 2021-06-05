@@ -30,13 +30,7 @@ class RealtimeClient:
         if self.conn:
             self.conn.binary_type = 'arraybuffer'
 
-    def disconnect(self):
-        """
-        Disconnects the socket 
-        """
-        pass
-
-    def log(kind: str, msg: str, data: Optional[any]):
+    def log(self, kind: str, msg: str, data: Optional[any]):
         """
         Logs the message 
         """
@@ -46,6 +40,9 @@ class RealtimeClient:
         self.state_change_callbacks.get("error").append(callback)
 
     def on_error(callback):
+        pass
+
+    def on_close(callback):
         pass
 
     def on_messsage(callback):
@@ -65,7 +62,6 @@ class RealtimeClient:
         pass
 
     def channel(self, topic, chan_params={}):
-
         chan = RealtimeSubscription(topic, chan_params, self.conn)
         self.channels.append(chan)
         return chan
@@ -95,6 +91,9 @@ class RealtimeClient:
             print(f"receive {payload} {topic} {event}")
         pass
 
+    def receive(self, callback: Callable):
+        pass
+
     def endpoint_url(self):
         """
         Returns the URL of the websocket
@@ -118,8 +117,6 @@ class RealtimeClient:
         self._flush_send_buffer()
         # self.reconnect_timer.reset()
         # self._reset_heartbeat()
-        map(self.state_change_callbacks.open)
-        # .forEach((callback) => callback())!
 
     def _on_conn_close(self):
         pass
