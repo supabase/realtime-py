@@ -1,10 +1,13 @@
-from constants import *
-from push import Push
+from realtime_py.constants import CHANNEL_EVENT_JOIN
+from realtime_py.push import Push
 
 
 class RealtimeSubscription:
-
-    def __init__():
+    def __init__(self, topic: str, params: dict, socket):
+        timeout = 5
+        socket.connect()
+        channel = socket.set_channel("realtime:public:todos")
+        self.join_push = Push(self, CHANNEL_EVENT_JOIN, params, timeout)
         pass
 
     def rejoin_until_connected():
@@ -27,7 +30,7 @@ class RealtimeSubscription:
 
     def can_push():
         pass
-    
+
     def push(self, event, payload, timeout):
         push_event = Push(event, payload, timeout)
         if self.can_push():
@@ -45,10 +48,10 @@ class RealtimeSubscription:
         Must return the payload modified or unmodified
         """
         pass
-    
-    def is_member(self,is_topic):
+
+    def is_member(self, is_topic):
         pass
-    
+
     def join_ref(self):
         return self.join_push.ref
 
@@ -63,10 +66,10 @@ class RealtimeSubscription:
 
     def reply_event_name(self, ref):
         return f"chan_reply_{ref}"
-    
+
     def is_closed():
         pass
-    
+
     def is_errored():
         pass
 
@@ -75,6 +78,6 @@ class RealtimeSubscription:
 
     def is_joining():
         pass
-    
+
     def is_leaving():
         pass
