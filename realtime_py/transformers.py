@@ -53,13 +53,10 @@ def convert_change_data(columns, records, options={}):
 
 
 def convert_column(column_name, columns, records, skip_types):
-    # TODO: [Joel](Figure out a non-hacky way to extract first elemetn)
-    column = list(filter(lambda x: x.get("name") == column_name, columns))[0]
+    column = next(filter(lambda x: x.get("name") == column_name, columns))
     if not column or column.get("type") in skip_types:
         return noop(records[column_name])
     else:
-        print("convert is called")
-        print(convert_cell(column.get("type"), records[column_name]))
         return convert_cell(column.get("type"), records[column_name])
 
 
