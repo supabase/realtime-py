@@ -3,3 +3,5 @@ from realtime_py.connection import Socket
 from realtime_py.exceptions import NotConnectedError
 from realtime_py.message import *
 from realtime_py.transformers import *
+from .constants import *
+from .version import *

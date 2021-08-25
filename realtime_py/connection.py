@@ -5,10 +5,12 @@ from collections import defaultdict
 from functools import wraps
 
 import websockets
+from websockets.datastructures import Headers
 
 from realtime_py.channel import Channel
 from realtime_py.exceptions import NotConnectedError
 from realtime_py.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, Message
+from .constants import DEFAULT_HEADERS
 
 logging.basicConfig(format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO)
 
@@ -24,7 +26,7 @@ class Socket:
 
         return wrapper
 
-    def __init__(self, url: str, params: dict = {}, hb_interval: int = 5):
+    def __init__(self, url: str, params: dict = {}, headers: dict = None, hb_interval: int = 5):
         """
         `Socket` is the abstraction for an actual socket connection that receives and 'reroutes' `Message` according to its `topic` and `event`.
         Socket-Channel has a 1-many relationship.
@@ -33,6 +35,9 @@ class Socket:
         :param params: Optional parameters for connection.
         :param hb_interval: WS connection is kept alive by sending a heartbeat message. Optional, defaults to 5.
         """
+        self.headers = DEFAULT_HEADERS
+        if headers:
+            self.headers.update(headers)
         self.url = url
         self.channels = defaultdict(list)
         self.connected = False
@@ -80,8 +85,9 @@ class Socket:
         self.connected = True
 
     async def _connect(self):
-
-        ws_connection = await websockets.connect(self.url)
+        socket_headers = Headers()  # old client accepts websockets/legacy/client.py:153 only headerslike types.
+        socket_headers.update(self.headers)
+        ws_connection = await websockets.connect(self.url, extra_headers=socket_headers)
         if ws_connection.open:
             logging.info("Connection was successful")
             self.ws_connection = ws_connection
