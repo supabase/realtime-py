@@ -1,4 +1,4 @@
-name: CI 
+name: CI (Python)
 
 on: [push]
 
@@ -29,4 +29,4 @@ jobs:
         env:
           SUPABASE_ID: ${{ secrets.SUPABASE_ID }}
           API_KEY: ${{ secrets.API_KEY }}
-        run: poetry pytest
+        run: poetry run pytest
