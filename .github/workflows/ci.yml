@@ -5,16 +5,14 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.7, 3.8]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.8
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.8
       - name: Cache Pip
         uses: actions/cache@v2
         with:
@@ -31,4 +29,4 @@ jobs:
         env:
           SUPABASE_ID: ${{ secrets.SUPABASE_ID }}
           API_KEY: ${{ secrets.API_KEY }}
-        run: pytest
+        run: poetry pytest
