@@ -3,6 +3,7 @@ import json
 import logging
 from collections import defaultdict
 from functools import wraps
+from typing import Any, Callable
 
 import websockets
 
@@ -13,18 +14,18 @@ from realtime_py.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvent
 logging.basicConfig(format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO)
 
 
+def ensure_connection(func: Callable):
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any):
+        if not args[0].connected:
+            raise NotConnectedError(func.__name__)
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
 class Socket:
-    def ensure_connection(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            if not args[0].connected:
-                raise NotConnectedError(func.__name__)
-
-            return func(*args, **kwargs)
-
-        return wrapper
-
-    def __init__(self, url: str, params: dict = {}, hb_interval: int = 5):
+    def __init__(self, url: str, params: dict = {}, hb_interval: int = 5) -> None:
         """
         `Socket` is the abstraction for an actual socket connection that receives and 'reroutes' `Message` according to its `topic` and `event`.
         Socket-Channel has a 1-many relationship.
@@ -38,20 +39,20 @@ class Socket:
         self.connected = False
         self.params: dict = params
         self.hb_interval: int = hb_interval
-        self.ws_connection: websockets.client.WebSocketClientProtocol = None
+        self.ws_connection: websockets.client.WebSocketClientProtocol
         self.kept_alive: bool = False
 
     @ensure_connection
-    def listen(self):
+    def listen(self) -> None:
         """
         Wrapper for async def _listen() to expose a non-async interface
         In most cases, this should be the last method executed as it starts an infinite listening loop.
         :return: None
         """
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_event_loop()  # TODO: replace with get_running_loop
         loop.run_until_complete(asyncio.gather(self._listen(), self._keep_alive()))
 
-    async def _listen(self):
+    async def _listen(self) -> None:
         """
         An infinite loop that keeps listening.
         :return: None
@@ -71,15 +72,15 @@ class Socket:
                 logging.exception("Connection closed")
                 break
 
-    def connect(self):
+    def connect(self) -> None:
         """
         Wrapper for async def _connect() to expose a non-async interface
         """
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_event_loop()  # TODO: replace with get_running
         loop.run_until_complete(self._connect())
         self.connected = True
 
-    async def _connect(self):
+    async def _connect(self) -> None:
 
         ws_connection = await websockets.connect(self.url)
         if ws_connection.open:
@@ -90,7 +91,7 @@ class Socket:
         else:
             raise Exception("Connection Failed")
 
-    async def _keep_alive(self):
+    async def _keep_alive(self) -> None:
         """
         Sending heartbeat to server every 5 seconds
         Ping - pong messages to verify connection is alive
@@ -110,10 +111,10 @@ class Socket:
                 break
 
     @ensure_connection
-    def set_channel(self, topic: str):
+    def set_channel(self, topic: str) -> Channel:
         """
         :param topic: Initializes a channel and creates a two-way association with the socket
-        :return: None
+        :return: Channel
         """
 
         chan = Channel(self, topic, self.params)
@@ -121,7 +122,7 @@ class Socket:
 
         return chan
 
-    def summary(self):
+    def summary(self) -> None:
         """
         Prints a list of topics and event the socket is listening to
         :return: None

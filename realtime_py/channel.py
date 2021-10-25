@@ -1,7 +1,10 @@
 import asyncio
 import json
 from collections import namedtuple
-from typing import List
+from typing import List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from realtime_py.connection import Socket
 
 """
 Callback Listener is a tuple with `event` and `callback` 
@@ -17,7 +20,7 @@ class Channel:
     Topic-Channel has a 1-many relationship.
     """
 
-    def __init__(self, socket, topic: str, params: dict = {}):
+    def __init__(self, socket: "Socket", topic: str, params: dict = {}) -> None:
         """
         :param socket: Socket object
         :param topic: Topic that it subscribes to on the realtime server
@@ -29,20 +32,20 @@ class Channel:
         self.listeners: List[CallbackListener] = []
         self.joined: bool = False
 
-    def join(self):
+    def join(self) -> "Channel":
         """
         Wrapper for async def _join() to expose a non-async interface
         Essentially gets the only event loop and attempt joining a topic
-        :return: None
+        :return: Channel
         """
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_event_loop()  # TODO: replace with get_running_loop
         loop.run_until_complete(self._join())
         return self
 
-    async def _join(self):
+    async def _join(self) -> None:
         """
         Coroutine that attempts to join Phoenix Realtime server via a certain topic
-        :return: Channel.channel
+        :return: None
         """
         join_req = dict(topic=self.topic, event="phx_join", payload={}, ref=None)
 
@@ -50,21 +53,21 @@ class Channel:
             await self.socket.ws_connection.send(json.dumps(join_req))
 
         except Exception as e:
-            print(str(e))
+            print(str(e))  # TODO: better error propagation
             return
 
-    def on(self, event: str, callback):
+    def on(self, event: str, callback) -> "Channel":
         """
         :param event: A specific event will have a specific callback
         :param callback: Callback that takes msg payload as its first argument
-        :return: None
+        :return: Channel
         """
 
         cl = CallbackListener(event=event, callback=callback)
         self.listeners.append(cl)
         return self
 
-    def off(self, event: str):
+    def off(self, event: str) -> None:
         """
         :param event: Stop responding to a certain event
         :return: None
