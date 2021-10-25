@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 
 @dataclass
@@ -10,7 +11,7 @@ class Message:
 
     event: str
     payload: dict
-    ref: any
+    ref: Any
     topic: str
 
     def __hash__(self):
