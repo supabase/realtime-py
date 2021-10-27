@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from collections import namedtuple
@@ -20,7 +22,7 @@ class Channel:
     Topic-Channel has a 1-many relationship.
     """
 
-    def __init__(self, socket: "Socket", topic: str, params: dict = {}) -> None:
+    def __init__(self, socket: Socket, topic: str, params: dict = {}) -> None:
         """
         :param socket: Socket object
         :param topic: Topic that it subscribes to on the realtime server
@@ -32,7 +34,7 @@ class Channel:
         self.listeners: List[CallbackListener] = []
         self.joined: bool = False
 
-    def join(self) -> "Channel":
+    def join(self) -> Channel:
         """
         Wrapper for async def _join() to expose a non-async interface
         Essentially gets the only event loop and attempt joining a topic
@@ -56,7 +58,7 @@ class Channel:
             print(str(e))  # TODO: better error propagation
             return
 
-    def on(self, event: str, callback) -> "Channel":
+    def on(self, event: str, callback) -> Channel:
         """
         :param event: A specific event will have a specific callback
         :param callback: Callback that takes msg payload as its first argument
