@@ -1,8 +1,6 @@
 """
 Converts the change Payload into native Python types.
 """
-from enum import Enum
-import datetime
 import json
 from dateutil.parser import parse
 
@@ -189,7 +187,7 @@ def to_array(string_value: str, type: str):
     # if string is empty (meaning the array was empty), an empty array will be immediately returned
     string_array = string_enriched.split(
         ",") if len(string_enriched) > 0 else []
-    array = list(map(string_array, lambda string: convert_cell(type, string)))
+    array = list(map(lambda string: convert_cell(type, string), string_array))
     return array
 
 
