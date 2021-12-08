@@ -64,7 +64,7 @@ def convert_cell(_type: str, string_value: str):
             return None
         # If data type is an array
         if _type[0] == "_":
-            array_value = _type[1, len(_type)]
+            array_value = _type[1:len(_type)]
             return to_array(string_value, array_value)
         # If it's not null then we need to convert it to the correct type
         if _type == abstime:
@@ -87,9 +87,9 @@ def convert_cell(_type: str, string_value: str):
         elif _type == int4range:
             return to_int_range(string_value)
         elif _type == int8:
-            return to_int_range(string_value)
-        elif _type == int8range:
             return to_int(string_value)
+        elif _type == int8range:
+            return to_int_range(string_value)
         elif _type == _json:
             return to_json(string_value)
         elif _type == jsonb:
@@ -112,10 +112,10 @@ def convert_cell(_type: str, string_value: str):
             )  # Format to be consistent with PostgREST
         elif _type == timestamptz:
             # To allow users to cast it based on Timezone
-            return noop(string_value)
+            return parse(string_value)
         elif _type == timetz:
             # To allow users to cast it based on Timezone
-            return noop(string_value)
+            return parse(string_value)
         elif _type == tsrange:
             return to_date_range(string_value)
         elif _type == tstzrange:
