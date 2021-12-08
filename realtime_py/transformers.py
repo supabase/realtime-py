@@ -111,10 +111,8 @@ def convert_cell(_type: str, string_value: str):
                 string_value
             )  # Format to be consistent with PostgREST
         elif _type == timestamptz:
-            # To allow users to cast it based on Timezone
             return parse(string_value)
         elif _type == timetz:
-            # To allow users to cast it based on Timezone
             return parse(string_value)
         elif _type == tsrange:
             return to_date_range(string_value)
