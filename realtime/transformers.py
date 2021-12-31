@@ -42,12 +42,12 @@ to its mapped type.
 
 
 def convert_change_data(columns, records, options={}):
-    result = {}
     skip_types = options.get("skip_types") if options.get(
         "skip_types") == "undefined" else []
-    for key in records.keys():
-        result[key] = convert_column(key, columns, records, skip_types)
-    return result
+    return {
+        key: convert_column(key, columns, records, skip_types)
+        for key in records.keys()
+    }
 
 
 def convert_column(column_name, columns, records, skip_types):
@@ -60,7 +60,7 @@ def convert_column(column_name, columns, records, skip_types):
 
 def convert_cell(_type: str, string_value: str):
     try:
-        if string_value == None:
+        if string_value is None:
             return None
         # If data type is an array
         if _type[0] == "_":
@@ -185,8 +185,7 @@ def to_array(string_value: str, type: str):
     # if string is empty (meaning the array was empty), an empty array will be immediately returned
     string_array = string_enriched.split(
         ",") if len(string_enriched) > 0 else []
-    array = list(map(lambda string: convert_cell(type, string), string_array))
-    return array
+    return list(map(lambda string: convert_cell(type, string), string_array))
 
 
 """
