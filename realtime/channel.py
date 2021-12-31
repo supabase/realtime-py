@@ -6,7 +6,7 @@ from collections import namedtuple
 from typing import List, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from realtime_py.connection import Socket
+    from realtime.connection import Socket
 
 """
 Callback Listener is a tuple with `event` and `callback` 
@@ -49,7 +49,8 @@ class Channel:
         Coroutine that attempts to join Phoenix Realtime server via a certain topic
         :return: None
         """
-        join_req = dict(topic=self.topic, event="phx_join", payload={}, ref=None)
+        join_req = dict(topic=self.topic, event="phx_join",
+                        payload={}, ref=None)
 
         try:
             await self.socket.ws_connection.send(json.dumps(join_req))
@@ -74,4 +75,5 @@ class Channel:
         :param event: Stop responding to a certain event
         :return: None
         """
-        self.listeners = [callback for callback in self.listeners if callback.event != event]
+        self.listeners = [
+            callback for callback in self.listeners if callback.event != event]
