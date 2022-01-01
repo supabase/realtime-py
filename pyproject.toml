@@ -1,12 +1,11 @@
 [tool.poetry]
 name = "realtime"
-version = "0.0.3"
+version = "0.0.4"
 description = ""
-authors = ["None"]
+authors = ["Joel"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
-dataclasses = "^0.6"
 websockets = "^9.1"
 python-dateutil = "^2.8.1"
 
