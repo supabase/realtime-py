@@ -68,11 +68,8 @@ class Socket:
                     continue
                 for channel in self.channels.get(msg.topic, []):
                     for cl in channel.listeners:
-                        if cl.event == "*":
+                        if cl.event in ["*", msg.event]:
                             cl.callback(msg.payload)
-                        elif cl.event == msg.event:
-                            cl.callback(msg.payload)
-
             except websockets.exceptions.ConnectionClosed:
                 logging.exception("Connection closed")
                 break
