@@ -1,20 +1,28 @@
+import sys
 import asyncio
 import json
 import logging
 from collections import defaultdict
 from functools import wraps
-from typing import Any, Callable, List, Dict, cast
+from typing import Any, Callable, List, Dict, cast, TypeVar
+
+if sys.version_info > (3, 9):
+    from typing import ParamSpec
+else:
+    from typing_extensions import ParamSpec
 
 import websockets
 
 from realtime.channel import Channel
 from realtime.exceptions import NotConnectedError
 from realtime.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, Message
-from realtime.types import T_ParamSpec, T_Retval
+
+
+T_Retval = TypeVar("T_Retval")
+T_ParamSpec = ParamSpec("T_ParamSpec")
 
 logging.basicConfig(
     format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO)
-
 
 def ensure_connection(func: Callable[T_ParamSpec, T_Retval]):
     @wraps(func)
