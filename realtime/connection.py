@@ -1,4 +1,3 @@
-import sys
 import asyncio
 import json
 import logging
@@ -6,12 +5,8 @@ from collections import defaultdict
 from functools import wraps
 from typing import Any, Callable, List, Dict, cast, TypeVar
 
-if sys.version_info > (3, 9):
-    from typing import ParamSpec
-else:
-    from typing_extensions import ParamSpec
-
 import websockets
+from typing_extensions import ParamSpec
 
 from realtime.channel import Channel
 from realtime.exceptions import NotConnectedError
@@ -102,7 +97,6 @@ class Socket:
             logging.info("Connection was successful")
             self.ws_connection = ws_connection
             self.connected = True
-
         else:
             raise Exception("Connection Failed")
 
