@@ -3,21 +3,25 @@ import json
 import logging
 from collections import defaultdict
 from functools import wraps
-from typing import Any, Callable
+from typing import Any, Callable, List, Dict, cast, TypeVar
 
 import websockets
+from typing_extensions import ParamSpec
 
 from realtime.channel import Channel
 from realtime.exceptions import NotConnectedError
 from realtime.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, Message
 
+
+T_Retval = TypeVar("T_Retval")
+T_ParamSpec = ParamSpec("T_ParamSpec")
+
 logging.basicConfig(
     format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO)
 
-
-def ensure_connection(func: Callable):
+def ensure_connection(func: Callable[T_ParamSpec, T_Retval]):
     @wraps(func)
-    def wrapper(*args: Any, **kwargs: Any):
+    def wrapper(*args: T_ParamSpec.args, **kwargs: T_ParamSpec.kwargs) -> T_Retval:
         if not args[0].connected:
             raise NotConnectedError(func.__name__)
 
@@ -27,7 +31,7 @@ def ensure_connection(func: Callable):
 
 
 class Socket:
-    def __init__(self, url: str, params: dict = {}, hb_interval: int = 5) -> None:
+    def __init__(self, url: str, params: Dict[str, Any] = {}, hb_interval: int = 5) -> None:
         """
         `Socket` is the abstraction for an actual socket connection that receives and 'reroutes' `Message` according to its `topic` and `event`.
         Socket-Channel has a 1-many relationship.
@@ -39,10 +43,12 @@ class Socket:
         self.url = url
         self.channels = defaultdict(list)
         self.connected = False
-        self.params: dict = params
-        self.hb_interval: int = hb_interval
+        self.params = params
+        self.hb_interval = hb_interval
         self.ws_connection: websockets.client.WebSocketClientProtocol
-        self.kept_alive: bool = False
+        self.kept_alive = False
+
+        self.channels = cast(defaultdict[str, List[Channel]], self.channels)
 
     @ensure_connection
     def listen(self) -> None:
@@ -64,13 +70,14 @@ class Socket:
             try:
                 msg = await self.ws_connection.recv()
                 msg = Message(**json.loads(msg))
+
                 if msg.event == ChannelEvents.reply:
                     continue
+                
                 for channel in self.channels.get(msg.topic, []):
                     for cl in channel.listeners:
                         if cl.event == msg.event:
                             cl.callback(msg.payload)
-
             except websockets.exceptions.ConnectionClosed:
                 logging.exception("Connection closed")
                 break
@@ -84,13 +91,12 @@ class Socket:
         self.connected = True
 
     async def _connect(self) -> None:
-
         ws_connection = await websockets.connect(self.url)
+
         if ws_connection.open:
             logging.info("Connection was successful")
             self.ws_connection = ws_connection
             self.connected = True
-
         else:
             raise Exception("Connection Failed")
 
@@ -119,7 +125,6 @@ class Socket:
         :param topic: Initializes a channel and creates a two-way association with the socket
         :return: Channel
         """
-
         chan = Channel(self, topic, self.params)
         self.channels[topic].append(chan)
 

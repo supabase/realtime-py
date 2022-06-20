@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections import namedtuple
-from typing import List, TYPE_CHECKING
+from typing import Any, List, Dict, TYPE_CHECKING, NamedTuple
+
+from realtime.types import Callback
 
 if TYPE_CHECKING:
     from realtime.connection import Socket
 
-"""
-Callback Listener is a tuple with `event` and `callback` 
-"""
-CallbackListener = namedtuple("CallbackListener", "event callback")
+
+class CallbackListener(NamedTuple):
+    """A tuple with `event` and `callback` """
+    event: str
+    callback: Callback
 
 
 class Channel:
@@ -22,17 +24,17 @@ class Channel:
     Topic-Channel has a 1-many relationship.
     """
 
-    def __init__(self, socket: Socket, topic: str, params: dict = {}) -> None:
+    def __init__(self, socket: Socket, topic: str, params: Dict[str, Any] = {}) -> None:
         """
         :param socket: Socket object
         :param topic: Topic that it subscribes to on the realtime server
         :param params:
         """
         self.socket = socket
-        self.topic: str = topic
-        self.params: dict = params
+        self.params = params
+        self.topic = topic
         self.listeners: List[CallbackListener] = []
-        self.joined: bool = False
+        self.joined = False
 
     def join(self) -> Channel:
         """
@@ -54,18 +56,16 @@ class Channel:
 
         try:
             await self.socket.ws_connection.send(json.dumps(join_req))
-
         except Exception as e:
             print(str(e))  # TODO: better error propagation
             return
 
-    def on(self, event: str, callback) -> Channel:
+    def on(self, event: str, callback: Callback) -> Channel:
         """
         :param event: A specific event will have a specific callback
         :param callback: Callback that takes msg payload as its first argument
         :return: Channel
         """
-
         cl = CallbackListener(event=event, callback=callback)
         self.listeners.append(cl)
         return self
