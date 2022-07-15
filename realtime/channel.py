@@ -57,7 +57,7 @@ class Channel:
         try:
             await self.socket.ws_connection.send(json.dumps(join_req))
         except Exception as e:
-            print(str(e))  # TODO: better error propagation
+            print(e)
             return
 
     def on(self, event: str, callback: Callback) -> Channel:
