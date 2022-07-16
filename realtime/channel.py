@@ -20,7 +20,7 @@ class Channel:
     """
     `Channel` is an abstraction for a topic listener for an existing socket connection.
     Each Channel has its own topic and a list of event-callbacks that responds to messages.
-    Should only be instantiated through `connection.Socket().set_chanel(topic)`
+    Should only be instantiated through `connection.Socket().set_channel(topic)`
     Topic-Channel has a 1-many relationship.
     """
 
