@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, Any
 
 
 @dataclass
@@ -7,10 +8,9 @@ class Message:
     """
     Dataclass abstraction for message
     """
-
     event: str
-    payload: dict
-    ref: any
+    payload: Dict[str, Any]
+    ref: Any
     topic: str
 
     def __hash__(self):

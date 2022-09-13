@@ -6,7 +6,7 @@ Python Client Library to interface with the Phoenix Realtime Server
 
 ## Installation
 ```bash
-pip3 install realtime_py==0.1.1a0
+pip3 install realtime==0.1.1a0
 ```
 
 ## Installation from source 
@@ -18,7 +18,7 @@ python3 usage.py
 
 ## Quick Start 
 ```python
-from realtime_py.connection import Socket
+from realtime.connection import Socket
 
 def callback1(payload):
     print("Callback 1: ", payload)
@@ -47,7 +47,7 @@ if __name__ == "__main__":
 Here's how you could connect to your realtime endpoint using Supabase endpoint. Correct as of 5th June 2021. Please replace `SUPABASE_ID` and `API_KEY` with your own `SUPABASE_ID` and `API_KEY`. The variables shown below are fake and they will not work if you try to run the snippet.
 
 ```python
-from realtime_py.connection import Socket
+from realtime.connection import Socket
 
 SUPABASE_ID = "dlzlllxhaakqdmaapvji"
 API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MT"

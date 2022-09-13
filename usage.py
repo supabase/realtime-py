@@ -1,10 +1,13 @@
-from realtime_py.connection import Socket
+from realtime.connection import Socket
+
 
 def callback1(payload):
     print("Callback 1: ", payload)
 
+
 def callback2(payload):
     print("Callback 2: ", payload)
+
 
 if __name__ == "__main__":
     URL = "ws://localhost:4000/socket/websocket"

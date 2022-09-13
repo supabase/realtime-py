@@ -1,8 +1,6 @@
 """
 Converts the change Payload into native Python types.
 """
-from enum import Enum
-import datetime
 import json
 from dateutil.parser import parse
 
@@ -44,12 +42,12 @@ to its mapped type.
 
 
 def convert_change_data(columns, records, options={}):
-    result = {}
     skip_types = options.get("skip_types") if options.get(
         "skip_types") == "undefined" else []
-    for key in records.keys():
-        result[key] = convert_column(key, columns, records, skip_types)
-    return result
+    return {
+        key: convert_column(key, columns, records, skip_types)
+        for key in records.keys()
+    }
 
 
 def convert_column(column_name, columns, records, skip_types):
@@ -62,11 +60,11 @@ def convert_column(column_name, columns, records, skip_types):
 
 def convert_cell(_type: str, string_value: str):
     try:
-        if string_value == None:
+        if string_value is None:
             return None
         # If data type is an array
         if _type[0] == "_":
-            array_value = _type[1, len(_type)]
+            array_value = _type[1:len(_type)]
             return to_array(string_value, array_value)
         # If it's not null then we need to convert it to the correct type
         if _type == abstime:
@@ -89,9 +87,9 @@ def convert_cell(_type: str, string_value: str):
         elif _type == int4range:
             return to_int_range(string_value)
         elif _type == int8:
-            return to_int_range(string_value)
-        elif _type == int8range:
             return to_int(string_value)
+        elif _type == int8range:
+            return to_int_range(string_value)
         elif _type == _json:
             return to_json(string_value)
         elif _type == jsonb:
@@ -113,11 +111,9 @@ def convert_cell(_type: str, string_value: str):
                 string_value
             )  # Format to be consistent with PostgREST
         elif _type == timestamptz:
-            # To allow users to cast it based on Timezone
-            return noop(string_value)
+            return parse(string_value)
         elif _type == timetz:
-            # To allow users to cast it based on Timezone
-            return noop(string_value)
+            return parse(string_value)
         elif _type == tsrange:
             return to_date_range(string_value)
         elif _type == tstzrange:
@@ -189,8 +185,7 @@ def to_array(string_value: str, type: str):
     # if string is empty (meaning the array was empty), an empty array will be immediately returned
     string_array = string_enriched.split(
         ",") if len(string_enriched) > 0 else []
-    array = list(map(string_array, lambda string: convert_cell(type, string)))
-    return array
+    return list(map(lambda string: convert_cell(type, string), string_array))
 
 
 """
