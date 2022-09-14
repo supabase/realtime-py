@@ -1,5 +1,5 @@
 import os
-from realtime_py.connection import Socket
+from realtime.connection import Socket
 
 def getSock():
     SUPABASE_ID = os.getenv("SUPABASE_ID") 
@@ -13,4 +13,4 @@ def getSock():
 
 def test():
     sock = getSock()
-    assert isinstance(sock , Socket) == True
+    assert isinstance(sock , Socket)
