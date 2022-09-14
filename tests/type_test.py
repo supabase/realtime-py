@@ -13,4 +13,4 @@ def getSock():
 
 def test():
     sock = getSock()
-    assert isinstance(sock , Socket) == True
+    assert isinstance(sock , Socket)
