@@ -31,7 +31,7 @@ def ensure_connection(func: Callable[T_ParamSpec, T_Retval]):
 
 
 class Socket:
-    def __init__(self, url: str, params: Dict[str, Any] = {}, hb_interval: int = 5) -> None:
+    def __init__(self, url: str, auto_reconnect: bool = False, params: Dict[str, Any] = {}, hb_interval: int = 5) -> None:
         """
         `Socket` is the abstraction for an actual socket connection that receives and 'reroutes' `Message` according to its `topic` and `event`.
         Socket-Channel has a 1-many relationship.
@@ -47,6 +47,7 @@ class Socket:
         self.hb_interval = hb_interval
         self.ws_connection: websockets.client.WebSocketClientProtocol
         self.kept_alive = False
+        self.auto_reconnect = auto_reconnect
 
         self.channels = cast(defaultdict[str, List[Channel]], self.channels)
 
@@ -79,8 +80,15 @@ class Socket:
                         if cl.event == msg.event:
                             cl.callback(msg.payload)
             except websockets.exceptions.ConnectionClosed:
-                logging.exception("Connection closed")
-                break
+                if self.auto_reconnect:
+                    logging.info("Connection with server closed, trying to reconnect...")
+                    await self._connect()
+                    for topic, channels in self.channels.items():
+                        for channel in channels:
+                            await channel._join()
+                else:
+                    logging.exception("Connection with the server closed.")
+                    break
 
     def connect(self) -> None:
         """
@@ -116,8 +124,12 @@ class Socket:
                 await self.ws_connection.send(json.dumps(data))
                 await asyncio.sleep(self.hb_interval)
             except websockets.exceptions.ConnectionClosed:
-                logging.exception("Connection with server closed")
-                break
+                if self.auto_reconnect:
+                    logging.info("Connection with server closed, trying to reconnect...")
+                    await self._connect()
+                else:
+                    logging.exception("Connection with the server closed.")
+                    break
 
     @ensure_connection
     def set_channel(self, topic: str) -> Channel:
