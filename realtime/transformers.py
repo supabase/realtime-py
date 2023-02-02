@@ -48,14 +48,12 @@ def convert_cell(_type: str, string_value: str):
             return None
         # If data type is an array
         if _type[0] == "_":
-            array_value = _type[1:len(_type)]
+            array_value = _type[1:]
             return to_array(string_value, array_value)
-        # If it's not null then we need to convert it to the correct type
-        if _type in list(conversion_map.keys()):
-            conv_func = conversion_map[_type]
-            return conv_func(string_value)
-        else:
+        if _type not in list(conversion_map.keys()):
             return noop(string_value)
+        conv_func = conversion_map[_type]
+        return conv_func(string_value)
     except Exception as e:
         print(
             f"Could not convert cell of type {_type} and value {string_value}")
@@ -96,7 +94,7 @@ def to_json(string_value: str):
 
 def to_array(string_value: str, type: str):
     # this takes off the '{' & '}'
-    string_enriched = string_value[1: len(string_value) - 1]
+    string_enriched = string_value[1:-1]
 
     # Converts the string into an array
     # if string is empty (meaning the array was empty), an empty array will be immediately returned

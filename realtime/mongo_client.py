@@ -34,7 +34,7 @@ class MongoServer():
         return self.client['parse']['BillingPlan']
 
     def get_pending_discord_alerts(self):
-        return [alert for alert in list(self.discord_alerts_table.find({'status': 1}))]
+        return list(list(self.discord_alerts_table.find({'status': 1})))
 
     def set_discord_alerts_delivered(self, alerts):
         for alert in alerts:
@@ -47,7 +47,7 @@ class MongoServer():
         return list(self.alert_table.find({"status": 1}))
  
     def getCollectionsToListen(self):
-        return list(set([alert['collection'] for alert in self.getAllActiveAlerts()]))
+        return list({alert['collection'] for alert in self.getAllActiveAlerts()})
     
     def getTraitsToWatch(self,activeAlerts):
         return [alert['details']['trait'] for alert in activeAlerts if alert['type'] == 'traits']
@@ -83,12 +83,14 @@ class MongoServer():
         skip = 0
         for trigger in baseTriggers:
             for alerts in toTrigger:
-                if trigger["username"] in alerts["username"]:
-                    if trigger["delivery_method"] in alerts["delivery_method"]:
-                        if trigger["alert_type"] in alerts["alert_type"]:
-                            if trigger["collection"] in alerts["collection"]:
-                                markTriggered.append(trigger)
-                                skip = 1
+                if (
+                    trigger["username"] in alerts["username"]
+                    and trigger["delivery_method"] in alerts["delivery_method"]
+                    and trigger["alert_type"] in alerts["alert_type"]
+                    and trigger["collection"] in alerts["collection"]
+                ):
+                    markTriggered.append(trigger)
+                    skip = 1
             if skip == 0:
                 toTrigger.append(trigger)
             else:
@@ -97,9 +99,12 @@ class MongoServer():
 
 
     def getMatchingAlerts(self,alerts, tokenID, traits,EthPrice,rarity):
-        baseToTrigger = []
         token_id_alerts = [alert for alert in alerts if alert['type'] == 'tokenId']
-        baseToTrigger.extend([alert for alert in token_id_alerts if alert['details']['id'] == str(tokenID)])
+        baseToTrigger = [
+            alert
+            for alert in token_id_alerts
+            if alert['details']['id'] == str(tokenID)
+        ]
         trait_alerts = [alert for alert in alerts if alert['type'] == 'traits']
         baseToTrigger.extend(self.get_matching_trait_alerts(trait_alerts, traits))
         price_alerts = [alert for alert in alerts if alert['type'] == 'price']
@@ -119,7 +124,7 @@ class MongoServer():
             return 0  
 
     def getSmsMTD(self,username):
-        begMonth = datetime.strptime(datetime.today().strftime("%Y-%m"),"%Y-%m")  
+        begMonth = datetime.strptime(datetime.now().strftime("%Y-%m"), "%Y-%m")
         return self.sms_table.count_documents({"username": username, "createdAt": {'$gte': begMonth}})             
 
     def removeOverLimits(self, alerts):
@@ -141,33 +146,44 @@ class MongoServer():
 
     def sendSms(self,alert_list,tokenId,link,price,rank):
         sent = []
+        new_line = "\n"
         for alerts in alert_list:
-            new_line = "\n"
             nft_collection = str(alerts["collection"])
             userPhone = self.getPhoneFromAlert(alerts)
             if int(rank) == 1000000:
                 smsBody = f'Token {tokenId} from the {nft_collection} NFT collection was just listed for {price} ETH {new_line}Link: {link}'
             else:
                 smsBody = f'Token {tokenId} from the {nft_collection} NFT collection was just listed for {price} ETH {new_line}Rank: {rank}{new_line}Link: {link}'
-            sid = self.sms.send_message(userPhone, smsBody)
-            if sid:
+            if sid := self.sms.send_message(userPhone, smsBody):
                 sent.append({"sid": sid, "alertId" : alerts["_id"], "username": alerts["username"]})
 #        print("Before sent")
 #        print(sent)
         return sent
 
     def create_discord_alerts(self,alerts):
-        discord_alerts = []
-        for alert in alerts:
-            discord_alerts.append({"createdAt": datetime.now(), "updatedAt": datetime.now(), "username": alert['username'], "status": 1, "message": alert["message"]})
-        if len(discord_alerts) > 0:
+        if discord_alerts := [
+            {
+                "createdAt": datetime.now(),
+                "updatedAt": datetime.now(),
+                "username": alert['username'],
+                "status": 1,
+                "message": alert["message"],
+            }
+            for alert in alerts
+        ]:
             self.discord_alerts_table.insert_many(discord_alerts)
 
     def createSms(self,confirmations):
-        sms = []
-        for confirmation in confirmations:
-            sms.append({"createdAt": datetime.now(), "updatedAt": datetime.now(), "sid": confirmation['sid'], "username": confirmation["username"], "alertId": confirmation["alertId"]})
-        if len(sms) > 0:
+        if sms := [
+            {
+                "createdAt": datetime.now(),
+                "updatedAt": datetime.now(),
+                "sid": confirmation['sid'],
+                "username": confirmation["username"],
+                "alertId": confirmation["alertId"],
+            }
+            for confirmation in confirmations
+        ]:
             self.sms_table.insert_many(sms)
 
     def discOrSmsAlert(self, alerts):
@@ -181,13 +197,14 @@ class MongoServer():
 
     def writeDiscordAlerts(self,alert_list,item_num,item_price,item_link,rank):
         discord_messages = []
+        new_line = "\n"
         for alert in alert_list:
             discord_username = self.getDiscordName(alert['username'])
-            new_line = "\n"
-            if int(rank) == 1000000:
-                message = f'{alert["collection"]} {item_num} was just listed for {item_price} ETH {new_line}Link: {item_link}'
-            else:
-                message = f'{alert["collection"]} {item_num} was just listed for {item_price} ETH {new_line}Rank: {rank}{new_line}Link: {item_link}'
+            message = (
+                f'{alert["collection"]} {item_num} was just listed for {item_price} ETH {new_line}Link: {item_link}'
+                if int(rank) == 1000000
+                else f'{alert["collection"]} {item_num} was just listed for {item_price} ETH {new_line}Rank: {rank}{new_line}Link: {item_link}'
+            )
             discord_messages.append({'message': message, 'username': discord_username})
         return discord_messages
                

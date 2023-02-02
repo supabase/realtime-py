@@ -76,14 +76,12 @@ class Socket:
         :return: None
         """
         breakIt = 0
-        while True:
-            if breakIt == 1:
-                break
+        while breakIt != 1:
             try:
                 msg = "never obtained"
                 msg = await self.ws_connection.recv()
                 msg = Message(**json.loads(msg))
-                
+
                 if msg.event == ChannelEvents.reply:
                     if len(self.ws_connection.messages) == 0  and self.done == True:
                         breakIt = 1
@@ -96,7 +94,7 @@ class Socket:
             except websockets.exceptions.ConnectionClosed:
                 self.restart = True
                 print("_listen FAILED")
-                print(str(msg))
+                print(msg)
                 logging.exception("Connection closed")
                 break
 
@@ -117,17 +115,15 @@ class Socket:
                 print("await connect Failed")
                 connectFailed = 1
             if connectFailed == 0:    
-                if ws_connection.open:
-                    logging.info("Connection was successful")
-                    self.ws_connection = ws_connection
-                    self.connected = True
-                    time.sleep(1)
-                else:
+                if not ws_connection.open:
                     raise Exception("Connection Failed")
-            else:
-                if self.connected == False:
-                    print(f'Waiting 5 to retry connection')
-                    time.sleep(5)
+                logging.info("Connection was successful")
+                self.ws_connection = ws_connection
+                self.connected = True
+                time.sleep(1)
+            elif self.connected == False:
+                print('Waiting 5 to retry connection')
+                time.sleep(5)
 
     async def _keep_alive(self) -> None:
         """
@@ -151,10 +147,10 @@ class Socket:
                     print("_keep_alive FAILED")
                     print(f'Restart = {self.restart}, Done: {self.done}')
                     break
-                if self.restart==True:
+                if self.restart:
                     self.done = True
                     break
-                await asyncio.sleep(self.hb_interval)    
+                await asyncio.sleep(self.hb_interval)
             except websockets.exceptions.ConnectionClosed:
                 logging.exception("Connection with server closed")
                 self.restart = True
@@ -167,11 +163,7 @@ class Socket:
         await asyncio.sleep(5)
         i=0
         localBreak = 0
-        while True:
-            if self.restart == True:
-                break
-            if localBreak == 1:
-                break
+        while self.restart != True and localBreak != 1:
             await asyncio.sleep(1)
             collectionsToWatch = db.getCollectionsToListen()
             #print(collectionsToWatch)
@@ -252,7 +244,7 @@ class Channel:
         try:
             await self.socket.ws_connection.send(json.dumps(join_req))
         except Exception as e:
-            print(str(e))  # TODO: better error propagation
+            print(e)
             return
 
     def leave(self):
@@ -276,7 +268,7 @@ class Channel:
         try:
             await self.socket.ws_connection.send(json.dumps(leave_req))
         except Exception as e:
-            print(str(e))  # TODO: better error propagation
+            print(e)
             return
 
     def on(self, event: str, callback: Callback):
