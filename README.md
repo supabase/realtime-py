@@ -6,7 +6,7 @@ Python Client Library to interface with the Phoenix Realtime Server
 
 ## Installation
 ```bash
-pip3 install realtime==0.1.1a0
+pip3 install realtime==1.0.0
 ```
 
 ## Installation from source 
