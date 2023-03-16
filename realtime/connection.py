@@ -3,7 +3,7 @@ import json
 import logging
 from collections import defaultdict
 from functools import wraps
-from typing import Any, Callable, List, Dict, cast, TypeVar
+from typing import Any, Callable, List, Dict, cast, TypeVar, DefaultDict
 
 import websockets
 from typing_extensions import ParamSpec
@@ -49,7 +49,7 @@ class Socket:
         self.kept_alive = False
         self.auto_reconnect = auto_reconnect
 
-        self.channels = cast(defaultdict[str, List[Channel]], self.channels)
+        self.channels = cast(DefaultDict[str, List[Channel]], self.channels)
 
     @ensure_connection
     def listen(self) -> None:
@@ -74,7 +74,7 @@ class Socket:
 
                 if msg.event == ChannelEvents.reply:
                     continue
-                
+
                 for channel in self.channels.get(msg.topic, []):
                     for cl in channel.listeners:
                         if cl.event in ["*", msg.event]:
