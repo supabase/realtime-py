@@ -49,7 +49,7 @@ class Socket:
         self.kept_alive = False
         self.auto_reconnect = auto_reconnect
 
-        self.channels = cast(DefaultDict[str, List[Channel]], self.channels)
+        self.channels: DefaultDict[str, List[Channel]] = defaultdict(list)
 
     @ensure_connection
     def listen(self) -> None:
