@@ -3,7 +3,7 @@ import json
 import logging
 from collections import defaultdict
 from functools import wraps
-from typing import Any, Callable, List, Dict, cast, TypeVar, DefaultDict
+from typing import Any, Callable, List, Dict, TypeVar, DefaultDict
 
 import websockets
 from typing_extensions import ParamSpec
