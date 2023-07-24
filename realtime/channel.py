@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from typing import Any, List, Dict, TYPE_CHECKING, NamedTuple
+from realtime.message import *
 
 from realtime.types import Callback
 
@@ -51,8 +52,11 @@ class Channel:
         Coroutine that attempts to join Phoenix Realtime server via a certain topic
         :return: None
         """
-        join_req = dict(topic=self.topic, event="phx_join",
+        if self.socket.version == 1:
+            join_req = dict(topic=self.topic, event="phx_join",
                         payload={}, ref=None)
+        elif self.socket.version == 2:
+            join_req = [None, None, self.topic, ChannelEvents.join, {}]
 
         try:
             await self.socket.ws_connection.send(json.dumps(join_req))

@@ -11,6 +11,7 @@ class Message:
     event: str
     payload: Dict[str, Any]
     ref: Any
+    chanid: Any
     topic: str
 
     def __hash__(self):
@@ -32,4 +33,4 @@ class ChannelEvents(str, Enum):
 
 
 PHOENIX_CHANNEL = "phoenix"
-HEARTBEAT_PAYLOAD = {"msg": "ping"}
+HEARTBEAT_PAYLOAD = {}

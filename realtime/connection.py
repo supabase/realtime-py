@@ -31,14 +31,15 @@ def ensure_connection(func: Callable[T_ParamSpec, T_Retval]):
 
 
 class Socket:
-    def __init__(self, url: str, auto_reconnect: bool = False, params: Dict[str, Any] = {}, hb_interval: int = 5) -> None:
+    def __init__(self, url: str, auto_reconnect: bool = False, params: Dict[str, Any] = {}, hb_interval: int = 30, version: int = 2) -> None:
         """
         `Socket` is the abstraction for an actual socket connection that receives and 'reroutes' `Message` according to its `topic` and `event`.
         Socket-Channel has a 1-many relationship.
         Socket-Topic has a 1-many relationship.
         :param url: Websocket URL of the Realtime server. starts with `ws://` or `wss://`
         :param params: Optional parameters for connection.
-        :param hb_interval: WS connection is kept alive by sending a heartbeat message. Optional, defaults to 5.
+        :param hb_interval: WS connection is kept alive by sending a heartbeat message. Optional, defaults to 30.
+        :param version: phoenix JSON serializer version.
         """
         self.url = url
         self.channels = defaultdict(list)
@@ -48,6 +49,7 @@ class Socket:
         self.ws_connection: websockets.client.WebSocketClientProtocol
         self.kept_alive = False
         self.auto_reconnect = auto_reconnect
+        self.version = version
 
         self.channels: DefaultDict[str, List[Channel]] = defaultdict(list)
 
@@ -70,7 +72,11 @@ class Socket:
         while True:
             try:
                 msg = await self.ws_connection.recv()
-                msg = Message(**json.loads(msg))
+                if self.version == 1 :
+                    msg = Message(**json.loads(msg))
+                elif self.version == 2:
+                    msg_array = json.loads(msg)
+                    msg = Message(chanid=msg_array[0], ref= msg_array[1], topic=msg_array[2], event= msg_array[3], payload= msg_array[4])
 
                 if msg.event == ChannelEvents.reply:
                     continue
@@ -115,12 +121,17 @@ class Socket:
         """
         while True:
             try:
-                data = dict(
-                    topic=PHOENIX_CHANNEL,
-                    event=ChannelEvents.heartbeat,
-                    payload=HEARTBEAT_PAYLOAD,
-                    ref=None,
-                )
+                if self.version == 1 :
+                    data = dict(
+                     topic=PHOENIX_CHANNEL,
+                     event=ChannelEvents.heartbeat,
+                     payload=HEARTBEAT_PAYLOAD,
+                     ref=None,
+                    )
+                elif self.version == 2 :
+                    # [null,"4","phoenix","heartbeat",{}]
+                    data = [None, None, PHOENIX_CHANNEL, ChannelEvents.heartbeat, HEARTBEAT_PAYLOAD]
+                
                 await self.ws_connection.send(json.dumps(data))
                 await asyncio.sleep(self.hb_interval)
             except websockets.exceptions.ConnectionClosed:
@@ -150,4 +161,4 @@ class Socket:
         for topic, chans in self.channels.items():
             for chan in chans:
                 print(
-                    f"Topic: {topic} | Events: {[e for e, _ in chan.callbacks]}]")
+                    f"Topic: {topic} | Events: {[e for e, _ in chan.listeners]}]")
