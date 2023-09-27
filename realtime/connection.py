@@ -16,8 +16,7 @@ from realtime.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, 
 T_Retval = TypeVar("T_Retval")
 T_ParamSpec = ParamSpec("T_ParamSpec")
 
-logging.basicConfig(
-    format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def ensure_connection(func: Callable[T_ParamSpec, T_Retval]):
     @wraps(func)
@@ -81,13 +80,13 @@ class Socket:
                             cl.callback(msg.payload)
             except websockets.exceptions.ConnectionClosed:
                 if self.auto_reconnect:
-                    logging.info("Connection with server closed, trying to reconnect...")
+                    logger.info("Connection with server closed, trying to reconnect...")
                     await self._connect()
                     for topic, channels in self.channels.items():
                         for channel in channels:
                             await channel._join()
                 else:
-                    logging.exception("Connection with the server closed.")
+                    logger.exception("Connection with the server closed.")
                     break
 
     def connect(self) -> None:
@@ -102,7 +101,7 @@ class Socket:
         ws_connection = await websockets.connect(self.url)
 
         if ws_connection.open:
-            logging.info("Connection was successful")
+            logger.info("Connection was successful")
             self.ws_connection = ws_connection
             self.connected = True
         else:
@@ -125,10 +124,10 @@ class Socket:
                 await asyncio.sleep(self.hb_interval)
             except websockets.exceptions.ConnectionClosed:
                 if self.auto_reconnect:
-                    logging.info("Connection with server closed, trying to reconnect...")
+                    logger.info("Connection with server closed, trying to reconnect...")
                     await self._connect()
                 else:
-                    logging.exception("Connection with the server closed.")
+                    logger.exception("Connection with the server closed.")
                     break
 
     @ensure_connection
