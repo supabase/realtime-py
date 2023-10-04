@@ -9,6 +9,7 @@ python = "^3.8"
 websockets = "^11.0"
 python-dateutil = "^2.8.1"
 typing-extensions = "^4.2.0"
+uuid = "^1.30"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.2.0"

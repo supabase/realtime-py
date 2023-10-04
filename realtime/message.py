@@ -11,7 +11,7 @@ class Message:
     event: str
     payload: Dict[str, Any]
     ref: Any
-    chanid: Any
+    join_ref: Any
     topic: str
 
     def __hash__(self):

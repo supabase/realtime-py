@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import pdb
 from collections import defaultdict
 from functools import wraps
 from typing import Any, Callable, List, Dict, TypeVar, DefaultDict
@@ -76,15 +77,23 @@ class Socket:
                     msg = Message(**json.loads(msg))
                 elif self.version == 2:
                     msg_array = json.loads(msg)
-                    msg = Message(chanid=msg_array[0], ref= msg_array[1], topic=msg_array[2], event= msg_array[3], payload= msg_array[4])
+                    msg = Message(join_ref=msg_array[0], ref= msg_array[1], topic=msg_array[2], event= msg_array[3], payload= msg_array[4])
 
                 if msg.event == ChannelEvents.reply:
-                    continue
+                    for channel in self.channels.get(msg.topic, []):
+                        if msg.ref == channel.join_msg_ref :
+                            logging.info(f"Successfully joined {msg.topic}")
+                            continue
+                        else:
+                            for cl in channel.listeners:
+                                if cl.ref in ["*", msg.ref]:
+                                    cl.callback(msg.payload)
 
                 for channel in self.channels.get(msg.topic, []):
                     for cl in channel.listeners:
                         if cl.event in ["*", msg.event]:
                             cl.callback(msg.payload)
+
             except websockets.exceptions.ConnectionClosed:
                 if self.auto_reconnect:
                     logging.info("Connection with server closed, trying to reconnect...")
@@ -155,10 +164,10 @@ class Socket:
 
     def summary(self) -> None:
         """
-        Prints a list of topics and event the socket is listening to
+        Prints a list of topics and event, and reference that the socket is listening to
         :return: None
         """
         for topic, chans in self.channels.items():
             for chan in chans:
                 print(
-                    f"Topic: {topic} | Events: {[e for e, _ in chan.listeners]}]")
+                    f"Topic: {topic} | Events: {[e for e, _, _ in chan.listeners]} | References: {[r for _, r, _ in chan.listeners]}]")
