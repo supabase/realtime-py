@@ -81,13 +81,19 @@ class Socket:
 
                 if msg.event == ChannelEvents.reply:
                     for channel in self.channels.get(msg.topic, []):
-                        if msg.ref == channel.join_msg_ref :
+                        if msg.ref == channel.control_msg_ref :
                             logging.info(f"Successfully joined {msg.topic}")
                             continue
                         else:
                             for cl in channel.listeners:
                                 if cl.ref in ["*", msg.ref]:
                                     cl.callback(msg.payload)
+                
+                if msg.event == ChannelEvents.close:
+                    for channel in self.channels.get(msg.topic, []):
+                        if msg.join_ref == channel.join_ref :
+                            logging.info(f"Successfully left {msg.topic}")
+                            continue
 
                 for channel in self.channels.get(msg.topic, []):
                     for cl in channel.listeners:

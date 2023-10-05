@@ -40,7 +40,7 @@ class Channel:
         self.listeners: List[CallbackListener] = []
         self.joined = False
         self.join_ref = str(uuid.uuid4())
-        self.join_msg_ref = str(uuid.uuid4())
+        self.control_msg_ref = ""
 
     def join(self) -> Channel:
         """
@@ -62,7 +62,8 @@ class Channel:
                         payload={}, ref=None)
         elif self.socket.version == 2:
             #[join_reference, message_reference, topic_name, event_name, payload]
-            join_req = [self.join_ref, self.join_msg_ref, self.topic, ChannelEvents.join, {}]
+            self.control_msg_ref = str(uuid.uuid4())
+            join_req = [self.join_ref, self.control_msg_ref, self.topic, ChannelEvents.join, {}]
 
         try:
             await self.socket.ws_connection.send(json.dumps(join_req))
@@ -70,14 +71,14 @@ class Channel:
             print(str(e))  # TODO: better error propagation
             return
 
-    def leave(self) -> Channel:
+    def leave(self) -> None:
         """
         Wrapper for async def _leave() to expose a non-async interface
         Essentially gets the only event loop and attempt leaving a topic
-        :return: Channel
+        :return: None
         """
         loop = asyncio.get_event_loop()  # TODO: replace with get_running_loop
-        loop.run_until_complete(self._join())
+        loop.run_until_complete(self._leave())
         return self
 
     async def _leave(self) -> None:
@@ -86,13 +87,13 @@ class Channel:
         :return: None
         """
         if self.socket.version == 1:
-            join_req = dict(topic=self.topic, event=ChannelEvents.leave,
+            leave_req = dict(topic=self.topic, event=ChannelEvents.leave,
                         payload={}, ref=None)
         elif self.socket.version == 2:
-            join_req = [self.join_ref, None, self.topic, ChannelEvents.leave, {}]
+            leave_req = [self.join_ref, None, self.topic, ChannelEvents.leave, {}]
 
         try:
-            await self.socket.ws_connection.send(json.dumps(join_req))
+            await self.socket.ws_connection.send(json.dumps(leave_req))
         except Exception as e:
             print(str(e))  # TODO: better error propagation
             return
