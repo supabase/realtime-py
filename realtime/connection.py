@@ -82,13 +82,10 @@ class Socket:
                 if msg.event == ChannelEvents.reply:
                     for channel in self.channels.get(msg.topic, []):
                         if msg.ref == channel.control_msg_ref :
-                            if msg.payload == "{'status': 'error', 'response': {'reason': 'sink not found'}}":
-                                logging.info(f"{msg.topic} not found")
+                            if msg.payload["status"] == "error":
+                                logging.info(f"Error joining channel: {msg.topic} - {msg.payload['response']['reason']}")
                                 break
-                            elif msg.payload ==  "{'status': 'error', 'response': {'reason': 'unauthorized'}}":
-                                logging.info(f"{msg.topic} unauthorized")
-                                break
-                            elif msg.payload == "{'status': 'ok', 'response': {}}":
+                            elif msg.payload["status"] == "ok":
                                 logging.info(f"Successfully joined {msg.topic}")
                                 continue
                         else:
