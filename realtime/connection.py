@@ -62,8 +62,16 @@ class Socket:
         :return: None
         """
         loop = asyncio.get_event_loop()  # TODO: replace with get_running_loop
-        loop.run_until_complete(asyncio.gather(
-            self._listen(), self._keep_alive()))
+        loop.create_task(self._listen())  
+        loop.create_task(self._keep_alive())  
+        try:
+            loop.run_forever()
+        except KeyboardInterrupt:
+            # we leave all channels properly
+            for channel in self.channels:
+                for chan in self.channels.get(channel, []):
+                    chan.leave()
+
 
     async def _listen(self) -> None:
         """

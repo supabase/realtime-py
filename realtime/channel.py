@@ -83,7 +83,7 @@ class Channel:
 
     async def _leave(self) -> None:
         """
-        Coroutine that attempts to join Phoenix Realtime server via a certain topic
+        Coroutine that attempts to leave Phoenix Realtime server via a certain topic
         :return: None
         """
         if self.socket.version == 1:
