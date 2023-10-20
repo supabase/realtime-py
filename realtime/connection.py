@@ -48,36 +48,20 @@ class Socket:
         self.params = params
         self.hb_interval = hb_interval
         self.ws_connection: websockets.client.WebSocketClientProtocol
-        self.kept_alive = False
+        self.kept_alive = set()
         self.auto_reconnect = auto_reconnect
         self.version = version
 
         self.channels: DefaultDict[str, List[Channel]] = defaultdict(list)
 
     @ensure_connection
-    def listen(self) -> None:
-        """
-        Wrapper for async def _listen() to expose a non-async interface
-        In most cases, this should be the last method executed as it starts an infinite listening loop.
-        :return: None
-        """
-        loop = asyncio.get_event_loop()  # TODO: replace with get_running_loop
-        loop.create_task(self._listen())  
-        loop.create_task(self._keep_alive())  
-        try:
-            loop.run_forever()
-        except KeyboardInterrupt:
-            # we leave all channels properly
-            for channel in self.channels:
-                for chan in self.channels.get(channel, []):
-                    chan.leave()
-
-
-    async def _listen(self) -> None:
+    async def listen(self) -> None:
         """
         An infinite loop that keeps listening.
         :return: None
         """
+        self.kept_alive.add(asyncio.ensure_future(self.keep_alive()))
+
         while True:
             try:
                 msg = await self.ws_connection.recv()
@@ -86,7 +70,6 @@ class Socket:
                 elif self.version == 2:
                     msg_array = json.loads(msg)
                     msg = Message(join_ref=msg_array[0], ref= msg_array[1], topic=msg_array[2], event= msg_array[3], payload= msg_array[4])
-
                 if msg.event == ChannelEvents.reply:
                     for channel in self.channels.get(msg.topic, []):
                         if msg.ref == channel.control_msg_ref :
@@ -123,25 +106,29 @@ class Socket:
                     logging.exception("Connection with the server closed.")
                     break
 
-    def connect(self) -> None:
-        """
-        Wrapper for async def _connect() to expose a non-async interface
-        """
-        loop = asyncio.get_event_loop()  # TODO: replace with get_running
-        loop.run_until_complete(self._connect())
-        self.connected = True
+            except asyncio.CancelledError:
+                logging.info("Listen task was cancelled.")
+                await self.leave_all()
 
-    async def _connect(self) -> None:
+            except Exception as e:
+                logging.error(f"Unexpected error in listen: {e}")
+
+    async def connect(self) -> None:
         ws_connection = await websockets.connect(self.url)
 
         if ws_connection.open:
-            logging.info("Connection was successful")
             self.ws_connection = ws_connection
             self.connected = True
+            logging.info("Connection was successful")
         else:
             raise Exception("Connection Failed")
+    
+    async def leave_all(self) -> None:
+        for channel in self.channels:
+            for chan in self.channels.get(channel, []):
+                await chan.leave()
 
-    async def _keep_alive(self) -> None:
+    async def keep_alive(self) -> None:
         """
         Sending heartbeat to server every 5 seconds
         Ping - pong messages to verify connection is alive

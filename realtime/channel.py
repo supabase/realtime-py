@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import asyncio
+import logging
 import json
 import uuid
 from typing import Any, List, Dict, TYPE_CHECKING, NamedTuple
@@ -42,17 +42,7 @@ class Channel:
         self.join_ref = str(uuid.uuid4())
         self.control_msg_ref = ""
 
-    def join(self) -> Channel:
-        """
-        Wrapper for async def _join() to expose a non-async interface
-        Essentially gets the only event loop and attempt joining a topic
-        :return: Channel
-        """
-        loop = asyncio.get_event_loop()  # TODO: replace with get_running_loop
-        loop.run_until_complete(self._join())
-        return self
-
-    async def _join(self) -> None:
+    async def join(self) -> None:
         """
         Coroutine that attempts to join Phoenix Realtime server via a certain topic
         :return: None
@@ -71,17 +61,7 @@ class Channel:
             print(str(e))  # TODO: better error propagation
             return
 
-    def leave(self) -> None:
-        """
-        Wrapper for async def _leave() to expose a non-async interface
-        Essentially gets the only event loop and attempt leaving a topic
-        :return: None
-        """
-        loop = asyncio.get_event_loop()  # TODO: replace with get_running_loop
-        loop.run_until_complete(self._leave())
-        return self
-
-    async def _leave(self) -> None:
+    async def leave(self) -> None:
         """
         Coroutine that attempts to leave Phoenix Realtime server via a certain topic
         :return: None
@@ -118,21 +98,7 @@ class Channel:
         self.listeners = [
             callback for callback in self.listeners if (callback.event != event and callback.ref != ref)]
 
-    def send(self, event_name: str, payload:str, ref: uuid = str(uuid.uuid4())) -> None:
-        """
-        Wrapper for async def _send() to expose a non-async interface
-        Essentially gets the only event loop and attempt sending a payload
-        to a topic
-        :param event_name: The event_name: it must match the first argument of a handle_in function on the server channel module.
-        :param payload: The payload to be sent to the phoenix server
-        :param ref: The message reference that the server will use for replying - if none is set, generates the string repr of a uuidv4
-        :return: None
-        """
-        loop = asyncio.get_event_loop()  # TODO: replace with get_running_loop
-        loop.run_until_complete(self._send(event_name, payload, ref))
-        return self
-
-    async def _send(self, event_name: str, payload: str, ref: str) -> None:
+    async def send(self, event_name: str, payload: str, ref: str) -> None:
         """
         Coroutine that attempts to join Phoenix Realtime server via a certain topic
         :param event_name: The event_name: it must match the first argument of a handle_in function on the server channel module.
