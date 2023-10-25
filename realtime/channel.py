@@ -53,7 +53,7 @@ class Channel:
         elif self.socket.version == 2:
             #[join_reference, message_reference, topic_name, event_name, payload]
             self.control_msg_ref = str(uuid.uuid4())
-            join_req = [self.join_ref, self.control_msg_ref, self.topic, ChannelEvents.join, {}]
+            join_req = [self.join_ref, self.control_msg_ref, self.topic, ChannelEvents.join, self.params]
 
         try:
             await self.socket.ws_connection.send(json.dumps(join_req))
