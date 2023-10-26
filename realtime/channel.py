@@ -58,7 +58,7 @@ class Channel:
         try:
             await self.socket.ws_connection.send(json.dumps(join_req))
         except Exception as e:
-            print(str(e))  # TODO: better error propagation
+            print(e)
             return
 
     async def leave(self) -> None:
@@ -75,7 +75,7 @@ class Channel:
         try:
             await self.socket.ws_connection.send(json.dumps(leave_req))
         except Exception as e:
-            print(str(e))  # TODO: better error propagation
+            print(e)
             return
 
     def on(self, event: str, ref: str, callback: Callback) -> Channel:
@@ -115,5 +115,5 @@ class Channel:
         try:
             await self.socket.ws_connection.send(json.dumps(msg))
         except Exception as e:
-            print(str(e))  # TODO: better error propagation
+            print(e)
             return
