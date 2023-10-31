@@ -98,7 +98,7 @@ class Socket:
             except websockets.exceptions.ConnectionClosed:
                 if self.auto_reconnect:
                     logging.info("Connection with server closed, trying to reconnect...")
-                    await self._connect()
+                    await self.connect()
                     for topic, channels in self.channels.items():
                         for channel in channels:
                             await channel._join()
@@ -151,7 +151,7 @@ class Socket:
             except websockets.exceptions.ConnectionClosed:
                 if self.auto_reconnect:
                     logging.info("Connection with server closed, trying to reconnect...")
-                    await self._connect()
+                    await self.connect()
                 else:
                     logging.exception("Connection with the server closed.")
                     break
