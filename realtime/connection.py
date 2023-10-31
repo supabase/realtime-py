@@ -101,7 +101,7 @@ class Socket:
                     await self.connect()
                     for topic, channels in self.channels.items():
                         for channel in channels:
-                            await channel._join()
+                            await channel.join()
                 else:
                     logging.exception("Connection with the server closed.")
                     break
