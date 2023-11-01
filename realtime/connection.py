@@ -1,12 +1,17 @@
 import asyncio
 import json
 import logging
-import pdb
 from collections import defaultdict
 from functools import wraps
 from typing import Any, Callable, List, Dict, TypeVar, DefaultDict
 
 import websockets
+from websockets.exceptions import (
+    ConnectionClosed,
+    InvalidHandshake,
+    InvalidMessage,
+    ConnectionClosedOK,
+)
 from typing_extensions import ParamSpec
 
 from realtime.channel import Channel
@@ -17,8 +22,8 @@ from realtime.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, 
 T_Retval = TypeVar("T_Retval")
 T_ParamSpec = ParamSpec("T_ParamSpec")
 
-logging.basicConfig(
-    format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO)
+logging.basicConfig(format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO)
+
 
 def ensure_connection(func: Callable[T_ParamSpec, T_Retval]):
     @wraps(func)
@@ -32,7 +37,14 @@ def ensure_connection(func: Callable[T_ParamSpec, T_Retval]):
 
 
 class Socket:
-    def __init__(self, url: str, auto_reconnect: bool = False, params: Dict[str, Any] = {}, hb_interval: int = 30, version: int = 2) -> None:
+    def __init__(
+        self,
+        url: str,
+        auto_reconnect: bool = False,
+        params: Dict[str, Any] = {},
+        hb_interval: int = 30,
+        version: int = 2,
+    ) -> None:
         """
         `Socket` is the abstraction for an actual socket connection that receives and 'reroutes' `Message` according to its `topic` and `event`.
         Socket-Channel has a 1-many relationship.
@@ -65,14 +77,20 @@ class Socket:
         while True:
             try:
                 msg = await self.ws_connection.recv()
-                if self.version == 1 :
+                if self.version == 1:
                     msg = Message(**json.loads(msg))
                 elif self.version == 2:
                     msg_array = json.loads(msg)
-                    msg = Message(join_ref=msg_array[0], ref= msg_array[1], topic=msg_array[2], event= msg_array[3], payload= msg_array[4])
+                    msg = Message(
+                        join_ref=msg_array[0],
+                        ref=msg_array[1],
+                        topic=msg_array[2],
+                        event=msg_array[3],
+                        payload=msg_array[4],
+                    )
                 if msg.event == ChannelEvents.reply:
                     for channel in self.channels.get(msg.topic, []):
-                        if msg.ref == channel.control_msg_ref :
+                        if msg.ref == channel.control_msg_ref:
                             if msg.payload["status"] == "error":
                                 logging.info(f"Error joining channel: {msg.topic} - {msg.payload['response']['reason']}")
                                 break
@@ -83,10 +101,10 @@ class Socket:
                             for cl in channel.listeners:
                                 if cl.ref in ["*", msg.ref]:
                                     cl.callback(msg.payload)
-                
+
                 if msg.event == ChannelEvents.close:
                     for channel in self.channels.get(msg.topic, []):
-                        if msg.join_ref == channel.join_ref :
+                        if msg.join_ref == channel.join_ref:
                             logging.info(f"Successfully left {msg.topic}")
                             continue
 
@@ -95,23 +113,28 @@ class Socket:
                         if cl.event in ["*", msg.event]:
                             cl.callback(msg.payload)
 
-            except websockets.exceptions.ConnectionClosed:
-                if self.auto_reconnect:
-                    logging.info("Connection with server closed, trying to reconnect...")
-                    await self.connect()
-                    for topic, channels in self.channels.items():
-                        for channel in channels:
-                            await channel.join()
-                else:
-                    logging.exception("Connection with the server closed.")
-                    break
+            except ConnectionClosedOK:
+                logging.info("Connection was closed normally.")
+                await self.leave_all()
+                break
+
+            except InvalidMessage:
+                logging.error("Received an invalid message. Check message format and content.")
+
+            except ConnectionClosed as e:
+                logging.error(f"Connection closed unexpectedly: {e}")
+                self._handle_reconnection()
+
+            except InvalidHandshake:
+                logging.error("Invalid handshake while connecting. Ensure your client and server configurations match.")
 
             except asyncio.CancelledError:
                 logging.info("Listen task was cancelled.")
                 await self.leave_all()
 
-            except Exception as e:
+            except Exception as e:  # A general exception handler should be the last resort
                 logging.error(f"Unexpected error in listen: {e}")
+                self._handle_reconnection()
 
     async def connect(self) -> None:
         ws_connection = await websockets.connect(self.url)
@@ -122,7 +145,17 @@ class Socket:
             logging.info("Connection was successful")
         else:
             raise Exception("Connection Failed")
-    
+
+    async def _handle_reconnection(self) -> None:
+        if self.auto_reconnect:
+            logging.info("Connection with server closed, trying to reconnect...")
+            await self.connect()
+            for topic, channels in self.channels.items():
+                for channel in channels:
+                    await channel.join()
+        else:
+            logging.exception("Connection with the server closed.")
+
     async def leave_all(self) -> None:
         for channel in self.channels:
             for chan in self.channels.get(channel, []):
@@ -135,26 +168,32 @@ class Socket:
         """
         while True:
             try:
-                if self.version == 1 :
+                if self.version == 1:
                     data = dict(
-                     topic=PHOENIX_CHANNEL,
-                     event=ChannelEvents.heartbeat,
-                     payload=HEARTBEAT_PAYLOAD,
-                     ref=None,
+                        topic=PHOENIX_CHANNEL,
+                        event=ChannelEvents.heartbeat,
+                        payload=HEARTBEAT_PAYLOAD,
+                        ref=None,
                     )
-                elif self.version == 2 :
+                elif self.version == 2:
                     # [null,"4","phoenix","heartbeat",{}]
-                    data = [None, None, PHOENIX_CHANNEL, ChannelEvents.heartbeat, HEARTBEAT_PAYLOAD]
-                
+                    data = [
+                        None,
+                        None,
+                        PHOENIX_CHANNEL,
+                        ChannelEvents.heartbeat,
+                        HEARTBEAT_PAYLOAD,
+                    ]
+
                 await self.ws_connection.send(json.dumps(data))
                 await asyncio.sleep(self.hb_interval)
-            except websockets.exceptions.ConnectionClosed:
-                if self.auto_reconnect:
-                    logging.info("Connection with server closed, trying to reconnect...")
-                    await self.connect()
-                else:
-                    logging.exception("Connection with the server closed.")
-                    break
+
+            except ConnectionClosed:
+                logging.error("Connection closed unexpectedly during heartbeat. Ensure the server is alive and responsive.")
+                self._handle_reconnection()
+
+            except Exception as e:  # A general exception handler should be the last resort
+                logging.error(f"Unexpected error in keep_alive: {e}")
 
     @ensure_connection
     def set_channel(self, topic: str) -> Channel:
@@ -175,4 +214,5 @@ class Socket:
         for topic, chans in self.channels.items():
             for chan in chans:
                 print(
-                    f"Topic: {topic} | Events: {[e for e, _, _ in chan.listeners]} | References: {[r for _, r, _ in chan.listeners]}]")
+                    f"Topic: {topic} | Events: {[e for e, _, _ in chan.listeners]} | References: {[r for _, r, _ in chan.listeners]}]"
+                )
