@@ -22,7 +22,9 @@ from realtime.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, 
 T_Retval = TypeVar("T_Retval")
 T_ParamSpec = ParamSpec("T_ParamSpec")
 
-logging.basicConfig(format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
+)
 
 
 def ensure_connection(func: Callable[T_ParamSpec, T_Retval]):
@@ -92,7 +94,9 @@ class Socket:
                     for channel in self.channels.get(msg.topic, []):
                         if msg.ref == channel.control_msg_ref:
                             if msg.payload["status"] == "error":
-                                logging.info(f"Error joining channel: {msg.topic} - {msg.payload['response']['reason']}")
+                                logging.info(
+                                    f"Error joining channel: {msg.topic} - {msg.payload['response']['reason']}"
+                                )
                                 break
                             elif msg.payload["status"] == "ok":
                                 logging.info(f"Successfully joined {msg.topic}")
@@ -119,22 +123,28 @@ class Socket:
                 break
 
             except InvalidMessage:
-                logging.error("Received an invalid message. Check message format and content.")
+                logging.error(
+                    "Received an invalid message. Check message format and content."
+                )
 
             except ConnectionClosed as e:
                 logging.error(f"Connection closed unexpectedly: {e}")
-                self._handle_reconnection()
+                await self._handle_reconnection()
 
             except InvalidHandshake:
-                logging.error("Invalid handshake while connecting. Ensure your client and server configurations match.")
+                logging.error(
+                    "Invalid handshake while connecting. Ensure your client and server configurations match."
+                )
 
             except asyncio.CancelledError:
                 logging.info("Listen task was cancelled.")
                 await self.leave_all()
 
-            except Exception as e:  # A general exception handler should be the last resort
+            except (
+                Exception
+            ) as e:  # A general exception handler should be the last resort
                 logging.error(f"Unexpected error in listen: {e}")
-                self._handle_reconnection()
+                await self._handle_reconnection()
 
     async def connect(self) -> None:
         ws_connection = await websockets.connect(self.url)
@@ -189,10 +199,14 @@ class Socket:
                 await asyncio.sleep(self.hb_interval)
 
             except ConnectionClosed:
-                logging.error("Connection closed unexpectedly during heartbeat. Ensure the server is alive and responsive.")
-                self._handle_reconnection()
+                logging.error(
+                    "Connection closed unexpectedly during heartbeat. Ensure the server is alive and responsive."
+                )
+                await self._handle_reconnection()
 
-            except Exception as e:  # A general exception handler should be the last resort
+            except (
+                Exception
+            ) as e:  # A general exception handler should be the last resort
                 logging.error(f"Unexpected error in keep_alive: {e}")
 
     @ensure_connection
