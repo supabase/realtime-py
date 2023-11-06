@@ -102,13 +102,14 @@ class Socket:
                         logging.info(f"Successfully left {msg.topic}")
                         continue
 
+            loop = asyncio.get_running_loop()
             for channel in self.channels.get(msg.topic, []):
                 for cl in channel.listeners:
                     if cl.event in ["*", msg.event]:
                         if asyncio.iscoroutinefunction(cl.callback):
-                            await cl.callback(msg.payload)
+                            loop.create_task(cl.callback(msg.payload))
                         else:
-                            cl.callback(msg.payload)
+                            loop.run_in_executor(None, cl.callback, msg.payload)
         except Exception as e:
             logging.error(f"Error processing message: {e}", exc_info=True)
 
