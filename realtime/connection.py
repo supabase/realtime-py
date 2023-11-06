@@ -6,13 +6,13 @@ from functools import wraps
 from typing import Any, Callable, List, Dict, TypeVar, DefaultDict
 
 import websockets
+from typing_extensions import ParamSpec
 from websockets.exceptions import (
     ConnectionClosed,
     InvalidHandshake,
     InvalidMessage,
     ConnectionClosedOK,
 )
-from typing_extensions import ParamSpec
 
 from realtime.channel import Channel
 from realtime.exceptions import NotConnectedError
@@ -67,52 +67,6 @@ class Socket:
 
         self.channels: DefaultDict[str, List[Channel]] = defaultdict(list)
 
-    async def _process_message(self, msg: str):
-        try:
-            if self.version == 1:
-                msg = Message(**json.loads(msg))
-            elif self.version == 2:
-                msg_array = json.loads(msg)
-                msg = Message(
-                    join_ref=msg_array[0],
-                    ref=msg_array[1],
-                    topic=msg_array[2],
-                    event=msg_array[3],
-                    payload=msg_array[4],
-                )
-            if msg.event == ChannelEvents.reply:
-                for channel in self.channels.get(msg.topic, []):
-                    if msg.ref == channel.control_msg_ref:
-                        if msg.payload["status"] == "error":
-                            logging.info(
-                                f"Error joining channel: {msg.topic} - {msg.payload['response']['reason']}"
-                            )
-                            break
-                        elif msg.payload["status"] == "ok":
-                            logging.info(f"Successfully joined {msg.topic}")
-                            continue
-                    else:
-                        for cl in channel.listeners:
-                            if cl.ref in ["*", msg.ref]:
-                                cl.callback(msg.payload)
-
-            if msg.event == ChannelEvents.close:
-                for channel in self.channels.get(msg.topic, []):
-                    if msg.join_ref == channel.join_ref:
-                        logging.info(f"Successfully left {msg.topic}")
-                        continue
-
-            loop = asyncio.get_running_loop()
-            for channel in self.channels.get(msg.topic, []):
-                for cl in channel.listeners:
-                    if cl.event in ["*", msg.event]:
-                        if asyncio.iscoroutinefunction(cl.callback):
-                            loop.create_task(cl.callback(msg.payload))
-                        else:
-                            loop.run_in_executor(None, cl.callback, msg.payload)
-        except Exception as e:
-            logging.error(f"Error processing message: {e}", exc_info=True)
-
     @ensure_connection
     async def listen(self) -> None:
         """
@@ -122,9 +76,52 @@ class Socket:
         self.kept_alive.add(asyncio.create_task(self.keep_alive()))
 
         while True:
+
+            await asyncio.sleep(0)
+
             try:
                 msg = await self.ws_connection.recv()
-                asyncio.create_task(self._process_message(msg))
+                if self.version == 1:
+                    msg = Message(**json.loads(msg))
+                elif self.version == 2:
+                    msg_array = json.loads(msg)
+                    msg = Message(
+                        join_ref=msg_array[0],
+                        ref=msg_array[1],
+                        topic=msg_array[2],
+                        event=msg_array[3],
+                        payload=msg_array[4],
+                    )
+                if msg.event == ChannelEvents.reply:
+                    for channel in self.channels.get(msg.topic, []):
+                        if msg.ref == channel.control_msg_ref:
+                            if msg.payload["status"] == "error":
+                                logging.info(
+                                    f"Error joining channel: {msg.topic} - {msg.payload['response']['reason']}"
+                                )
+                                break
+                            elif msg.payload["status"] == "ok":
+                                logging.info(f"Successfully joined {msg.topic}")
+                                continue
+                        else:
+                            for cl in channel.listeners:
+                                if cl.ref in ["*", msg.ref]:
+                                    cl.callback(msg.payload)
+
+                if msg.event == ChannelEvents.close:
+                    for channel in self.channels.get(msg.topic, []):
+                        if msg.join_ref == channel.join_ref:
+                            logging.info(f"Successfully left {msg.topic}")
+                            continue
+
+                for channel in self.channels.get(msg.topic, []):
+                    for cl in channel.listeners:
+                        if cl.event in ["*", msg.event]:
+                            if asyncio.iscoroutinefunction(cl.callback):
+                                asyncio.create_task(cl.callback(msg.payload))
+                            else:
+                                cl.callback(msg.payload)
+
 
             except ConnectionClosedOK:
                 logging.info("Connection was closed normally.")
