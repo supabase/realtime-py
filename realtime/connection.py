@@ -74,7 +74,7 @@ class Socket:
         An infinite loop that keeps listening.
         :return: None
         """
-        self.kept_alive.add(asyncio.ensure_future(self.keep_alive()))
+        self.kept_alive.add(asyncio.create_task(self.keep_alive()))
 
         while True:
             try:
@@ -115,7 +115,11 @@ class Socket:
                 for channel in self.channels.get(msg.topic, []):
                     for cl in channel.listeners:
                         if cl.event in ["*", msg.event]:
-                            cl.callback(msg.payload)
+                            if asyncio.iscoroutinefunction(cl.callback):
+                                asyncio.create_task(cl.callback(msg.payload))
+                            else:
+                                cl.callback(msg.payload)
+
 
             except ConnectionClosedOK:
                 logging.info("Connection was closed normally.")
