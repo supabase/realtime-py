@@ -76,11 +76,11 @@ class Socket:
         self.kept_alive.add(asyncio.create_task(self.keep_alive()))
 
         while True:
-
-            await asyncio.sleep(0)
-
             try:
+                await asyncio.sleep(0)
+
                 msg = await self.ws_connection.recv()
+
                 if self.version == 1:
                     msg = Message(**json.loads(msg))
                 elif self.version == 2:
@@ -150,6 +150,7 @@ class Socket:
             except asyncio.CancelledError:
                 logging.info("Listen task was cancelled.")
                 await self.leave_all()
+                break
 
             except (
                     Exception
@@ -209,6 +210,9 @@ class Socket:
                 await self.ws_connection.send(json.dumps(data))
                 await asyncio.sleep(self.hb_interval)
 
+            except asyncio.CancelledError:
+                logging.info("Keep alive task was cancelled.")
+                break
             except ConnectionClosed:
                 logging.error(
                     "Connection closed unexpectedly during heartbeat. Ensure the server is alive and responsive."
