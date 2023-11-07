@@ -11,8 +11,9 @@ class Message:
     event: str
     payload: Dict[str, Any]
     ref: Any
-    join_ref: Any
     topic: str
+
+    join_ref: Any = None  # V2
 
     def __hash__(self):
         return hash((self.event, tuple(list(self.payload.values())), self.ref, self.topic))
