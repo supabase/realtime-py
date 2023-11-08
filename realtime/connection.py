@@ -45,6 +45,7 @@ class Socket:
             params: Dict[str, Any] = {},
             hb_interval: int = 30,
             version: int = 2,
+            ping_timeout: int = 20,
     ) -> None:
         """
         `Socket` is the abstraction for an actual socket connection that receives and 'reroutes' `Message` according to its `topic` and `event`.
@@ -64,6 +65,7 @@ class Socket:
         self.kept_alive = set()
         self.auto_reconnect = auto_reconnect
         self.version = version
+        self.ping_timeout = ping_timeout
 
         self.channels: DefaultDict[str, List[Channel]] = defaultdict(list)
 
@@ -160,7 +162,7 @@ class Socket:
                 await self._handle_reconnection()
 
     async def connect(self) -> None:
-        ws_connection = await websockets.connect(self.url)
+        ws_connection = await websockets.connect(self.url, ping_timeout=self.ping_timeout)
 
         if ws_connection.open:
             self.ws_connection = ws_connection
