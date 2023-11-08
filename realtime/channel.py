@@ -41,7 +41,6 @@ class Channel:
         self.joined = False
         self.join_ref = str(uuid.uuid4())
         self.control_msg_ref = ""
-        self.members_count = 0
 
     async def join(self) -> None:
         """
@@ -118,6 +117,3 @@ class Channel:
         except Exception as e:
             print(str(e))  # TODO: better error propagation
             return
-
-    async def has_members(self) -> bool:
-        return self.members_count > 0
