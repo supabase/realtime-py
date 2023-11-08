@@ -236,6 +236,13 @@ class Socket:
 
         return chan
 
+    def remove_channel(self, topic: str) -> None:
+        """
+        :param topic: Removes a channel from the socket
+        :return: None
+        """
+        self.channels.pop(topic, None)
+
     def summary(self) -> None:
         """
         Prints a list of topics and event, and reference that the socket is listening to
