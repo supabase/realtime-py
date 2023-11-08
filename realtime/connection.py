@@ -121,6 +121,20 @@ class Socket:
                             logging.info(f"Successfully left {msg.topic}")
                             continue
 
+                if msg.event == ChannelEvents.join:
+                    for channel in self.channels.get(msg.topic, []):
+                        if msg.join_ref != channel.join_ref:
+                            channel.members_count += 1
+                            logging.info(f"New member joined to {msg.topic}")
+                            continue
+
+                if msg.event == ChannelEvents.leave:
+                    for channel in self.channels.get(msg.topic, []):
+                        if msg.join_ref != channel.join_ref:
+                            channel.members_count -= 1
+                            logging.info(f"Member left from {msg.topic}")
+                            continue
+
                 for channel in self.channels.get(msg.topic, []):
                     for cl in channel.listeners:
                         if cl.event in ["*", msg.event]:
