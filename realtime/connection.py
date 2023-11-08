@@ -73,7 +73,8 @@ class Socket:
         An infinite loop that keeps listening.
         :return: None
         """
-        self.kept_alive.add(asyncio.create_task(self.keep_alive()))
+        if self.hb_interval >= 0:
+            self.kept_alive.add(asyncio.create_task(self.keep_alive()))
 
         while True:
             try:
