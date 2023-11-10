@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import logging
 import json
+import logging
 import uuid
-from typing import Any, List, Dict, TYPE_CHECKING, NamedTuple
-from realtime.message import *
+from typing import List, TYPE_CHECKING, NamedTuple, Dict, Any
 
+from realtime.message import ChannelEvents
 from realtime.types import Callback
 
 if TYPE_CHECKING:
@@ -49,17 +49,17 @@ class Channel:
         """
         if self.socket.version == 1:
             join_req = dict(topic=self.topic, event=ChannelEvents.join,
-                        payload={}, ref=None)
+                            payload={}, ref=None)
         elif self.socket.version == 2:
-            #[join_reference, message_reference, topic_name, event_name, payload]
+            # [join_reference, message_reference, topic_name, event_name, payload]
             self.control_msg_ref = str(uuid.uuid4())
             join_req = [self.join_ref, self.control_msg_ref, self.topic, ChannelEvents.join, self.params]
 
         try:
             await self.socket.ws_connection.send(json.dumps(join_req))
         except Exception as e:
-            print(str(e))  # TODO: better error propagation
-            return
+            logging.error(f"Error while joining channel: {str(e)}", exc_info=True)
+            raise
 
     async def leave(self) -> None:
         """
@@ -68,15 +68,15 @@ class Channel:
         """
         if self.socket.version == 1:
             leave_req = dict(topic=self.topic, event=ChannelEvents.leave,
-                        payload={}, ref=None)
+                             payload={}, ref=None)
         elif self.socket.version == 2:
             leave_req = [self.join_ref, None, self.topic, ChannelEvents.leave, {}]
 
         try:
             await self.socket.ws_connection.send(json.dumps(leave_req))
         except Exception as e:
-            print(str(e))  # TODO: better error propagation
-            return
+            logging.error(f"Error while leaving channel: {str(e)}", exc_info=True)
+            raise
 
     def on(self, event: str, ref: str, callback: Callback) -> Channel:
         """
@@ -108,12 +108,12 @@ class Channel:
         """
         if self.socket.version == 1:
             msg = dict(topic=self.topic, event=event_name,
-                        payload=payload, ref=None)
+                       payload=payload, ref=None)
         elif self.socket.version == 2:
             msg = [None, ref, self.topic, event_name, payload]
 
         try:
             await self.socket.ws_connection.send(json.dumps(msg))
         except Exception as e:
-            print(str(e))  # TODO: better error propagation
-            return
+            logging.error(f"Error while sending message: {str(e)}", exc_info=True)
+            raise
