@@ -59,7 +59,7 @@ class Channel:
             await self.socket.ws_connection.send(json.dumps(join_req))
         except Exception as e:
             logging.error(f"Error while joining channel: {str(e)}", exc_info=True)
-            raise
+            return
 
     async def leave(self) -> None:
         """
@@ -76,7 +76,7 @@ class Channel:
             await self.socket.ws_connection.send(json.dumps(leave_req))
         except Exception as e:
             logging.error(f"Error while leaving channel: {str(e)}", exc_info=True)
-            raise
+            return
 
     def on(self, event: str, ref: str, callback: Callback) -> Channel:
         """
