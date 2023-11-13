@@ -17,6 +17,7 @@ from websockets.exceptions import (
 from realtime.channel import Channel
 from realtime.exceptions import NotConnectedError
 from realtime.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, Message
+from realtime.types import Callback
 
 T_Retval = TypeVar("T_Retval")
 T_ParamSpec = ParamSpec("T_ParamSpec")
@@ -35,6 +36,10 @@ def ensure_connection(func: Callable[T_ParamSpec, T_Retval]):
         return func(*args, **kwargs)
 
     return wrapper
+
+
+class CallbackError(Exception):
+    pass
 
 
 class Socket:
@@ -68,6 +73,15 @@ class Socket:
         self.ping_timeout = ping_timeout
 
         self.channels: DefaultDict[str, List[Channel]] = defaultdict(list)
+
+    async def _run_callback_safe(self, callback: Callback, payload: Dict) -> None:
+        try:
+            if asyncio.iscoroutinefunction(callback):
+                asyncio.create_task(callback(payload))
+            else:
+                callback(payload)
+        except Exception as e:
+            raise CallbackError("Error in callback") from e
 
     @ensure_connection
     async def listen(self) -> None:
@@ -109,10 +123,7 @@ class Socket:
                         else:
                             for cl in channel.listeners:
                                 if cl.ref in ["*", msg.ref]:
-                                    if asyncio.iscoroutinefunction(cl.callback):
-                                        asyncio.create_task(cl.callback(msg.payload))
-                                    else:
-                                        cl.callback(msg.payload)
+                                    await self._run_callback_safe(cl.callback, msg.payload)
 
                 if msg.event == ChannelEvents.close:
                     for channel in self.channels.get(msg.topic, []):
@@ -123,11 +134,7 @@ class Socket:
                 for channel in self.channels.get(msg.topic, []):
                     for cl in channel.listeners:
                         if cl.event in ["*", msg.event]:
-                            if asyncio.iscoroutinefunction(cl.callback):
-                                asyncio.create_task(cl.callback(msg.payload))
-                            else:
-                                cl.callback(msg.payload)
-
+                            await self._run_callback_safe(cl.callback, msg.payload)
 
             except ConnectionClosedOK:
                 logging.info("Connection was closed normally.")
@@ -152,6 +159,9 @@ class Socket:
                 logging.info("Listen task was cancelled.")
                 await self.leave_all()
                 break
+
+            except CallbackError:
+                logging.info("Error in callback")
 
             except (
                     Exception
