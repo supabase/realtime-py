@@ -170,14 +170,22 @@ class Socket:
                 await self._handle_reconnection()
 
     async def connect(self) -> None:
-        ws_connection = await websockets.connect(self.url, ping_timeout=self.ping_timeout)
+        while True:
+            try:
+                ws_connection = await websockets.connect(self.url, ping_timeout=self.ping_timeout)
 
-        if ws_connection.open:
-            self.ws_connection = ws_connection
-            self.connected = True
-            logging.info("Connection was successful")
-        else:
-            raise Exception("Connection Failed")
+                self.ws_connection = ws_connection
+                self.connected = True
+                logging.info("Connection was successful")
+                break
+            except OSError:
+                logging.error(
+                    "Connection failed. Retrying in 3 seconds. Ensure the server is alive and responsive."
+                )
+                await asyncio.sleep(3)
+            except asyncio.CancelledError:
+                logging.info("Connect task was cancelled.")
+                break
 
     async def _handle_reconnection(self) -> None:
         if self.auto_reconnect:
