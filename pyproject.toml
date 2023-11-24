@@ -2,7 +2,13 @@
 name = "realtime"
 version = "1.0.0"
 description = ""
-authors = ["Joel"]
+authors = [
+    "Joel Lee <joel@joellee.org>",
+    "Andrew Smith <a.smith@silentworks.co.uk>"
+]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/supabase-community/realtime-py"
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -12,6 +18,22 @@ typing-extensions = "^4.2.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.2.0"
+
+[tool.poetry.group.dev.dependencies]
+python-semantic-release = "^8.3.0"
+black = "^23.11.0"
+isort = "^5.12.0"
+pre-commit = "^3.5.0"
+
+[tool.semantic_release]
+version_variables = ["realtime/__init__.py:__version__"]
+version_toml = ["pyproject.toml:tool.poetry.version"]
+major_on_zero = false
+commit_message = "chore(release): bump version to v{version}"
+build_command = "curl -sSL https://install.python-poetry.org | python - && export PATH=\"/github/home/.local/bin:$PATH\" && poetry install && poetry build"
+upload_to_vcs_release = true
+branch = "master"
+changelog_components = "semantic_release.changelog.changelog_headers,semantic_release.changelog.compare_url"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
