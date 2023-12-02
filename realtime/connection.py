@@ -11,15 +11,14 @@ from typing_extensions import ParamSpec
 from realtime.channel import Channel
 from realtime.exceptions import NotConnectedError
 from realtime.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, Message
-
-
-T_Retval = TypeVar("T_Retval")
-T_ParamSpec = ParamSpec("T_ParamSpec")
+from realtime.types import Callback, T_ParamSpec, T_Retval
 
 logging.basicConfig(
-    format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO)
+    format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
+)
 
-def ensure_connection(func: Callable[T_ParamSpec, T_Retval]):
+
+def ensure_connection(func: Callback):
     @wraps(func)
     def wrapper(*args: T_ParamSpec.args, **kwargs: T_ParamSpec.kwargs) -> T_Retval:
         if not args[0].connected:
@@ -31,7 +30,13 @@ def ensure_connection(func: Callable[T_ParamSpec, T_Retval]):
 
 
 class Socket:
-    def __init__(self, url: str, auto_reconnect: bool = False, params: Dict[str, Any] = {}, hb_interval: int = 5) -> None:
+    def __init__(
+        self,
+        url: str,
+        auto_reconnect: bool = False,
+        params: Dict[str, Any] = {},
+        hb_interval: int = 5,
+    ) -> None:
         """
         `Socket` is the abstraction for an actual socket connection that receives and 'reroutes' `Message` according to its `topic` and `event`.
         Socket-Channel has a 1-many relationship.
@@ -59,8 +64,7 @@ class Socket:
         :return: None
         """
         loop = asyncio.get_event_loop()  # TODO: replace with get_running_loop
-        loop.run_until_complete(asyncio.gather(
-            self._listen(), self._keep_alive()))
+        loop.run_until_complete(asyncio.gather(self._listen(), self._keep_alive()))
 
     async def _listen(self) -> None:
         """
@@ -81,7 +85,9 @@ class Socket:
                             cl.callback(msg.payload)
             except websockets.exceptions.ConnectionClosed:
                 if self.auto_reconnect:
-                    logging.info("Connection with server closed, trying to reconnect...")
+                    logging.info(
+                        "Connection with server closed, trying to reconnect..."
+                    )
                     await self._connect()
                     for topic, channels in self.channels.items():
                         for channel in channels:
@@ -125,7 +131,9 @@ class Socket:
                 await asyncio.sleep(self.hb_interval)
             except websockets.exceptions.ConnectionClosed:
                 if self.auto_reconnect:
-                    logging.info("Connection with server closed, trying to reconnect...")
+                    logging.info(
+                        "Connection with server closed, trying to reconnect..."
+                    )
                     await self._connect()
                 else:
                     logging.exception("Connection with the server closed.")
@@ -149,5 +157,4 @@ class Socket:
         """
         for topic, chans in self.channels.items():
             for chan in chans:
-                print(
-                    f"Topic: {topic} | Events: {[e for e, _ in chan.callbacks]}]")
+                print(f"Topic: {topic} | Events: {[e for e, _ in chan.callbacks]}]")
