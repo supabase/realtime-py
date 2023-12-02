@@ -2,9 +2,18 @@
 
 
 
+## v1.0.2 (2023-12-02)
+
+### Fix
+
+* fix: update README.md (#77) ([`c5d9afb`](https://github.com/supabase-community/realtime-py/commit/c5d9afb610651b2981361ff01a8a593399809c7f))
+
+
 ## v1.0.1 (2023-12-02)
 
 ### Chore
+
+* chore(release): bump version to v1.0.1 ([`7f185e9`](https://github.com/supabase-community/realtime-py/commit/7f185e993735afbefde823577586f4c24fe88eee))
 
 * chore: update CI to use correct branch (#76) ([`07b1b8b`](https://github.com/supabase-community/realtime-py/commit/07b1b8b3c5d586cca576b728deba0930dc1f681e))
 
