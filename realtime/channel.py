@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 class CallbackListener(NamedTuple):
     """A tuple with `event` and `callback` """
     event: str
+    on_params: Dict[str, Any]
     callback: Callback
 
 
@@ -24,7 +25,7 @@ class Channel:
     Topic-Channel has a 1-many relationship.
     """
 
-    def __init__(self, socket: Socket, topic: str, params: Dict[str, Any] = {}) -> None:
+    def __init__(self, socket: Socket, topic: str, channel_params: Dict[str, Any] = {}, params = {}) -> None:
         """
         :param socket: Socket object
         :param topic: Topic that it subscribes to on the realtime server
@@ -32,6 +33,7 @@ class Channel:
         """
         self.socket = socket
         self.params = params
+        self.channel_params = channel_params
         self.topic = topic
         self.listeners: List[CallbackListener] = []
         self.joined = False
@@ -51,8 +53,12 @@ class Channel:
         Coroutine that attempts to join Phoenix Realtime server via a certain topic
         :return: None
         """
-        join_req = dict(topic=self.topic, event="phx_join",
-                        payload={}, ref=None)
+        join_req = {
+            "topic": self.topic,
+            "event": "phx_join",
+            "payload": {"config": self.channel_params},
+            "ref": None
+        }
 
         try:
             await self.socket.ws_connection.send(json.dumps(join_req))
@@ -60,14 +66,21 @@ class Channel:
             print(str(e))  # TODO: better error propagation
             return
 
-    def on(self, event: str, callback: Callback) -> Channel:
+    def on(self, event: str, on_params: Dict[str, Any], callback: Callback) -> Channel:
         """
         :param event: A specific event will have a specific callback
         :param callback: Callback that takes msg payload as its first argument
         :return: Channel
         """
-        cl = CallbackListener(event=event, callback=callback)
-        self.listeners.append(cl)
+        if event == "presence":
+            cl_diff = CallbackListener(event="presence_diff", on_params = on_params, callback=callback)
+            cl_state = CallbackListener(event="presence_state", on_params = on_params, callback=callback)
+            self.listeners.append(cl_diff)
+            self.listeners.append(cl_state)
+        else:
+            cl = CallbackListener(event=event, on_params = on_params, callback=callback)
+            self.listeners.append(cl)
+
         return self
 
     def off(self, event: str) -> None:

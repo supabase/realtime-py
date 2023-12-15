@@ -33,6 +33,7 @@ class Socket:
     def __init__(
         self,
         url: str,
+        token: str,
         auto_reconnect: bool = False,
         params: Dict[str, Any] = {},
         hb_interval: int = 5,
@@ -45,7 +46,7 @@ class Socket:
         :param params: Optional parameters for connection.
         :param hb_interval: WS connection is kept alive by sending a heartbeat message. Optional, defaults to 5.
         """
-        self.url = url
+        self.url = f"{url}/realtime/v1/websocket?apikey={token}"
         self.channels = defaultdict(list)
         self.connected = False
         self.params = params
@@ -75,14 +76,17 @@ class Socket:
             try:
                 msg = await self.ws_connection.recv()
                 msg = Message(**json.loads(msg))
-
-                if msg.event == ChannelEvents.reply:
-                    continue
-
                 for channel in self.channels.get(msg.topic, []):
                     for cl in channel.listeners:
-                        if cl.event in ["*", msg.event]:
-                            cl.callback(msg.payload)
+                        if cl.event == msg.event:
+                            if cl.event in ["presence_diff", "presence_state"]:
+                                cl.callback(msg.payload)
+                                continue
+                            if cl.event in ["postgres_changes"]:
+                                cl.callback(msg.payload)
+                                continue
+                            if cl.on_params["event"] in [msg.payload["event"] , "*"]:
+                                cl.callback(msg.payload)
             except websockets.exceptions.ConnectionClosed:
                 if self.auto_reconnect:
                     logging.info(
@@ -100,6 +104,7 @@ class Socket:
         """
         Wrapper for async def _connect() to expose a non-async interface
         """
+
         loop = asyncio.get_event_loop()  # TODO: replace with get_running
         loop.run_until_complete(self._connect())
         self.connected = True
@@ -140,12 +145,13 @@ class Socket:
                     break
 
     @ensure_connection
-    def set_channel(self, topic: str) -> Channel:
+    def set_channel(self, topic: str, channel_params: Dict[str, Any]) -> Channel:
         """
         :param topic: Initializes a channel and creates a two-way association with the socket
         :return: Channel
         """
-        chan = Channel(self, topic, self.params)
+        topic = f"realtime:{topic}"
+        chan = Channel(self, topic, channel_params, self.params)
         self.channels[topic].append(chan)
 
         return chan
