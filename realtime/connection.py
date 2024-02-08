@@ -79,7 +79,7 @@ class Socket:
             if asyncio.iscoroutinefunction(callback):
                 asyncio.create_task(callback(payload))
             else:
-                callback(payload)
+                asyncio.create_task(asyncio.to_thread(callback, payload))
         except Exception as e:
             raise CallbackError("Error in callback") from e
 
