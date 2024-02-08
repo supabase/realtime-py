@@ -1,0 +1,343 @@
+# CHANGELOG
+
+
+
+## v1.0.2 (2023-12-02)
+
+### Fix
+
+* fix: update README.md (#77) ([`c5d9afb`](https://github.com/supabase-community/realtime-py/commit/c5d9afb610651b2981361ff01a8a593399809c7f))
+
+
+## v1.0.1 (2023-12-02)
+
+### Chore
+
+* chore(release): bump version to v1.0.1 ([`7f185e9`](https://github.com/supabase-community/realtime-py/commit/7f185e993735afbefde823577586f4c24fe88eee))
+
+* chore: update CI to use correct branch (#76) ([`07b1b8b`](https://github.com/supabase-community/realtime-py/commit/07b1b8b3c5d586cca576b728deba0930dc1f681e))
+
+* chore: update github workflow with correct branch (#74) ([`13688c4`](https://github.com/supabase-community/realtime-py/commit/13688c4e86ba5da938b52a04c74bf10cc8250cf3))
+
+* chore: Remove unused import of &#39;cast&#39; ([`593815f`](https://github.com/supabase-community/realtime-py/commit/593815ffa84661b74fa83627fe1dfb39c4731e50))
+
+### Fix
+
+* fix: use shared types (#75) ([`233392a`](https://github.com/supabase-community/realtime-py/commit/233392a7626ddd9e750e0f0bf0e45d72626740a7))
+
+* fix: add github action workflow (#73) ([`f29d8b3`](https://github.com/supabase-community/realtime-py/commit/f29d8b3d4eff08e146bcf4049e26eac806475374))
+
+* fix: replace cast method with consistent type hinting and direct assignment of value ([`1d822b5`](https://github.com/supabase-community/realtime-py/commit/1d822b5704c2b2b63caee8ac1d95a5eb4639af66))
+
+* fix: correct type argument for cast method during socket initialisation ([`283af0a`](https://github.com/supabase-community/realtime-py/commit/283af0a5e9285e10aa7a6c5f6fb5f2189b3d0603))
+
+### Unknown
+
+* Merge pull request #70 from markyao6275/update-websockets-pytest
+
+Update websockets + pytest versions ([`bf9ae1c`](https://github.com/supabase-community/realtime-py/commit/bf9ae1c073e3a3544bd536c308d99792661f196f))
+
+* Update websockets + pytest versions ([`9af9807`](https://github.com/supabase-community/realtime-py/commit/9af980788a6a8494b4ef10c3a6ce8516382c6e01))
+
+* Merge pull request #65 from odiseo0/master
+
+Remove additional `Any` ([`0934023`](https://github.com/supabase-community/realtime-py/commit/0934023fe002357a2558f3b48d1c5000c4b00382))
+
+* Remove additional `Any` ([`803203b`](https://github.com/supabase-community/realtime-py/commit/803203b06045d47b03abec2b3d54a74d3d74b695))
+
+* Revert &#34;Update dependencies&#34;
+
+This reverts commit 4cdcde406eb38b73f84349a39c079ff2eaf375b7.
+I meant to push this to another branch and then open a PR, sorry! ([`6b2a320`](https://github.com/supabase-community/realtime-py/commit/6b2a3200427e78b5382b11aecb1d020c36a893c5))
+
+* Update dependencies ([`4cdcde4`](https://github.com/supabase-community/realtime-py/commit/4cdcde406eb38b73f84349a39c079ff2eaf375b7))
+
+* Merge pull request #60 from dhaneshsabane/bug-58-type-correction
+
+fix: correct type argument for cast method during socket initialisation ([`e40a359`](https://github.com/supabase-community/realtime-py/commit/e40a359e68837360392dd87868fafbb9d582aecb))
+
+* Update README.md ([`5f4afad`](https://github.com/supabase-community/realtime-py/commit/5f4afad859f444d1d5b6d19d4947dd2df940410a))
+
+
+## v1.0.0 (2023-02-05)
+
+### Build
+
+* build: update websockets version ([`5a243e1`](https://github.com/supabase-community/realtime-py/commit/5a243e1b4886365eab87b70c8915f18eabdc0a5b))
+
+### Chore
+
+* chore: build 0.0.5 ([`1b653b7`](https://github.com/supabase-community/realtime-py/commit/1b653b7633ad226edadf8e946d23a38bfc5b9a91))
+
+### Feature
+
+* feat: add new release, drop support for 3.7 ([`28225cd`](https://github.com/supabase-community/realtime-py/commit/28225cdcfcac1b5f27ca33e9a66e35e3945a6439))
+
+### Fix
+
+* fix: update version ([`0e8699a`](https://github.com/supabase-community/realtime-py/commit/0e8699a7bb12c583a7802dd39a863e75ee324714))
+
+* fix: update package name in test ([`689de0b`](https://github.com/supabase-community/realtime-py/commit/689de0b35625c8e661b6784c73440a8b080b3612))
+
+* fix: wildcard event is not handled correctly ([`88e4e58`](https://github.com/supabase-community/realtime-py/commit/88e4e58655206cb175936716888de4f367d5f209))
+
+### Unknown
+
+* Merge pull request #57 from supabase-community/j0/new_release
+
+feat: add new release, drop support for 3.7, add 3.11 to CI ([`3b4f40f`](https://github.com/supabase-community/realtime-py/commit/3b4f40fbeeb624ca4db6bc9684370fdf3615b446))
+
+* Merge pull request #46 from bramvdbruggen/socket-auto-reconnect
+
+Reconnect to websocket ([`02ca2cf`](https://github.com/supabase-community/realtime-py/commit/02ca2cf1b332b805c41a6ea0cc44fd4f0336c247))
+
+* Merge pull request #34 from supabase-community/sourcery/pull-33
+
+fix: wildcard event is not handled correctly (Sourcery refactored) ([`e256ccd`](https://github.com/supabase-community/realtime-py/commit/e256ccdcd1d2cae4e387af1078d0415f799194d9))
+
+* Merge pull request #48 from kavalerov/remove-dataclasses
+
+Remove `dataclasses` dependency ([`c5e1599`](https://github.com/supabase-community/realtime-py/commit/c5e1599a160fb3b2cae6e4399fe42f3768cfb9da))
+
+* Remove dataclasses dependency ([`cdb7570`](https://github.com/supabase-community/realtime-py/commit/cdb7570c721a5c894f217d1deb557a04e435c1c0))
+
+* Reconnect to websocket
+
+Added the ability to specify if you want the socket to automatic try reconnecting and rejoining the channels. ([`2d81e72`](https://github.com/supabase-community/realtime-py/commit/2d81e729969cf51671364b670735dfcf87102fd7))
+
+* Merge pull request #44 from supabase-community/j0_add_0.0.5
+
+chore: release version 0.0.5 ([`4c808b0`](https://github.com/supabase-community/realtime-py/commit/4c808b000bfa3384678ad4aaa5e78f99d5ad89be))
+
+* Merge pull request #45 from supabase-community/sourcery/j0_add_0.0.5
+
+chore: release version 0.0.5 (Sourcery refactored) ([`86e2048`](https://github.com/supabase-community/realtime-py/commit/86e20480dcc9357941f738591c3a00e8c79ca2bc))
+
+* &#39;Refactored by Sourcery&#39; ([`e12c165`](https://github.com/supabase-community/realtime-py/commit/e12c1657cb93e3a4f335386d031defd8421dc561))
+
+* Merge pull request #18 from RizkyRajitha/add-ghaction
+
+Add github action with trivial test cases with pytest ([`b787354`](https://github.com/supabase-community/realtime-py/commit/b787354225c3ac2f0df20fa17065b18d87b07ea6))
+
+* Merge branch &#39;master&#39; into add-ghaction ([`966f986`](https://github.com/supabase-community/realtime-py/commit/966f98605842099364c8e14ee1e1fae3067167b4))
+
+* Merge pull request #42 from nielsrolf/master
+
+fix spelling mistake: set_chanel-&gt;set_channel ([`d475aea`](https://github.com/supabase-community/realtime-py/commit/d475aea4a3929698e8a891e7b1cd7f678564dd8e))
+
+* fix spelling mistake: set_chanel-&gt;set_channel ([`25dc1bc`](https://github.com/supabase-community/realtime-py/commit/25dc1bc8571368549f9ac47e96c2472439599ae0))
+
+* Merge pull request #37 from odiseo0/master
+
+♻️ Standardize types and improve consistency ([`e30529e`](https://github.com/supabase-community/realtime-py/commit/e30529efb56250d34aca69d8739f73fa8a60879e))
+
+* ♻️ Use `typing-extensions` directly ([`189f8b9`](https://github.com/supabase-community/realtime-py/commit/189f8b9b6c9b97fb843e2246f2aed6565e80b315))
+
+* ♻️ Declare types in file instead of importing from `types.py` ([`d81682a`](https://github.com/supabase-community/realtime-py/commit/d81682a8d2c95c2881ec433731eefa6d748359c8))
+
+* ➕ Add `typing-extensions` ([`0fe4287`](https://github.com/supabase-community/realtime-py/commit/0fe42875a4e753e19592a10b16a48a3c838b4e17))
+
+* ♻️ Standardize types and improve consistency ([`dd71d42`](https://github.com/supabase-community/realtime-py/commit/dd71d42467432d1094e0149dc9e49526483d74cc))
+
+* Merge pull request #36 from Matthew-Burkard/master
+
+build: update websockets version ([`e0ef5b1`](https://github.com/supabase-community/realtime-py/commit/e0ef5b1149db6a6960082c8d298149421fdc8705))
+
+* &#39;Refactored by Sourcery&#39; ([`f270cb1`](https://github.com/supabase-community/realtime-py/commit/f270cb1119134f9037390377e47ccb7d60dd5b05))
+
+
+## v0.0.4 (2022-01-01)
+
+### Chore
+
+* chore: update dependencies ([`b917727`](https://github.com/supabase-community/realtime-py/commit/b917727ab3a9bdc41cb2b5e43e0c9410a447a67a))
+
+* chore: update version ([`5453baa`](https://github.com/supabase-community/realtime-py/commit/5453baa939173bcf1a5ad0726a9b5ccd9369c18d))
+
+* chore: rename realtime_py to realtime ([`5334bd9`](https://github.com/supabase-community/realtime-py/commit/5334bd9d50ffe54fce865746d7bb2d41901d4b73))
+
+* chore: update versions ([`a810aa3`](https://github.com/supabase-community/realtime-py/commit/a810aa37ab040f1f63cf88c8ea206ba4a3b1818d))
+
+* chore: use annotations future import ([`68ee73b`](https://github.com/supabase-community/realtime-py/commit/68ee73b8aa6cc8f1f24a065274483d76d5517212))
+
+* chore: fix return annotations ([`03667af`](https://github.com/supabase-community/realtime-py/commit/03667af4b690588fc9aa21418c11b5daf3915622))
+
+* chore: remove unused imports, bugfix ([`592a563`](https://github.com/supabase-community/realtime-py/commit/592a5638eb93ff5c00665c8a4a1d5b2798d739fa))
+
+* chore: update websockets to 9.1 ([`86f05d3`](https://github.com/supabase-community/realtime-py/commit/86f05d3957f2a9e96e48005d3812db2d98a748b7))
+
+* chore: add .md files for hacktoberfest ([`c7e31a1`](https://github.com/supabase-community/realtime-py/commit/c7e31a1ca3080df603849abf5f282180639425ea))
+
+* chore: add transformers as an import in __init__ ([`eb04ae9`](https://github.com/supabase-community/realtime-py/commit/eb04ae9883e2a99f04019c8b368218098cd7503b))
+
+* chore: update README
+
+Add details to help a user  connect to the Supabase realtime endpoint using the library. ([`460e0c9`](https://github.com/supabase-community/realtime-py/commit/460e0c97f5f54b0875b9e71b294b2d3c643ca870))
+
+* chore: refactor code ([`d1b8621`](https://github.com/supabase-community/realtime-py/commit/d1b8621cd39f506623ec829255f7040403c014f1))
+
+### Feature
+
+* feat: added logging ([`c614de3`](https://github.com/supabase-community/realtime-py/commit/c614de3840d49fc83b49d777efe70cd156ee1d0e))
+
+### Fix
+
+* fix: incorrect typehints ([`e999d48`](https://github.com/supabase-community/realtime-py/commit/e999d48cb22d16ad07d625d563e8981b579e1ce9))
+
+### Refactor
+
+* refactor: Extract transfomer to separate PR ([`e5f3457`](https://github.com/supabase-community/realtime-py/commit/e5f3457620c76ab67532e396ffdaa5cfc50be32b))
+
+### Unknown
+
+* Merge pull request #24 from supabase-community/sourcery/pull-23
+
+Bug fixes and parsing timestamptz (Sourcery refactored) ([`6945872`](https://github.com/supabase-community/realtime-py/commit/694587212bb76132d595e93be6f2f85c8e9347cb))
+
+* Merge pull request #27 from supabase-community/jl--update-realtime-version
+
+Update Realtime Version ([`ac90f6c`](https://github.com/supabase-community/realtime-py/commit/ac90f6c5e7dd6b374ee3d8a15738582084de4699))
+
+* &#39;Refactored by Sourcery&#39; ([`05920c6`](https://github.com/supabase-community/realtime-py/commit/05920c64124ddd322d31cc47181995b04db850a1))
+
+* Merge remote-tracking branch &#39;orig/master&#39; ([`7299676`](https://github.com/supabase-community/realtime-py/commit/729967636d76b2730ec71a4683fc3d6712f5a680))
+
+* Removing redundant comment ([`5c2b318`](https://github.com/supabase-community/realtime-py/commit/5c2b31838d24ca471eed9347bbf605c7a02a7c0b))
+
+* quick fixes ([`e577e73`](https://github.com/supabase-community/realtime-py/commit/e577e73c3a6db2b342b2a4554f99c11aa799d75e))
+
+* Merge pull request #1 from RizkyRajitha/ci-test
+
+Ci test ([`428e2bd`](https://github.com/supabase-community/realtime-py/commit/428e2bdb2bbdd12368fb4f1892a8b0c64901b3d4))
+
+* upgrade websockets to v 10.1 ([`d5b9dc7`](https://github.com/supabase-community/realtime-py/commit/d5b9dc74195385e9cf14b73fa19a0bc8f84215e8))
+
+* rename pythonV to python-version ([`9afe2f4`](https://github.com/supabase-community/realtime-py/commit/9afe2f46f3e53f86f1978dcf7d86c8455dd3e861))
+
+* added matrix strategy for python 3.x ([`e0ea64e`](https://github.com/supabase-community/realtime-py/commit/e0ea64e893f4331d591815ddf24c909e63808d5f))
+
+* Merge pull request #20 from supabase-community/j0_release_new_ver
+
+Release Version 1.3 ([`5e5b539`](https://github.com/supabase-community/realtime-py/commit/5e5b539c5f6beb8a7b232ec2c46a6abae34a9e75))
+
+* Merge pull request #19 from anand2312/update-websockets
+
+Update websockets ([`7f44217`](https://github.com/supabase-community/realtime-py/commit/7f442177e172c94694fe8861d9443709227d8194))
+
+* add poetry run pytest with poetry ([`e66e554`](https://github.com/supabase-community/realtime-py/commit/e66e554afb98d7a8e0ee0c51fd897e533dc53531))
+
+* remove matrix test , run pytest with poetry ([`6a41ef5`](https://github.com/supabase-community/realtime-py/commit/6a41ef538006e8c5a440211d576de465fa914dff))
+
+* added gh actions for ci ([`0a60297`](https://github.com/supabase-community/realtime-py/commit/0a60297c9cce91b316355fa95eb4f25031b08a24))
+
+* Merge pull request #17 from supabase-community/j0_hacktoberfest
+
+Add.md files for hacktoberfest ([`70acd89`](https://github.com/supabase-community/realtime-py/commit/70acd89bde1ddd0aeb606304fb08af7fb8ec8e9e))
+
+* Update README.md ([`83cfac7`](https://github.com/supabase-community/realtime-py/commit/83cfac7385da31a42aa588a9c044bbaeb63935cb))
+
+* Merge pull request #13 from supabase/j0_add_transformer
+
+Extract Transformer ([`ae7345c`](https://github.com/supabase-community/realtime-py/commit/ae7345ce191c1577660ced00d5dff6a14eb61d25))
+
+* Update dependencies ([`dd44f66`](https://github.com/supabase-community/realtime-py/commit/dd44f66c18c74a16d87f838b484c918126189ea7))
+
+* bump version ([`7c5ad32`](https://github.com/supabase-community/realtime-py/commit/7c5ad32d4b45f53cf7359b445f7f8b366998835f))
+
+* Merge pull request #10 from supabase/j0_add_transformers
+
+Add transformers ([`43d0c1c`](https://github.com/supabase-community/realtime-py/commit/43d0c1c4403751c128df2c40a326d4eda89e5f05))
+
+* Resolve merge conflicts ([`093b224`](https://github.com/supabase-community/realtime-py/commit/093b2243517a6eb2b42cd8e65a04559d928ee832))
+
+* Update requirements.txt ([`5472ac2`](https://github.com/supabase-community/realtime-py/commit/5472ac285a749844c7361d52da42db3451f0934f))
+
+* Implement convert_column ([`f3c5a13`](https://github.com/supabase-community/realtime-py/commit/f3c5a13bf1caa95a8fa67b0587e829a4a5b5fb35))
+
+* Add timestamp conversion ([`3a046b9`](https://github.com/supabase-community/realtime-py/commit/3a046b95f05128d8ecb968d1de2f7b1486bb8bd0))
+
+* Add initial transformers lib ([`e88ff3e`](https://github.com/supabase-community/realtime-py/commit/e88ff3e172d95e364a0aa291dbaab3a1e8e0674c))
+
+* Merge pull request #8 from supabase/j0_use_poetry
+
+Change package management tool ([`5911b2c`](https://github.com/supabase-community/realtime-py/commit/5911b2ca6cf64aecddd015c2c6455924266d18b4))
+
+* Merge pull request #9 from supabase/j0_allow_chaining
+
+allow chaining with channel/on ([`450da56`](https://github.com/supabase-community/realtime-py/commit/450da5651f655bc6a75c44f90a5b39c0c8d4433f))
+
+* allow chaining with channel/on ([`242675b`](https://github.com/supabase-community/realtime-py/commit/242675bec29e773033daa375b14919c50643c80a))
+
+* Refactor to use poetry ([`0fd7719`](https://github.com/supabase-community/realtime-py/commit/0fd77193d58bb37f9236a42ec33d4deebdb0fd82))
+
+* Merge pull request #7 from prettyirrelevant/master
+
+refactored code and added logging ([`26e3146`](https://github.com/supabase-community/realtime-py/commit/26e31461b7ff1b3ba1ca4ee33ec6c7ed532d48a1))
+
+* Merge pull request #6 from lionellloh/fix/dependencies
+
+Fix/dependencies ([`a0579c4`](https://github.com/supabase-community/realtime-py/commit/a0579c41550abff6c02395d0e1506d18055d0823))
+
+* include dataclasses in requirements.txt ([`06390ed`](https://github.com/supabase-community/realtime-py/commit/06390edb6ce96af4e2e48bfb19785abc263c846f))
+
+* readme update ([`6add91f`](https://github.com/supabase-community/realtime-py/commit/6add91fc2bc3d49cb699e90c9ced014c3af37750))
+
+* Merge pull request #4 from lionellloh/pypi
+
+Refactorings for better distribution ([`b0edab0`](https://github.com/supabase-community/realtime-py/commit/b0edab08b8c26a0020ea8c037c13830a66a9d8d7))
+
+* ignore .DS_store ([`9623444`](https://github.com/supabase-community/realtime-py/commit/962344478f78eb9f35a40ebd1b5d4334ddc5fdd6))
+
+* Update Readme and version ([`850c912`](https://github.com/supabase-community/realtime-py/commit/850c912ca9e362dc2a55d7859b3a07bede31b347))
+
+* Merge pull request #3 from lionellloh/pypi
+
+pip pkg related refactor ([`8fef058`](https://github.com/supabase-community/realtime-py/commit/8fef058ae23ab38dfdae136f35d5d38bd8a58976))
+
+* pip pkg related refactor ([`adef018`](https://github.com/supabase-community/realtime-py/commit/adef018da8d7ded6e8e1a549b4bd9f14db27f564))
+
+* Merge pull request #2 from lionellloh/pypi
+
+restructure for PYPI ([`3904e93`](https://github.com/supabase-community/realtime-py/commit/3904e93efd5081aaa14ec4b38cf0d2d451a378ae))
+
+* restructure for PYPI ([`4949494`](https://github.com/supabase-community/realtime-py/commit/49494949e44168b0f55d55af289158bf081b3339))
+
+* fix decorator to return func ([`ccbd91c`](https://github.com/supabase-community/realtime-py/commit/ccbd91c6cf7b2f1456f2b57e8e07c5407be01313))
+
+* fix minor typo ([`9bf2698`](https://github.com/supabase-community/realtime-py/commit/9bf2698d411ac49217b29dcd16d2cd3c7f064b0c))
+
+* Docs ([`4678642`](https://github.com/supabase-community/realtime-py/commit/46786423c5039c2d4694f333f19a9316d8574c42))
+
+* `exceptions` -&gt; `Exceptions` ([`ebac053`](https://github.com/supabase-community/realtime-py/commit/ebac053fb7f35f93f9da68f8f2272d50fae37c2b))
+
+* Decorator to check + Exception if check fails ([`5d8e49b`](https://github.com/supabase-community/realtime-py/commit/5d8e49bb8ab6d528f5d63f80282850d5da23cb1b))
+
+* Added docstrings ([`5d8f9f5`](https://github.com/supabase-community/realtime-py/commit/5d8f9f56898b6dd11d0dd328514677956d78dab6))
+
+* Type hints and named tuples ([`01058df`](https://github.com/supabase-community/realtime-py/commit/01058df29823730ce084b1bb721917140d1ab93d))
+
+* Clean up ([`2c2a6df`](https://github.com/supabase-community/realtime-py/commit/2c2a6dfe995c0a85bf583abb6157f94812e1a13a))
+
+* Removed constants, include type hints ([`b311691`](https://github.com/supabase-community/realtime-py/commit/b311691b092da9df755e5dbb70bd1d5835268817))
+
+* Merge remote-tracking branch &#39;origin/master&#39; ([`4987917`](https://github.com/supabase-community/realtime-py/commit/498791752626d304475f69e1e957c6943ca9f508))
+
+* ignore .idea/* ([`6dde5c5`](https://github.com/supabase-community/realtime-py/commit/6dde5c520e5844837a9af56a2c3ffe4195357da7))
+
+* Use dataclass for Message ([`b206a61`](https://github.com/supabase-community/realtime-py/commit/b206a6188e320f273ddb3435216afa04d014a744))
+
+* Update usage to be clearer that that it is the payload that is passed ([`45658eb`](https://github.com/supabase-community/realtime-py/commit/45658ebcb895444e791653246dc6af7f858e3681))
+
+* Create README.md ([`53216bd`](https://github.com/supabase-community/realtime-py/commit/53216bd732367111f0f8cc48e817b0c4a7269eb8))
+
+* requirements ([`78dc02c`](https://github.com/supabase-community/realtime-py/commit/78dc02c196ad023a507652905b522bdbb65eb3e0))
+
+* Merge pull request #1 from lionellloh/dev
+
+Merge POC work in to master ([`5a1d4db`](https://github.com/supabase-community/realtime-py/commit/5a1d4db119f9251058006dadfd18f8aba361ccd3))
+
+* gitignore ([`828fe8f`](https://github.com/supabase-community/realtime-py/commit/828fe8f0f378147b7ae40bca86ba6c175961c339))
+
+* POC works ([`80d5c42`](https://github.com/supabase-community/realtime-py/commit/80d5c426fe52252df6270b703950f2a7097f9743))
+
+* Initial commit ([`73025b3`](https://github.com/supabase-community/realtime-py/commit/73025b3a469cb167ad548018b4aefd08d19025a3))

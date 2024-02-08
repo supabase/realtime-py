@@ -17,17 +17,14 @@ from websockets.exceptions import (
 from realtime.channel import Channel
 from realtime.exceptions import NotConnectedError
 from realtime.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, Message
-from realtime.types import Callback
-
-T_Retval = TypeVar("T_Retval")
-T_ParamSpec = ParamSpec("T_ParamSpec")
+from realtime.types import Callback, T_ParamSpec, T_Retval
 
 logging.basicConfig(
     format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
 )
 
 
-def ensure_connection(func: Callable[T_ParamSpec, T_Retval]):
+def ensure_connection(func: Callback):
     @wraps(func)
     def wrapper(*args: T_ParamSpec.args, **kwargs: T_ParamSpec.kwargs) -> T_Retval:
         if not args[0].connected:
@@ -44,13 +41,13 @@ class CallbackError(Exception):
 
 class Socket:
     def __init__(
-            self,
-            url: str,
-            auto_reconnect: bool = False,
-            params: Dict[str, Any] = {},
-            hb_interval: int = 30,
-            version: int = 2,
-            ping_timeout: int = 20,
+        self,
+        url: str,
+        auto_reconnect: bool = False,
+        params: Dict[str, Any] = {},
+        hb_interval: int = 5,
+        version: int = 2,
+        ping_timeout: int = 20,
     ) -> None:
         """
         `Socket` is the abstraction for an actual socket connection that receives and 'reroutes' `Message` according to its `topic` and `event`.
