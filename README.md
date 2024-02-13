@@ -77,6 +77,9 @@ await channel.send("your_handler", "this is my payload", ref)
 channel.off(None, ref, callback1)
 ```
 
+##  Examples
+see `usage.py`, `sending-receiving-usage.py`, and `fd-usage.py`.
+
 ## Sample usage with Supabase
 
 Here's how you could connect to your realtime endpoint using Supabase endpoint. Should be correct as of 13th Feb 2024. Please replace `SUPABASE_ID` and `API_KEY` with your own `SUPABASE_ID` and `API_KEY`. The variables shown below are fake and they will not work if you try to run the snippet.

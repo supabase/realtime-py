@@ -11,11 +11,9 @@ def callback2(payload):
 async def main():
 
     # your phoenix server token
-    # TOKEN = ""
-    TOKEN = "SFMyNTY.g2gDYRRuBgBK_9yHjQFiAAFRgA.Fs-vgUBiBiSBtKq9qlKar8ny7SjO0ykXfaLUk2a1TMM"
+    TOKEN = ""
     # your phoenix server URL
-    # URL = f"ws://127.0.0.1:4000/socket/websocket?token={TOKEN}&vsn=2.0.0"
-    URL = f"ws://127.0.0.1:4000/feedsocket/websocket?token={TOKEN}&vsn=2.0.0"
+    URL = f"ws://127.0.0.1:4000/socket/websocket?token={TOKEN}&vsn=2.0.0"
 
     client = Socket(URL)
 
@@ -26,8 +24,7 @@ async def main():
     listen_task = asyncio.ensure_future(client.listen())
 
     # join the channel
-    # channel = client.set_channel("this:is:my:topic")
-    channel = client.set_channel("feed:44")
+    channel = client.set_channel("this:is:my:topic")
     await channel.join()
 
     channel.on("test_event", None, callback1)
