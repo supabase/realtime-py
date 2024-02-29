@@ -20,7 +20,7 @@ typing-extensions = "^4.2.0"
 pytest = "^8.0.2"
 
 [tool.poetry.group.dev.dependencies]
-python-semantic-release = "^8.3.0"
+python-semantic-release = ">=8.3,<10.0"
 black = "^23.11.0"
 isort = "^5.12.0"
 pre-commit = "^3.5.0"
