@@ -1,12 +1,12 @@
 import asyncio
 import json
 import logging
+import re
 from collections import defaultdict
 from functools import wraps
-from typing import Any, Callable, List, Dict, TypeVar, DefaultDict
+from typing import Any, DefaultDict, Dict, List
 
 import websockets
-from typing_extensions import ParamSpec
 
 from realtime.channel import Channel
 from realtime.exceptions import NotConnectedError
@@ -21,7 +21,7 @@ logging.basicConfig(
 def ensure_connection(func: Callback):
     @wraps(func)
     def wrapper(*args: T_ParamSpec.args, **kwargs: T_ParamSpec.kwargs) -> T_Retval:
-        if not args[0].connected:
+        if not args[0].is_connected:
             raise NotConnectedError(func.__name__)
 
         return func(*args, **kwargs)
@@ -42,13 +42,13 @@ class Socket:
         `Socket` is the abstraction for an actual socket connection that receives and 'reroutes' `Message` according to its `topic` and `event`.
         Socket-Channel has a 1-many relationship.
         Socket-Topic has a 1-many relationship.
-        :param url: Websocket URL of the Realtime server. starts with `ws://` or `wss://`
+        :param url: Websocket URL of the Realtime server. starts with `ws://` or `wss://`. Also accepts default Supabase URL: `http://` or `https://`
         :param params: Optional parameters for connection.
         :param hb_interval: WS connection is kept alive by sending a heartbeat message. Optional, defaults to 5.
         """
-        self.url = f"{url}/realtime/v1/websocket?apikey={token}"
+        self.url = f"{re.sub(r'https?://', 'wss://', url, flags=re.IGNORECASE)}/realtime/v1/websocket?apikey={token}"
         self.channels = defaultdict(list)
-        self.connected = False
+        self.is_connected = False
         self.params = params
         self.hb_interval = hb_interval
         self.ws_connection: websockets.client.WebSocketClientProtocol
@@ -85,7 +85,7 @@ class Socket:
                             if cl.event in ["postgres_changes"]:
                                 cl.callback(msg.payload)
                                 continue
-                            if cl.on_params["event"] in [msg.payload["event"] , "*"]:
+                            if cl.on_params["event"] in [msg.payload["event"], "*"]:
                                 cl.callback(msg.payload)
             except websockets.exceptions.ConnectionClosed:
                 if self.auto_reconnect:
@@ -107,17 +107,26 @@ class Socket:
 
         loop = asyncio.get_event_loop()  # TODO: replace with get_running
         loop.run_until_complete(self._connect())
-        self.connected = True
+        self.is_connected = True
 
     async def _connect(self) -> None:
-        ws_connection = await websockets.connect(self.url)
+        try:
+            ws_connection = await websockets.connect(self.url)
+        except Exception as e:
+            logging.error(f"Failed to establish WebSocket connection: {e}")
+            if self.auto_reconnect:
+                logging.info("Retrying connection...")
+                await asyncio.sleep(5)  # Wait before retrying
+                await self._connect()   # Retry connection
+            else:
+                raise
 
         if ws_connection.open:
             logging.info("Connection was successful")
             self.ws_connection = ws_connection
-            self.connected = True
+            self.is_connected = True
         else:
-            raise Exception("Connection Failed")
+            raise Exception("Failed to open WebSocket connection")
 
     async def _keep_alive(self) -> None:
         """
@@ -155,6 +164,15 @@ class Socket:
         self.channels[topic].append(chan)
 
         return chan
+
+    def set_channel(self, channel: Channel) -> None:
+        """
+        Associates the given channel object with the socket.
+        :param channel: Channel object to associate with the socket.
+        :return: None
+        """
+        topic = channel.topic
+        self.channels[topic].append(channel)
 
     def summary(self) -> None:
         """

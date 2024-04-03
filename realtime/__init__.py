@@ -1,5 +1,4 @@
-
-__version__ = "1.0.2"
+__version__ = "2.0.0"
 
 from realtime.channel import CallbackListener, Channel
 from realtime.connection import Socket
