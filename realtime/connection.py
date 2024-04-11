@@ -13,10 +13,9 @@ from realtime.exceptions import NotConnectedError
 from realtime.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, Message
 from realtime.types import Callback, T_ParamSpec, T_Retval
 
-logging.basicConfig(
-    format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
-)
-
+# logging.basicConfig(
+#     format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
+# )
 
 def ensure_connection(func: Callback):
     @wraps(func)
