@@ -2,6 +2,42 @@
 
 
 
+## v1.0.4 (2024-04-13)
+
+### Build
+
+* build(deps-dev): bump idna from 3.4 to 3.7 (#118) ([`364de4e`](https://github.com/supabase-community/realtime-py/commit/364de4eeb154344e197ab9bcbf59e7191d92c23a))
+
+* build(deps-dev): bump python-semantic-release from 9.3.1 to 9.4.1 (#115) ([`88e8a30`](https://github.com/supabase-community/realtime-py/commit/88e8a3010fb87f2360a39bf346f0e1525f0a56c1))
+
+* build(deps): bump typing-extensions from 4.10.0 to 4.11.0 (#114) ([`910616a`](https://github.com/supabase-community/realtime-py/commit/910616a0fd0a0a79f783480a30ad1661658333d5))
+
+* build(deps): bump python-semantic-release/python-semantic-release (#116)
+
+Bumps [python-semantic-release/python-semantic-release](https://github.com/python-semantic-release/python-semantic-release) from 9.3.1 to 9.4.1.
+- [Release notes](https://github.com/python-semantic-release/python-semantic-release/releases)
+- [Changelog](https://github.com/python-semantic-release/python-semantic-release/blob/master/CHANGELOG.md)
+- [Commits](https://github.com/python-semantic-release/python-semantic-release/compare/v9.3.1...v9.4.1)
+
+---
+updated-dependencies:
+- dependency-name: python-semantic-release/python-semantic-release
+  dependency-type: direct:production
+  update-type: version-update:semver-minor
+...
+
+Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
+Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`6e07a0c`](https://github.com/supabase-community/realtime-py/commit/6e07a0cf0d3025693bf702346807e753bc68f9b0))
+
+### Fix
+
+* fix: version bump (#119) ([`228d466`](https://github.com/supabase-community/realtime-py/commit/228d466a1467e916a9670bdf7801f95fcba2c872))
+
+### Unknown
+
+* Update connection.py (#117) ([`c5915e5`](https://github.com/supabase-community/realtime-py/commit/c5915e511517d097b7c716be89d55f37ff64a5e4))
+
+
 ## v1.0.3 (2024-03-26)
 
 ### Build
@@ -171,6 +207,10 @@ updated-dependencies:
 
 Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
 Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`1bfd2c1`](https://github.com/supabase-community/realtime-py/commit/1bfd2c112604217f818266f29788e4055dbfc96d))
+
+### Chore
+
+* chore(release): bump version to v1.0.3 ([`1079275`](https://github.com/supabase-community/realtime-py/commit/1079275f158b5ddc3e5adef20075f97298e1cbc3))
 
 ### Fix
 
