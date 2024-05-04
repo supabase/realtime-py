@@ -3,10 +3,9 @@ import json
 import logging
 from collections import defaultdict
 from functools import wraps
-from typing import Any, Callable, List, Dict, TypeVar, DefaultDict
+from typing import Any, DefaultDict, Dict, List
 
 import websockets
-from typing_extensions import ParamSpec
 
 from realtime.channel import Channel
 from realtime.exceptions import NotConnectedError
@@ -16,6 +15,7 @@ from realtime.types import Callback, T_ParamSpec, T_Retval
 # logging.basicConfig(
 #     format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
 # )
+
 
 def ensure_connection(func: Callback):
     @wraps(func)
