@@ -8,13 +8,16 @@ class Message:
     """
     Dataclass abstraction for message
     """
+
     event: str
     payload: Dict[str, Any]
     ref: Any
     topic: str
 
     def __hash__(self):
-        return hash((self.event, tuple(list(self.payload.values())), self.ref, self.topic))
+        return hash(
+            (self.event, tuple(list(self.payload.values())), self.ref, self.topic)
+        )
 
 
 class ChannelEvents(str, Enum):
