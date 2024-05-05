@@ -65,6 +65,18 @@ class Socket:
         loop = asyncio.get_event_loop()  # TODO: replace with get_running_loop
         loop.run_until_complete(asyncio.gather(self._listen(), self._keep_alive()))
 
+    async def listen_async(self) -> None:
+        """
+        Wrapper for async def _listen() and async def _keep_alive() to expose an async interface.
+        :return: None
+        """
+        # @ensure_connection is definitely nicer, but I don't know if it is also
+        # working for asynchronous functions.
+        if not self.connected:
+            raise NotConnectedError(self.listen_async.__name__)
+
+        await asyncio.gather(self._listen(), self._keep_alive())
+
     async def _listen(self) -> None:
         """
         An infinite loop that keeps listening.
@@ -102,6 +114,12 @@ class Socket:
         loop = asyncio.get_event_loop()  # TODO: replace with get_running
         loop.run_until_complete(self._connect())
         self.connected = True
+
+    async def connect_async(self) -> None:
+        """
+        Wrapper for async def _connect() to expose a async interface.
+        """
+        await self._connect()
 
     async def _connect(self) -> None:
         ws_connection = await websockets.connect(self.url)

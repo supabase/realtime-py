@@ -46,6 +46,13 @@ class Channel:
         loop.run_until_complete(self._join())
         return self
 
+    async def join_async(self) -> None:
+        """
+        Wrapper for async def _join().
+        :return: None
+        """
+        await self._join()
+
     async def _join(self) -> None:
         """
         Coroutine that attempts to join Phoenix Realtime server via a certain topic
