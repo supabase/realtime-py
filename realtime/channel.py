@@ -36,23 +36,27 @@ class Channel:
         self.listeners: List[CallbackListener] = []
         self.joined = False
 
-    def join(self) -> Channel:
+    def join(self, payload: Dict[str, Any] = {}) -> Channel:
         """
         Wrapper for async def _join() to expose a non-async interface
         Essentially gets the only event loop and attempt joining a topic
+        :param payload: Optional, additional payload, which is sent to the
+                        server, when a channel is joined.
         :return: Channel
         """
         loop = asyncio.get_event_loop()  # TODO: replace with get_running_loop
-        loop.run_until_complete(self._join())
+        loop.run_until_complete(self._join(payload))
         return self
 
-    async def _join(self) -> None:
+    async def _join(self, payload: Dict[str, Any]) -> None:
         """
         Coroutine that attempts to join Phoenix Realtime server via a certain topic
+        :param payload: Optional, additional payload, which is sent to the
+                        server, when a channel is joined.
         :return: None
         """
         join_req = dict(topic=self.topic, event="phx_join",
-                        payload={}, ref=None)
+                        payload=payload, ref=None)
 
         try:
             await self.socket.ws_connection.send(json.dumps(join_req))
