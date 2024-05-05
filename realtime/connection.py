@@ -156,4 +156,4 @@ class Socket:
         """
         for topic, chans in self.channels.items():
             for chan in chans:
-                print(f"Topic: {topic} | Events: {[e for e, _ in chan.callbacks]}]")
+                print(f"Topic: {topic} | Events: {[e for e, _ in chan.listeners]}]")
