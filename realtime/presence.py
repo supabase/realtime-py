@@ -60,7 +60,7 @@ class RealtimePresence:
 
     def _sync_state(self, current_state: Dict[str, Any], new_state: Dict[str, Any]) -> Dict[str, Any]:
         # Merges the new state into the current state
-        current_state.update(new_state)
+        current_state |= new_state
         return current_state
 
     def _sync_diff(self, state: Dict[str, Any], diff: Dict[str, Any]) -> Dict[str, Any]:
