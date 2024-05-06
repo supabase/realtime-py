@@ -209,9 +209,9 @@ def __init__(
         """
         if not self.joined:
             return
-        if self.current_event == "postgres_changes" and self.filter:
-            if self.filter is not None:
-                self.channel_params['filter'] = self.filter
+        if self.current_event == "postgres_changes" and self.filter and self.filter is not None:
+            self.channel_params['filter'] = self.filter
+
         join_req = {
             "topic": self.topic,
             "event": "phx_join",
