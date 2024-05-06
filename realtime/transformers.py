@@ -178,7 +178,7 @@ Converts a Postgres array into a native python list.
 
 def to_array(string_value: str, type: str):
     # this takes off the '{' & '}'
-    string_enriched = string_value[1 : len(string_value) - 1]
+    string_enriched = string_value[1:-1]
 
     # Converts the string into an array
     # if string is empty (meaning the array was empty), an empty array will be immediately returned
