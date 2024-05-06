@@ -29,7 +29,13 @@ class Channel:
     """
 
     def __init__(
-        self, socket: Socket, topic: str, channel_params: Dict[str, Any] = {}, params={}
+def __init__(
+    self, socket: Socket, topic: str, channel_params: Dict[str, Any] = None, params=None
+) -> None:
+    if channel_params is None:
+        channel_params = {}
+    if params is None:
+        params = {}
     ) -> None:
         """
         Initialize the Channel object.
