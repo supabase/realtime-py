@@ -66,7 +66,7 @@ def convert_cell(_type: str, string_value: str):
             return None
         # If data type is an array
         if _type[0] == "_":
-            array_value = _type[1 : len(_type)]
+            array_value = _type[1:]
             return to_array(string_value, array_value)
         # If it's not null then we need to convert it to the correct type
         if _type == abstime:
