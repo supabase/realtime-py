@@ -1,9 +1,10 @@
 """
 Converts the change Payload into native Python types.
 """
-import json
-from dateutil.parser import parse
 
+import json
+
+from dateutil.parser import parse
 
 abstime = "abstime"
 _bool = "bool"  # bool is a keyword in python
@@ -42,11 +43,11 @@ to its mapped type.
 
 
 def convert_change_data(columns, records, options={}):
-    skip_types = options.get("skip_types") if options.get(
-        "skip_types") == "undefined" else []
+    skip_types = (
+        options.get("skip_types") if options.get("skip_types") == "undefined" else []
+    )
     return {
-        key: convert_column(key, columns, records, skip_types)
-        for key in records.keys()
+        key: convert_column(key, columns, records, skip_types) for key in records.keys()
     }
 
 
@@ -64,7 +65,7 @@ def convert_cell(_type: str, string_value: str):
             return None
         # If data type is an array
         if _type[0] == "_":
-            array_value = _type[1:len(_type)]
+            array_value = _type[1 : len(_type)]
             return to_array(string_value, array_value)
         # If it's not null then we need to convert it to the correct type
         if _type == abstime:
@@ -123,8 +124,7 @@ def convert_cell(_type: str, string_value: str):
             return noop(string_value)
 
     except Exception as e:
-        print(
-            f"Could not convert cell of type {_type} and value {string_value}")
+        print(f"Could not convert cell of type {_type} and value {string_value}")
         print(f"This is the error {e}")
         return string_value
 
@@ -179,12 +179,11 @@ Converts a Postgres array into a native python list.
 
 def to_array(string_value: str, type: str):
     # this takes off the '{' & '}'
-    string_enriched = string_value[1: len(string_value) - 1]
+    string_enriched = string_value[1 : len(string_value) - 1]
 
     # Converts the string into an array
     # if string is empty (meaning the array was empty), an empty array will be immediately returned
-    string_array = string_enriched.split(
-        ",") if len(string_enriched) > 0 else []
+    string_array = string_enriched.split(",") if len(string_enriched) > 0 else []
     return list(map(lambda string: convert_cell(type, string), string_array))
 
 

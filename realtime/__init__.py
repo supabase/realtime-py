@@ -1,4 +1,3 @@
-
 __version__ = "1.0.4"
 
 from realtime.channel import CallbackListener, Channel
