@@ -60,73 +60,60 @@ def convert_column(column_name, columns, records, skip_types):
 
 
 def convert_cell(_type: str, string_value: str):
+    """Converts a cell value to the specified type.
+
+    Args:
+        _type: The target data type, string type.
+        string_value: The value, string type.
+
+    Returns:
+        The converted value or the original string value if conversion fails.
+    """
+
     try:
         if string_value is None:
             return None
-        # If data type is an array
+        # Handle private types with leading underscore.
         if _type[0] == "_":
             array_value = _type[1 : len(_type)]
             return to_array(string_value, array_value)
-        # If it's not null then we need to convert it to the correct type
-        if _type == abstime:
-            return noop(string_value)
-        elif _type == _bool:
-            print("converted to bool")
-            return to_boolean(string_value)
-        elif _type == date:
-            return noop(string_value)
-        elif _type == daterange:
-            return to_date_range(string_value)
-        elif _type == float4:
-            return to_float(string_value)
-        elif _type == float8:
-            return to_float(string_value)
-        elif _type == int2:
-            return to_int(string_value)
-        elif _type == int4:
-            return to_int(string_value)
-        elif _type == int4range:
-            return to_int_range(string_value)
-        elif _type == int8:
-            return to_int(string_value)
-        elif _type == int8range:
-            return to_int_range(string_value)
-        elif _type == _json:
-            return to_json(string_value)
-        elif _type == jsonb:
-            return to_json(string_value)
-        elif _type == money:
-            return to_float(string_value)
-        elif _type == numeric:
-            return to_float(string_value)
-        elif _type == oid:
-            return to_int(string_value)
-        elif _type == reltime:
-            # To allow users to cast it based on Timezone
-            return noop(string_value)
-        elif _type == time:
-            # To allow users to cast it based on Timezone
-            return noop(string_value)
-        elif _type == timestamp:
-            return to_timestamp_string(
-                string_value
-            )  # Format to be consistent with PostgREST
-        elif _type == timestamptz:
-            return parse(string_value)
-        elif _type == timetz:
-            return parse(string_value)
-        elif _type == tsrange:
-            return to_date_range(string_value)
-        elif _type == tstzrange:
-            return to_date_range(string_value)
+        # Map type conversions to appropriate functions.
+        conversion_map = {
+            abstime: noop,
+            _bool: to_boolean,
+            date: noop,
+            daterange: to_date_range,
+            float4: to_float,
+            float8: to_float,
+            int2: to_int,
+            int4: to_int,
+            int4range: to_int_range,
+            int8: to_int,
+            int8range: to_int_range,
+            _json: to_json,
+            jsonb: to_json,
+            money: to_float,
+            numeric: to_float,
+            oid: to_int,
+            reltime: noop,
+            time: noop,
+            timestamp: to_timestamp_string,
+            timestamptz: parse,
+            timetz: parse,
+            tsrange: to_date_range,
+            tstzrange: to_date_range,
+        }
+        # conversion_map dict get.
+        converter = conversion_map.get(_type, None)
+        if converter:
+            return converter(string_value)
         else:
-            # All the rest will be returned as strings
             return noop(string_value)
-
     except Exception as e:
         print(f"Could not convert cell of type {_type} and value {string_value}")
         print(f"This is the error {e}")
-        return string_value
+
+    return string_value
 
 
 def noop(string_value: str):
