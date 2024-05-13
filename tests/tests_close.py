@@ -19,7 +19,6 @@ def test():
     channel_1 = s.set_channel("realtime:public:sample")
     channel_1.join().on("INSERT", callback)
 
-    print(dir(s))
     s.close()
     assert s.ws_connection.closed, "Connection was not closed as expected."
 
