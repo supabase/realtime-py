@@ -113,6 +113,18 @@ class Socket:
         else:
             raise Exception("Connection Failed")
 
+    @ensure_connection
+    def close(self) -> None:
+        """
+        Wrapper for async def _close() to expose a non-async interface
+        """
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self._close())
+        self.connected = False
+
+    async def _close(self) -> None:
+        await self.ws_connection.close()
+
     async def _keep_alive(self) -> None:
         """
         Sending heartbeat to server every 5 seconds
