@@ -14,7 +14,7 @@ repository = "https://github.com/supabase-community/realtime-py"
 python = "^3.8"
 websockets = ">=11,<13"
 python-dateutil = "^2.8.1"
-typing-extensions = "^4.11.0"
+typing-extensions = "^4.12.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.2.1"
