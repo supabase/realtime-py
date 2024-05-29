@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "realtime"
-version = "1.0.4"
+version = "1.0.5"
 description = ""
 authors = [
     "Joel Lee <joel@joellee.org>",

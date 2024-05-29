@@ -2,6 +2,35 @@
 
 
 
+## v1.0.5 (2024-05-29)
+
+### Fix
+
+* fix: gracefully close the socket ([`9c0ffd1`](https://github.com/supabase-community/realtime-py/commit/9c0ffd13bd94aeb3d36dc7f93897d9673a522dfd))
+
+### Unknown
+
+* Update .pre-commit-config.yaml (#132)
+
+* Update .pre-commit-config.yaml
+
+* Update .pre-commit-config.yaml
+
+* Update .pre-commit-config.yaml
+
+* Update .pre-commit-config.yaml
+
+* Update .pre-commit-config.yaml
+
+* Update .pre-commit-config.yaml
+
+* Update .pre-commit-config.yaml
+
+* Update .pre-commit-config.yaml ([`8bcf6da`](https://github.com/supabase-community/realtime-py/commit/8bcf6da63e161d7127292a079887952d2c8a2722))
+
+* Add stale bot (#131) ([`5d1906a`](https://github.com/supabase-community/realtime-py/commit/5d1906aa564f8c50567d3ea61a7b35a2b3ef9274))
+
+
 ## v1.0.4 (2024-04-13)
 
 ### Build
@@ -28,6 +57,10 @@ updated-dependencies:
 
 Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
 Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`6e07a0c`](https://github.com/supabase-community/realtime-py/commit/6e07a0cf0d3025693bf702346807e753bc68f9b0))
+
+### Chore
+
+* chore(release): bump version to v1.0.4 ([`a7dc820`](https://github.com/supabase-community/realtime-py/commit/a7dc8200cc4c14cbd32763810aa4a6f2ebcc7230))
 
 ### Fix
 
