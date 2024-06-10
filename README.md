@@ -1,6 +1,8 @@
 # realtime-py
 Python Client Library to interface with the Phoenix Realtime Server 
 
+[![realtime Downloads Last Month](https://assets.piptrends.com/get-last-month-downloads-badge/realtime.svg 'realtime Downloads Last Month by pip Trends')](https://piptrends.com/package/realtime)
+
 ## Requirements
 **Python 3 higher**
 
