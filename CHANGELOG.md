@@ -2,7 +2,49 @@
 
 
 
+## v1.0.6 (2024-06-15)
+
+### Build
+
+* build(deps-dev): bump black from 24.3.0 to 24.4.2 (#127) ([`cedc610`](https://github.com/supabase-community/realtime-py/commit/cedc610462a4840d6fcb0636aa5a023794f2dde4))
+
+### Chore
+
+* chore(deps): bump typing-extensions from 4.12.0 to 4.12.2 (#159) ([`bc8ed99`](https://github.com/supabase-community/realtime-py/commit/bc8ed990731b49012fda05f5edca877d2abe8a6d))
+
+* chore(deps): bump python-semantic-release/python-semantic-release (#157) ([`6fd84c1`](https://github.com/supabase-community/realtime-py/commit/6fd84c135cb0931936e3ae1e54353c1a4c55fa2a))
+
+* chore(deps-dev): bump python-semantic-release from 9.8.0 to 9.8.1 (#156) ([`90aa6d9`](https://github.com/supabase-community/realtime-py/commit/90aa6d92a9208d96ed67ef1da9e9b30cd1f72811))
+
+* chore(deps-dev): bump pytest from 8.2.1 to 8.2.2 (#155) ([`77ab4fc`](https://github.com/supabase-community/realtime-py/commit/77ab4fc93b9334213e11e977e0da513ec0f68b6a))
+
+* chore(deps-dev): bump requests in the pip group across 1 directory (#153)
+
+Bumps the pip group with 1 update in the / directory: [requests](https://github.com/psf/requests).
+
+Updates `requests` from 2.31.0 to 2.32.2
+- [Release notes](https://github.com/psf/requests/releases)
+- [Changelog](https://github.com/psf/requests/blob/main/HISTORY.md)
+- [Commits](https://github.com/psf/requests/compare/v2.31.0...v2.32.2) ([`72fec0e`](https://github.com/supabase-community/realtime-py/commit/72fec0e9503331f44d33be0ffbbe6eaaac8c9f88))
+
+* chore(deps-dev): bump python-semantic-release from 9.4.1 to 9.8.0 (#152) ([`acd62f5`](https://github.com/supabase-community/realtime-py/commit/acd62f58900f948d83edbc4b0bd6836307fbeb8f))
+
+* chore(deps): bump typing-extensions from 4.11.0 to 4.12.0 (#150) ([`36f7d31`](https://github.com/supabase-community/realtime-py/commit/36f7d31230e1f9847685a6d12fbb623d4ed50bf8))
+
+* chore(deps): bump python-semantic-release/python-semantic-release (#151) ([`f6040fd`](https://github.com/supabase-community/realtime-py/commit/f6040fde199e6feaffad3573d60d7a426e7b930c))
+
+* chore(deps-dev): bump pytest from 8.1.1 to 8.2.1 (#147) ([`86d889f`](https://github.com/supabase-community/realtime-py/commit/86d889f30678a87e29fc7c6672650375ccb2a29e))
+
+### Fix
+
+* fix: Fixes for ciclomatic complexity (#148) ([`883d051`](https://github.com/supabase-community/realtime-py/commit/883d0511b543a49b424ce4bb466aeb7fcd7cb4aa))
+
+
 ## v1.0.5 (2024-05-29)
+
+### Chore
+
+* chore(release): bump version to v1.0.5 ([`9b8d0c0`](https://github.com/supabase-community/realtime-py/commit/9b8d0c0be12201350db852ae60f3e3bd043c126f))
 
 ### Fix
 
