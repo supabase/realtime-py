@@ -27,13 +27,16 @@ class RealtimePresence:
         self.caller = {
             'onJoin': lambda *args: None,
             'onLeave': lambda *args: None,
-            'onSync': lambda: None
+            'onSync': lambda: None,
+            'onAuthSuccess': lambda: None,
+            'onAuthFailure': lambda: None
         }
         # Initialize with default events if not provided
         events = opts.events if opts else PresenceEvents(state='presence_state', diff='presence_diff')
         # Set up event listeners for presence state and diff
         self.channel.on(events.state, self._on_state_event)
         self.channel.on(events.diff, self._on_diff_event)
+        self.channel.on('phx_auth', self._on_auth_event)
 
     def on_join(self, callback: Callable[[str, List[Any], List[Any]], None]):
         self.caller['onJoin'] = callback
@@ -43,6 +46,12 @@ class RealtimePresence:
 
     def on_sync(self, callback: Callable[[], None]):
         self.caller['onSync'] = callback
+
+    def on_auth_success(self, callback: Callable[[], None]):
+        self.caller['onAuthSuccess'] = callback
+
+    def on_auth_failure(self, callback: Callable[[], None]):
+        self.caller['onAuthFailure'] = callback
 
     def _on_state_event(self, event: str, payload: Dict[str, Any]):
         self.state = self._sync_state(self.state, payload)
@@ -57,6 +66,12 @@ class RealtimePresence:
         else:
             self.state = self._sync_diff(self.state, payload)
             self.caller['onSync']()
+
+    def _on_auth_event(self, event: str, payload: Dict[str, Any]):
+        if payload.get('status') == 'ok':
+            self.caller['onAuthSuccess']()
+        else:
+            self.caller['onAuthFailure']()
 
     def _sync_state(self, current_state: Dict[str, Any], new_state: Dict[str, Any]) -> Dict[str, Any]:
         # Merges the new state into the current state

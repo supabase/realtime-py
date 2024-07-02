@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Callabl
 from realtime.types import Callback
 
 from .presence import RealtimePresence
+from .transformers import http_endpoint_url
 
 if TYPE_CHECKING:
     from realtime.connection import Socket
@@ -29,13 +30,7 @@ class Channel:
     """
 
     def __init__(
-def __init__(
-    self, socket: Socket, topic: str, channel_params: Dict[str, Any] = None, params=None
-) -> None:
-    if channel_params is None:
-        channel_params = {}
-    if params is None:
-        params = {}
+        self, socket: Socket, topic: str, channel_params: Dict[str, Any] = None, params=None
     ) -> None:
         """
         Initialize the Channel object.
@@ -44,6 +39,11 @@ def __init__(
         :param topic: Topic that it subscribes to on the realtime server
         :param params: Optional parameters for connection.
         """
+        if channel_params is None:
+            channel_params = {}
+        if params is None:
+            params = {}
+
         self.socket = socket
         self.params = params
         self.channel_params = channel_params
@@ -54,6 +54,18 @@ def __init__(
         self.filter = None
         self.current_event = None
         self.current_params = None
+
+        self.params['config'] = {
+            'broadcast': {'ack': False, 'self': False},
+            'presence': {'key': ''},
+            'private': False,
+            **self.params.get('config', {})
+        }
+
+        self.broadcast_endpoint_url = self._broadcast_endpoint_url()
+
+    def _broadcast_endpoint_url(self):
+        return f"{http_endpoint_url(self.socket.endpoint)}/api/broadcast"
 
     def on(self, event: str, on_params: Dict[str, Any]) -> Channel:
         """
@@ -158,7 +170,7 @@ def __init__(
         self.filter = f"{column}=in.({','.join(values)})"
         return self
 
-    def on_postgres_changes(self, event: str, table:str, callback: Callback, schema:str = 'public') -> Channel:
+    def on_postgres_changes(self, event: str, table: str, callback: Callback, schema: str = 'public') -> Channel:
         """
         Set up a listener for a specific Postgres changes event.
 
@@ -168,13 +180,13 @@ def __init__(
         :param schema: The database schema where the table exists. Default is 'public'.
         :return: The Channel instance for method chaining.
         """
-        self.channel_params = { "postgres_changes": [
-                                    {
-                                    "event": event,
-                                    "schema": schema,
-                                    "table": table
-                                    }
-                                    ]}
+        self.channel_params = {"postgres_changes": [
+            {
+                "event": event,
+                "schema": schema,
+                "table": table
+            }
+        ]}
         cl = CallbackListener(
             event="postgres_changes", on_params={"event": event}, callback=callback
         )

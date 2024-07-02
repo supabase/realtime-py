@@ -12,11 +12,11 @@ from realtime.channel import Channel
 from realtime.exceptions import NotConnectedError
 from realtime.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, Message
 from realtime.types import Callback, T_ParamSpec, T_Retval
+from realtime.transformers import http_endpoint_url
 
 # logging.basicConfig(
 #     format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
 # )
-
 
 def ensure_connection(func: Callback):
     @wraps(func)
@@ -47,6 +47,7 @@ class Socket:
         :param hb_interval: WS connection is kept alive by sending a heartbeat message. Optional, defaults to 5.
         """
         self.url = f"{re.sub(r'https?://', 'wss://', url, flags=re.IGNORECASE)}/realtime/v1/websocket?apikey={token}"
+        self.http_endpoint = http_endpoint_url(url)
         self.channels = defaultdict(list)
         self.is_connected = False
         self.params = params
@@ -177,7 +178,7 @@ class Socket:
 
         return chan
 
-    def set_channel(self, channel: Channel) -> None:
+    def add_channel(self, channel: Channel) -> None:
         """
         Associates the given channel object with the socket.
         :param channel: Channel object to associate with the socket.
@@ -193,4 +194,4 @@ class Socket:
         """
         for topic, chans in self.channels.items():
             for chan in chans:
-                print(f"Topic: {topic} | Events: {[e for e, _ in chan.callbacks]}]")
+                print(f"Topic: {topic} | Events: {[e for e, _ in chan.listeners]}]")

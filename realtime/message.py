@@ -32,6 +32,7 @@ class ChannelEvents(str, Enum):
     reply = "phx_reply"
     leave = "phx_leave"
     heartbeat = "heartbeat"
+    auth = "phx_auth"
 
 
 PHOENIX_CHANNEL = "phoenix"
