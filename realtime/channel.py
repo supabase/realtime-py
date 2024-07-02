@@ -318,3 +318,20 @@ class Channel:
         """
         self.presence.on_leave(callback)
         return self
+
+    def send_broadcast(self, event: str, data: Any) -> asyncio.Future:
+        """
+        Sends a broadcast message to the current channel.
+
+        :param event: The name of the broadcast event.
+        :param data: The data to be sent with the message.
+        :return: An asyncio.Future object representing the send operation.
+        """
+        message = {
+            "topic": "__phoenix__.broadcast",
+            "event": "phx_publish",
+            "payload": {"ref": None, "topic": self.topic, "event": event, "payload": data},
+        }
+        return asyncio.get_event_loop().run_until_complete(
+            self.socket.ws_connection.send(json.dumps(message))
+        )
