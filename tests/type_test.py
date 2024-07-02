@@ -1,6 +1,10 @@
 import os
+
 from realtime.connection import Socket
 
+def getSock():
+    SUPABASE_ID = os.getenv("SUPABASE_ID")
+    API_KEY = os.getenv("API_KEY")
 
 def getSock():
     SUPABASE_ID = os.getenv("SUPABASE_ID")

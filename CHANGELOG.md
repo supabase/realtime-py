@@ -2,7 +2,313 @@
 
 
 
+## v1.0.6 (2024-06-15)
+
+### Build
+
+* build(deps-dev): bump black from 24.3.0 to 24.4.2 (#127) ([`cedc610`](https://github.com/supabase-community/realtime-py/commit/cedc610462a4840d6fcb0636aa5a023794f2dde4))
+
+### Chore
+
+* chore(deps): bump typing-extensions from 4.12.0 to 4.12.2 (#159) ([`bc8ed99`](https://github.com/supabase-community/realtime-py/commit/bc8ed990731b49012fda05f5edca877d2abe8a6d))
+
+* chore(deps): bump python-semantic-release/python-semantic-release (#157) ([`6fd84c1`](https://github.com/supabase-community/realtime-py/commit/6fd84c135cb0931936e3ae1e54353c1a4c55fa2a))
+
+* chore(deps-dev): bump python-semantic-release from 9.8.0 to 9.8.1 (#156) ([`90aa6d9`](https://github.com/supabase-community/realtime-py/commit/90aa6d92a9208d96ed67ef1da9e9b30cd1f72811))
+
+* chore(deps-dev): bump pytest from 8.2.1 to 8.2.2 (#155) ([`77ab4fc`](https://github.com/supabase-community/realtime-py/commit/77ab4fc93b9334213e11e977e0da513ec0f68b6a))
+
+* chore(deps-dev): bump requests in the pip group across 1 directory (#153)
+
+Bumps the pip group with 1 update in the / directory: [requests](https://github.com/psf/requests).
+
+Updates `requests` from 2.31.0 to 2.32.2
+- [Release notes](https://github.com/psf/requests/releases)
+- [Changelog](https://github.com/psf/requests/blob/main/HISTORY.md)
+- [Commits](https://github.com/psf/requests/compare/v2.31.0...v2.32.2) ([`72fec0e`](https://github.com/supabase-community/realtime-py/commit/72fec0e9503331f44d33be0ffbbe6eaaac8c9f88))
+
+* chore(deps-dev): bump python-semantic-release from 9.4.1 to 9.8.0 (#152) ([`acd62f5`](https://github.com/supabase-community/realtime-py/commit/acd62f58900f948d83edbc4b0bd6836307fbeb8f))
+
+* chore(deps): bump typing-extensions from 4.11.0 to 4.12.0 (#150) ([`36f7d31`](https://github.com/supabase-community/realtime-py/commit/36f7d31230e1f9847685a6d12fbb623d4ed50bf8))
+
+* chore(deps): bump python-semantic-release/python-semantic-release (#151) ([`f6040fd`](https://github.com/supabase-community/realtime-py/commit/f6040fde199e6feaffad3573d60d7a426e7b930c))
+
+* chore(deps-dev): bump pytest from 8.1.1 to 8.2.1 (#147) ([`86d889f`](https://github.com/supabase-community/realtime-py/commit/86d889f30678a87e29fc7c6672650375ccb2a29e))
+
+### Fix
+
+* fix: Fixes for ciclomatic complexity (#148) ([`883d051`](https://github.com/supabase-community/realtime-py/commit/883d0511b543a49b424ce4bb466aeb7fcd7cb4aa))
+
+
+## v1.0.5 (2024-05-29)
+
+### Chore
+
+* chore(release): bump version to v1.0.5 ([`9b8d0c0`](https://github.com/supabase-community/realtime-py/commit/9b8d0c0be12201350db852ae60f3e3bd043c126f))
+
+### Fix
+
+* fix: gracefully close the socket ([`9c0ffd1`](https://github.com/supabase-community/realtime-py/commit/9c0ffd13bd94aeb3d36dc7f93897d9673a522dfd))
+
+### Unknown
+
+* Update .pre-commit-config.yaml (#132)
+
+* Update .pre-commit-config.yaml
+
+* Update .pre-commit-config.yaml
+
+* Update .pre-commit-config.yaml
+
+* Update .pre-commit-config.yaml
+
+* Update .pre-commit-config.yaml
+
+* Update .pre-commit-config.yaml
+
+* Update .pre-commit-config.yaml
+
+* Update .pre-commit-config.yaml ([`8bcf6da`](https://github.com/supabase-community/realtime-py/commit/8bcf6da63e161d7127292a079887952d2c8a2722))
+
+* Add stale bot (#131) ([`5d1906a`](https://github.com/supabase-community/realtime-py/commit/5d1906aa564f8c50567d3ea61a7b35a2b3ef9274))
+
+
+## v1.0.4 (2024-04-13)
+
+### Build
+
+* build(deps-dev): bump idna from 3.4 to 3.7 (#118) ([`364de4e`](https://github.com/supabase-community/realtime-py/commit/364de4eeb154344e197ab9bcbf59e7191d92c23a))
+
+* build(deps-dev): bump python-semantic-release from 9.3.1 to 9.4.1 (#115) ([`88e8a30`](https://github.com/supabase-community/realtime-py/commit/88e8a3010fb87f2360a39bf346f0e1525f0a56c1))
+
+* build(deps): bump typing-extensions from 4.10.0 to 4.11.0 (#114) ([`910616a`](https://github.com/supabase-community/realtime-py/commit/910616a0fd0a0a79f783480a30ad1661658333d5))
+
+* build(deps): bump python-semantic-release/python-semantic-release (#116)
+
+Bumps [python-semantic-release/python-semantic-release](https://github.com/python-semantic-release/python-semantic-release) from 9.3.1 to 9.4.1.
+- [Release notes](https://github.com/python-semantic-release/python-semantic-release/releases)
+- [Changelog](https://github.com/python-semantic-release/python-semantic-release/blob/master/CHANGELOG.md)
+- [Commits](https://github.com/python-semantic-release/python-semantic-release/compare/v9.3.1...v9.4.1)
+
+---
+updated-dependencies:
+- dependency-name: python-semantic-release/python-semantic-release
+  dependency-type: direct:production
+  update-type: version-update:semver-minor
+...
+
+Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
+Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`6e07a0c`](https://github.com/supabase-community/realtime-py/commit/6e07a0cf0d3025693bf702346807e753bc68f9b0))
+
+### Chore
+
+* chore(release): bump version to v1.0.4 ([`a7dc820`](https://github.com/supabase-community/realtime-py/commit/a7dc8200cc4c14cbd32763810aa4a6f2ebcc7230))
+
+### Fix
+
+* fix: version bump (#119) ([`228d466`](https://github.com/supabase-community/realtime-py/commit/228d466a1467e916a9670bdf7801f95fcba2c872))
+
+### Unknown
+
+* Update connection.py (#117) ([`c5915e5`](https://github.com/supabase-community/realtime-py/commit/c5915e511517d097b7c716be89d55f37ff64a5e4))
+
+
+## v1.0.3 (2024-03-26)
+
+### Build
+
+* build(deps-dev): bump python-semantic-release from 9.1.1 to 9.3.1 (#109) ([`acc5af2`](https://github.com/supabase-community/realtime-py/commit/acc5af2e662ae71fabfd6c79e01836c32773d129))
+
+* build(deps): bump python-semantic-release/python-semantic-release (#107) ([`fc381db`](https://github.com/supabase-community/realtime-py/commit/fc381db0e9607efd1663c145a1ee1275f6559143))
+
+* build(deps-dev): bump black from 23.11.0 to 24.3.0 (#105) ([`7c2bc90`](https://github.com/supabase-community/realtime-py/commit/7c2bc9072ce4757b8e004c4688e7f710a77c9048))
+
+* build(deps-dev): bump black from 23.11.0 to 24.3.0 (#103) ([`aa068c0`](https://github.com/supabase-community/realtime-py/commit/aa068c00cc182e6111f940f79c8ed8bb0b4be124))
+
+* build(deps-dev): bump pytest from 8.0.2 to 8.1.1 (#101) ([`f3ac93a`](https://github.com/supabase-community/realtime-py/commit/f3ac93a60be24ed98416b8a903c96582e2f4d381))
+
+* build(deps): bump python-dateutil from 2.8.2 to 2.9.0.post0 (#100) ([`36875c7`](https://github.com/supabase-community/realtime-py/commit/36875c766423e6d9e2220815c9f329a617405807))
+
+* build(deps): bump websockets from 11.0.3 to 12.0 (#97) ([`859a7e7`](https://github.com/supabase-community/realtime-py/commit/859a7e72241cd174b15e7ee90260ebc062ac0c75))
+
+* build(deps-dev): bump isort from 5.12.0 to 5.13.2 (#94) ([`1938958`](https://github.com/supabase-community/realtime-py/commit/19389585f602db864b4604c0cac0fc4ba2eecdbe))
+
+* build(deps): bump typing-extensions from 4.7.1 to 4.10.0 (#96)
+
+Bumps [typing-extensions](https://github.com/python/typing_extensions) from 4.7.1 to 4.10.0.
+- [Release notes](https://github.com/python/typing_extensions/releases)
+- [Changelog](https://github.com/python/typing_extensions/blob/main/CHANGELOG.md)
+- [Commits](https://github.com/python/typing_extensions/compare/4.7.1...4.10.0)
+
+---
+updated-dependencies:
+- dependency-name: typing-extensions
+  dependency-type: direct:production
+  update-type: version-update:semver-minor
+...
+
+Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
+Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`9b610d7`](https://github.com/supabase-community/realtime-py/commit/9b610d781d5987c4293366f96ec286e0b39e46f8))
+
+* build(deps-dev): bump python-semantic-release from 8.3.0 to 9.1.1 (#95)
+
+Bumps [python-semantic-release](https://github.com/python-semantic-release/python-semantic-release) from 8.3.0 to 9.1.1.
+- [Release notes](https://github.com/python-semantic-release/python-semantic-release/releases)
+- [Changelog](https://github.com/python-semantic-release/python-semantic-release/blob/master/CHANGELOG.md)
+- [Commits](https://github.com/python-semantic-release/python-semantic-release/compare/v8.3.0...v9.1.1)
+
+---
+updated-dependencies:
+- dependency-name: python-semantic-release
+  dependency-type: direct:development
+  update-type: version-update:semver-major
+...
+
+Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
+Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`99a0c48`](https://github.com/supabase-community/realtime-py/commit/99a0c48498e1a16bfbd026fb13bff8e4ce2098a3))
+
+* build(deps): bump actions/setup-python from 2 to 5 (#89)
+
+Bumps [actions/setup-python](https://github.com/actions/setup-python) from 2 to 5.
+- [Release notes](https://github.com/actions/setup-python/releases)
+- [Commits](https://github.com/actions/setup-python/compare/v2...v5)
+
+---
+updated-dependencies:
+- dependency-name: actions/setup-python
+  dependency-type: direct:production
+  update-type: version-update:semver-major
+...
+
+Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
+Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`d7f13aa`](https://github.com/supabase-community/realtime-py/commit/d7f13aa7e28caa73de7e4bd49d3ac54ae2d760aa))
+
+* build(deps-dev): bump pytest from 7.4.0 to 8.0.2 (#93)
+
+Bumps [pytest](https://github.com/pytest-dev/pytest) from 7.4.0 to 8.0.2.
+- [Release notes](https://github.com/pytest-dev/pytest/releases)
+- [Changelog](https://github.com/pytest-dev/pytest/blob/main/CHANGELOG.rst)
+- [Commits](https://github.com/pytest-dev/pytest/compare/7.4.0...8.0.2)
+
+---
+updated-dependencies:
+- dependency-name: pytest
+  dependency-type: direct:development
+  update-type: version-update:semver-major
+...
+
+Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
+Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`64f7e8e`](https://github.com/supabase-community/realtime-py/commit/64f7e8ef3b4eb8c709f206fba5c74c9f028ac082))
+
+* build(deps): bump abatilo/actions-poetry from 2.2.0 to 3.0.0 (#91)
+
+Bumps [abatilo/actions-poetry](https://github.com/abatilo/actions-poetry) from 2.2.0 to 3.0.0.
+- [Release notes](https://github.com/abatilo/actions-poetry/releases)
+- [Changelog](https://github.com/abatilo/actions-poetry/blob/master/.releaserc)
+- [Commits](https://github.com/abatilo/actions-poetry/compare/v2.2.0...v3.0.0)
+
+---
+updated-dependencies:
+- dependency-name: abatilo/actions-poetry
+  dependency-type: direct:production
+  update-type: version-update:semver-major
+...
+
+Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
+Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`3fb37a5`](https://github.com/supabase-community/realtime-py/commit/3fb37a575d6ce338a55aac1a8ca44dee08b5e77d))
+
+* build(deps): bump python-semantic-release/python-semantic-release (#92)
+
+Bumps [python-semantic-release/python-semantic-release](https://github.com/python-semantic-release/python-semantic-release) from 8.0.0 to 9.1.1.
+- [Release notes](https://github.com/python-semantic-release/python-semantic-release/releases)
+- [Changelog](https://github.com/python-semantic-release/python-semantic-release/blob/master/CHANGELOG.md)
+- [Commits](https://github.com/python-semantic-release/python-semantic-release/compare/v8.0.0...v9.1.1)
+
+---
+updated-dependencies:
+- dependency-name: python-semantic-release/python-semantic-release
+  dependency-type: direct:production
+  update-type: version-update:semver-major
+...
+
+Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
+Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`2f6776e`](https://github.com/supabase-community/realtime-py/commit/2f6776ead4cd8db54626180e5d1e01d667ce33db))
+
+* build(deps): bump actions/checkout from 2 to 4 (#90)
+
+Bumps [actions/checkout](https://github.com/actions/checkout) from 2 to 4.
+- [Release notes](https://github.com/actions/checkout/releases)
+- [Changelog](https://github.com/actions/checkout/blob/main/CHANGELOG.md)
+- [Commits](https://github.com/actions/checkout/compare/v2...v4)
+
+---
+updated-dependencies:
+- dependency-name: actions/checkout
+  dependency-type: direct:production
+  update-type: version-update:semver-major
+...
+
+Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
+Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`f6001b5`](https://github.com/supabase-community/realtime-py/commit/f6001b578e2bc88468d8a13603d0b15d53043237))
+
+* build(deps-dev): bump jinja2 from 3.1.2 to 3.1.3 (#84)
+
+Bumps [jinja2](https://github.com/pallets/jinja) from 3.1.2 to 3.1.3.
+- [Release notes](https://github.com/pallets/jinja/releases)
+- [Changelog](https://github.com/pallets/jinja/blob/main/CHANGES.rst)
+- [Commits](https://github.com/pallets/jinja/compare/3.1.2...3.1.3)
+
+---
+updated-dependencies:
+- dependency-name: jinja2
+  dependency-type: indirect
+...
+
+Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
+Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`30699c9`](https://github.com/supabase-community/realtime-py/commit/30699c9bc0a150f7ffcc095e3d4e9c4989871964))
+
+* build(deps-dev): bump gitpython from 3.1.40 to 3.1.41 (#83)
+
+Bumps [gitpython](https://github.com/gitpython-developers/GitPython) from 3.1.40 to 3.1.41.
+- [Release notes](https://github.com/gitpython-developers/GitPython/releases)
+- [Changelog](https://github.com/gitpython-developers/GitPython/blob/main/CHANGES)
+- [Commits](https://github.com/gitpython-developers/GitPython/compare/3.1.40...3.1.41)
+
+---
+updated-dependencies:
+- dependency-name: gitpython
+  dependency-type: indirect
+...
+
+Signed-off-by: dependabot[bot] &lt;support@github.com&gt;
+Co-authored-by: dependabot[bot] &lt;49699333+dependabot[bot]@users.noreply.github.com&gt; ([`1bfd2c1`](https://github.com/supabase-community/realtime-py/commit/1bfd2c112604217f818266f29788e4055dbfc96d))
+
+### Chore
+
+* chore(release): bump version to v1.0.3 ([`1079275`](https://github.com/supabase-community/realtime-py/commit/1079275f158b5ddc3e5adef20075f97298e1cbc3))
+
+### Fix
+
+* fix: package release (#110) ([`fde31f3`](https://github.com/supabase-community/realtime-py/commit/fde31f3efda3836486e1fdad53bf1278e61c1543))
+
+### Unknown
+
+* Create dependabot.yml &amp; update code-owners (#88)
+
+* Create dependabot.yml
+
+* Create dependabot.yml
+
+* Delete .github/.github directory
+
+* Create CODEOWNERS ([`5fdb923`](https://github.com/supabase-community/realtime-py/commit/5fdb923b26e418d21299e8cbd8e9b4558457bf33))
+
+
 ## v1.0.2 (2023-12-02)
+
+### Chore
+
+* chore(release): bump version to v1.0.2 ([`8897feb`](https://github.com/supabase-community/realtime-py/commit/8897feb605ec643de89cf0e1d9944860b23b6038))
 
 ### Fix
 

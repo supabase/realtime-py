@@ -13,9 +13,9 @@ from realtime.exceptions import NotConnectedError
 from realtime.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, Message
 from realtime.types import Callback, T_ParamSpec, T_Retval
 
-logging.basicConfig(
-    format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
-)
+# logging.basicConfig(
+#     format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
+# )
 
 
 def ensure_connection(func: Callback):
@@ -127,6 +127,18 @@ class Socket:
             self.is_connected = True
         else:
             raise Exception("Failed to open WebSocket connection")
+
+    @ensure_connection
+    def close(self) -> None:
+        """
+        Wrapper for async def _close() to expose a non-async interface
+        """
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self._close())
+        self.connected = False
+
+    async def _close(self) -> None:
+        await self.ws_connection.close()
 
     async def _keep_alive(self) -> None:
         """
