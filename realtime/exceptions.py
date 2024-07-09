@@ -8,3 +8,15 @@ class NotConnectedError(Exception):
 
     def __str__(self):
         return f"A WS connection has not been established. Ensure you call Socket.connect() before calling Socket.{self.offending_func_name}()"
+
+
+class AuthorizationError(Exception):
+    """
+    Raised when there is an authorization failure for private channels
+    """
+
+    def __init__(self, message: str = None):
+        self.message: str = message or "Authorization failed for private channel"
+
+    def __str__(self):
+        return self.message
