@@ -18,9 +18,9 @@ async def realtime(payload):
     print("async realtime ", payload)
 
 if __name__ == "__main__":
-    ID = 'unjmcdnawyleplexbxja'#os.getenv("SUPABASE_ID")
+    ID = os.getenv("SUPABASE_ID")
     URL = f"https://{ID}.supabase.co"
-    JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuam1jZG5hd3lsZXBsZXhieGphIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcxOTkzNDY2NCwiZXhwIjoyMDM1NTEwNjY0fQ.qL9CBx9wUEdUWTRjxJTEIhUhnHDeeexu3UHiLqxqQ7o'#os.getenv("API_KEY")
+    JWT = os.getenv("API_KEY")
 
     # Setup the broadcast socket and channel
     broad_socket = Socket(URL, JWT, auto_reconnect=True)
