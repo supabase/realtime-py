@@ -65,7 +65,7 @@ class Channel:
         self.broadcast_endpoint_url = self._broadcast_endpoint_url()
 
     def _broadcast_endpoint_url(self):
-        return f"{http_endpoint_url(self.socket.endpoint)}/api/broadcast"
+        return f"{http_endpoint_url(self.socket.http_endpoint)}/api/broadcast"
 
     def on(self, event: str, on_params: Dict[str, Any]) -> Channel:
         """
