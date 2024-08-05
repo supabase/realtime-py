@@ -4,7 +4,7 @@ import logging
 import re
 from collections import defaultdict
 from functools import wraps
-from typing import Any, DefaultDict, Dict, List
+from typing import Any, DefaultDict, Dict, List, Union
 
 import websockets
 
@@ -58,6 +58,9 @@ class Socket:
         self.auto_reconnect = auto_reconnect
 
         self.channels: DefaultDict[str, List[Channel]] = defaultdict(list)
+
+        self._access_token: Union[str, None] = token
+        self._api_key = token
 
     @ensure_connection
     def listen(self) -> None:
@@ -196,3 +199,12 @@ class Socket:
         for topic, chans in self.channels.items():
             for chan in chans:
                 print(f"Topic: {topic} | Events: {[e for e, _ in chan.listeners]}]")
+
+    @ensure_connection
+    def set_auth(self, token: Union[str, None]) -> None:
+        self._access_token = token
+
+        for _, channels in self.channels.items():
+            for channel in channels:
+                if channel.joined:
+                    channel._push("access_token", {"access_token": token})

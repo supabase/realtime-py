@@ -230,15 +230,19 @@ class Channel:
         ):
             self.channel_params["filter"] = self.filter
 
-        join_req = {
+        self._push("phx_join", {"config": self.channel_params})
+        
+    def _push(self, event: str, payload: dict) -> None:
+        message = {
             "topic": self.topic,
-            "event": "phx_join",
-            "payload": {"config": self.channel_params},
+            "event": event,
+            "payload": payload,
             "ref": None,
         }
+
         try:
             asyncio.get_event_loop().run_until_complete(
-                self.socket.ws_connection.send(json.dumps(join_req))
+                self.socket.ws_connection.send(json.dumps(message))
             )
         except Exception as e:
             print(e)
