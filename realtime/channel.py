@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Callable
+from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple
 
 from realtime.types import Callback
 
@@ -30,7 +30,11 @@ class Channel:
     """
 
     def __init__(
-        self, socket: Socket, topic: str, channel_params: Dict[str, Any] = None, params=None
+        self,
+        socket: Socket,
+        topic: str,
+        channel_params: Dict[str, Any] = None,
+        params=None,
     ) -> None:
         """
         Initialize the Channel object.
@@ -55,11 +59,11 @@ class Channel:
         self.current_event = None
         self.current_params = None
 
-        self.params['config'] = {
-            'broadcast': {'ack': False, 'self': False},
-            'presence': {'key': ''},
-            'private': False,
-            **self.params.get('config', {})
+        self.params["config"] = {
+            "broadcast": {"ack": False, "self": False},
+            "presence": {"key": ""},
+            "private": False,
+            **self.params.get("config", {}),
         }
 
         self.broadcast_endpoint_url = self._broadcast_endpoint_url()
@@ -170,7 +174,9 @@ class Channel:
         self.filter = f"{column}=in.({','.join(values)})"
         return self
 
-    def on_postgres_changes(self, event: str, table: str, callback: Callback, schema: str = 'public') -> Channel:
+    def on_postgres_changes(
+        self, event: str, table: str, callback: Callback, schema: str = "public"
+    ) -> Channel:
         """
         Set up a listener for a specific Postgres changes event.
 
@@ -180,13 +186,9 @@ class Channel:
         :param schema: The database schema where the table exists. Default is 'public'.
         :return: The Channel instance for method chaining.
         """
-        self.channel_params = {"postgres_changes": [
-            {
-                "event": event,
-                "schema": schema,
-                "table": table
-            }
-        ]}
+        self.channel_params = {
+            "postgres_changes": [{"event": event, "schema": schema, "table": table}]
+        }
         cl = CallbackListener(
             event="postgres_changes", on_params={"event": event}, callback=callback
         )
@@ -221,8 +223,12 @@ class Channel:
         """
         if not self.joined:
             return
-        if self.current_event == "postgres_changes" and self.filter and self.filter is not None:
-            self.channel_params['filter'] = self.filter
+        if (
+            self.current_event == "postgres_changes"
+            and self.filter
+            and self.filter is not None
+        ):
+            self.channel_params["filter"] = self.filter
 
         join_req = {
             "topic": self.topic,
@@ -330,7 +336,12 @@ class Channel:
         message = {
             "topic": "__phoenix__.broadcast",
             "event": "phx_publish",
-            "payload": {"ref": None, "topic": self.topic, "event": event, "payload": data},
+            "payload": {
+                "ref": None,
+                "topic": self.topic,
+                "event": event,
+                "payload": data,
+            },
         }
         return asyncio.get_event_loop().run_until_complete(
             self.socket.ws_connection.send(json.dumps(message))

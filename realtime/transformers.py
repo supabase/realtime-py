@@ -4,6 +4,7 @@ Converts the change Payload into native Python types.
 
 import json
 import re
+
 from dateutil.parser import parse
 
 abstime = "abstime"
@@ -40,6 +41,7 @@ to its mapped type.
 :param options: The map of various options that can be applied to the mapper
 
 """
+
 
 def convert_change_data(columns, records, options=None):
     if options is None:
@@ -185,7 +187,10 @@ Fixes timestamp to be ISO-8601. Swaps the space between the date and time for a 
 def to_timestamp_string(string_value: str):
     return string_value.replace(" ", "T")
 
+
 def http_endpoint_url(socket_url: str) -> str:
-    url = re.sub(r'^ws', 'http', socket_url, flags=re.IGNORECASE)
-    url = re.sub(r'(\/socket\/websocket|\/socket|\/websocket)\/?$', '', url, flags=re.IGNORECASE)
-    return re.sub(r'\/+$', '', url)
+    url = re.sub(r"^ws", "http", socket_url, flags=re.IGNORECASE)
+    url = re.sub(
+        r"(\/socket\/websocket|\/socket|\/websocket)\/?$", "", url, flags=re.IGNORECASE
+    )
+    return re.sub(r"\/+$", "", url)

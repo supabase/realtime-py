@@ -1,7 +1,10 @@
-from realtime.connection import Socket
-from realtime.channel import CallbackListener, Channel
 import os
 import time
+
+from realtime.channel import Channel
+from realtime.connection import Socket
+
+
 def broadcast_callback(payload):
     print("broadcast: ", payload)
 
@@ -17,6 +20,7 @@ def postgres_changes_callback(payload):
 async def realtime(payload):
     print("async realtime ", payload)
 
+
 if __name__ == "__main__":
     ID = os.getenv("SUPABASE_ID")
     URL = f"https://{ID}.supabase.co"
@@ -31,7 +35,12 @@ if __name__ == "__main__":
     # Setup another socket for changes
     s = Socket(URL, JWT, auto_reconnect=True)
     channel = Channel(s, topic="changes-test")
-    channel.on_postgres_changes(table="realtime_test", schema="public", event="*", callback=postgres_changes_callback).eq("id", 10).subscribe()
+    channel.on_postgres_changes(
+        table="realtime_test",
+        schema="public",
+        event="*",
+        callback=postgres_changes_callback,
+    ).eq("id", 10).subscribe()
 
     # Setup the socket for set_channel
     ss = Socket(URL, JWT, auto_reconnect=True)
