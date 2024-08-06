@@ -11,12 +11,13 @@ import websockets
 from realtime.channel import Channel
 from realtime.exceptions import NotConnectedError
 from realtime.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, Message
-from realtime.types import Callback, T_ParamSpec, T_Retval
 from realtime.transformers import http_endpoint_url
+from realtime.types import Callback, T_ParamSpec, T_Retval
 
 # logging.basicConfig(
 #     format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
 # )
+
 
 def ensure_connection(func: Callback):
     @wraps(func)
@@ -118,7 +119,7 @@ class Socket:
             if self.auto_reconnect:
                 logging.info("Retrying connection...")
                 await asyncio.sleep(5)  # Wait before retrying
-                await self._connect()   # Retry connection
+                await self._connect()  # Retry connection
             else:
                 raise
 
