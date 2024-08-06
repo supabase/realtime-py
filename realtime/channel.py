@@ -89,6 +89,7 @@ class Channel:
         self.filter = None
         self.current_event = None
         self.current_params = None
+        self.join_ref: Optional[int] = None
 
         self.params["config"] = {
             "broadcast": {"ack": False, "self": False},
@@ -290,15 +291,13 @@ class Channel:
         :return: Channel
         """
         try:
-            await self.socket.ws_connection.send(
-                json.dumps(
-                    {
-                        "topic": self.topic,
-                        "event": "phx_join",
-                        "payload": {"config": self.channel_params},
-                        "ref": None,
-                    }
-                )
+            await self.socket._send(
+                {
+                    "topic": self.topic,
+                    "event": "phx_join",
+                    "payload": {"config": self.channel_params},
+                    "ref": None,
+                }
             )
         except Exception as e:
             print(e)
@@ -362,7 +361,7 @@ class Channel:
         self.presence.on_leave(callback)
         return self
 
-    def send_broadcast(self, event: str, data: Any) -> asyncio.Future:
+    def send_broadcast(self, event: str, data: Any) -> None:
         """
         Sends a broadcast message to the current channel.
 
@@ -370,16 +369,17 @@ class Channel:
         :param data: The data to be sent with the message.
         :return: An asyncio.Future object representing the send operation.
         """
+
         message = {
-            "topic": "__phoenix__.broadcast",
-            "event": "phx_publish",
+            "topic": self.topic,
+            "ref": self.socket._make_ref(),
+            "join_ref": self.join_ref,
+            "event": ChannelEvents.broadcast,
             "payload": {
-                "ref": None,
-                "topic": self.topic,
+                "type": "broadcast",
                 "event": event,
                 "payload": data,
             },
         }
-        return asyncio.get_event_loop().run_until_complete(
-            self.socket.ws_connection.send(json.dumps(message))
-        )
+
+        self.socket.send(message)
