@@ -14,9 +14,11 @@ from realtime.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, 
 from realtime.transformers import http_endpoint_url
 from realtime.types import Callback, T_ParamSpec, T_Retval
 
-# logging.basicConfig(
-#     format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
-# )
+logging.basicConfig(
+    format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
+)
+
+logger = logging.getLogger(__name__)
 
 
 def ensure_connection(func: Callback):
@@ -31,6 +33,10 @@ def ensure_connection(func: Callback):
 
 
 class Socket:
+    _ref: int = 0
+    _token: str
+    _access_token: str
+
     def __init__(
         self,
         url: str,
@@ -38,6 +44,8 @@ class Socket:
         auto_reconnect: bool = False,
         params: Dict[str, Any] = {},
         hb_interval: int = 5,
+        max_retries: int = 5,
+        initial_backoff: float = 1.0,
     ) -> None:
         """
         `Socket` is the abstraction for an actual socket connection that receives and 'reroutes' `Message` according to its `topic` and `event`.
@@ -47,18 +55,23 @@ class Socket:
         :param params: Optional parameters for connection.
         :param hb_interval: WS connection is kept alive by sending a heartbeat message. Optional, defaults to 5.
         """
-        self.url = f"{re.sub(r'https?://', 'wss://', url, flags=re.IGNORECASE)}/realtime/v1/websocket?apikey={token}"
+        self.url = f"{re.sub(r'https://', 'wss://', re.sub(r'http://', 'ws://', url, flags=re.IGNORECASE), flags=re.IGNORECASE)}/realtime/v1/websocket?apikey={token}"
         self.http_endpoint = http_endpoint_url(url)
         self.channels = defaultdict(list)
         self.is_connected = False
         self.params = params
+
+        self._token = token
+        self._access_token = token
+
         self.hb_interval = hb_interval
         self.ws_connection: websockets.client.WebSocketClientProtocol
         self.kept_alive = False
         self.ref = 0
         self.auto_reconnect = auto_reconnect
-
         self.channels: DefaultDict[str, List[Channel]] = defaultdict(list)
+        self.max_retries = max_retries
+        self.initial_backoff = initial_backoff
 
         self._access_token: Union[str, None] = token
         self._api_key = token
@@ -70,8 +83,11 @@ class Socket:
         In most cases, this should be the last method executed as it starts an infinite listening loop.
         :return: None
         """
-        loop = asyncio.get_event_loop()  # TODO: replace with get_running_loop
-        loop.run_until_complete(asyncio.gather(self._listen(), self._keep_alive()))
+        asyncio.get_event_loop().run_until_complete(self.listen_async())
+
+    @ensure_connection
+    async def listen_async(self):
+        await asyncio.gather(self._listen(), self._keep_alive())
 
     async def _listen(self) -> None:
         """
@@ -82,17 +98,18 @@ class Socket:
             try:
                 msg = await self.ws_connection.recv()
                 msg = Message(**json.loads(msg))
-                for channel in self.channels.get(msg.topic, []):
+
+                logging.info(f"Received message: {msg}")
+
+                logger.debug(msg)
+                channels = self.channels.get(msg.topic, [])
+
+                logging.info(f"found {len(channels)} channels")
+
+                for channel in channels:
                     for cl in channel.listeners:
                         if cl.event == msg.event:
-                            if cl.event in ["presence_diff", "presence_state"]:
-                                cl.callback(msg.payload)
-                                continue
-                            if cl.event in ["postgres_changes"]:
-                                cl.callback(msg.payload)
-                                continue
-                            if cl.on_params["event"] in [msg.payload["event"], "*"]:
-                                cl.callback(msg.payload)
+                            cl.callback(msg.payload)
             except websockets.exceptions.ConnectionClosed:
                 if self.auto_reconnect:
                     logging.info(
@@ -111,28 +128,42 @@ class Socket:
         Wrapper for async def _connect() to expose a non-async interface
         """
 
-        loop = asyncio.get_event_loop()  # TODO: replace with get_running
+        loop = asyncio.get_event_loop()
         loop.run_until_complete(self._connect())
         self.is_connected = True
 
     async def _connect(self) -> None:
-        try:
-            ws_connection = await websockets.connect(self.url)
-        except Exception as e:
-            logging.error(f"Failed to establish WebSocket connection: {e}")
-            if self.auto_reconnect:
-                logging.info("Retrying connection...")
-                await asyncio.sleep(5)  # Wait before retrying
-                await self._connect()  # Retry connection
-            else:
-                raise
+        retries = 0
+        backoff = self.initial_backoff
 
-        if ws_connection.open:
-            logging.info("Connection was successful")
-            self.ws_connection = ws_connection
-            self.is_connected = True
-        else:
-            raise Exception("Failed to open WebSocket connection")
+        while retries < self.max_retries:
+            try:
+                ws_connection = await websockets.connect(self.url)
+                if ws_connection.open:
+                    logging.info("Connection was successful")
+                    self.ws_connection = ws_connection
+                    self.is_connected = True
+                    return
+                else:
+                    raise Exception("Failed to open WebSocket connection")
+            except Exception as e:
+                retries += 1
+                if retries >= self.max_retries or not self.auto_reconnect:
+                    logging.error(
+                        f"Failed to establish WebSocket connection after {retries} attempts: {e}"
+                    )
+                    raise
+                else:
+                    wait_time = backoff * (2 ** (retries - 1))  # Exponential backoff
+                    logging.info(
+                        f"Connection attempt {retries} failed. Retrying in {wait_time:.2f} seconds..."
+                    )
+                    await asyncio.sleep(wait_time)
+                    backoff = min(backoff * 2, 60)  # Cap the backoff at 60 seconds
+
+        raise Exception(
+            f"Failed to establish WebSocket connection after {self.max_retries} attempts"
+        )
 
     @ensure_connection
     def close(self) -> None:
@@ -141,7 +172,7 @@ class Socket:
         """
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self._close())
-        self.connected = False
+        self.is_connected = False
 
     async def _close(self) -> None:
         await self.ws_connection.close()
@@ -159,7 +190,7 @@ class Socket:
                     payload=HEARTBEAT_PAYLOAD,
                     ref=None,
                 )
-                await self.ws_connection.send(json.dumps(data))
+                await self._send(data)
                 await asyncio.sleep(self.hb_interval)
             except websockets.exceptions.ConnectionClosed:
                 if self.auto_reconnect:
@@ -213,3 +244,10 @@ class Socket:
     def _make_ref(self) -> str:
         self.ref += 1
         return f"{self.ref}"
+
+    async def _send(self, message):
+        logger.info(f"Sending: {message}")
+        await self.ws_connection.send(json.dumps(message))
+
+    def send(self, message):
+        asyncio.get_event_loop().run_until_complete(self._send(message))

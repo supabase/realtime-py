@@ -1,7 +1,5 @@
 import os
-import time
 
-from realtime.channel import Channel
 from realtime.connection import Socket
 
 
@@ -21,33 +19,16 @@ async def realtime(payload):
     print("async realtime ", payload)
 
 
-if __name__ == "__main__":
-    ID = os.getenv("SUPABASE_ID")
-    URL = f"https://{ID}.supabase.co"
-    JWT = os.getenv("API_KEY")
+URL = os.getenv("SUPABASE_URL")
+JWT = os.getenv("SUPABASE_ANON_KEY")
 
-    # Setup the broadcast socket and channel
-    broad_socket = Socket(URL, JWT, auto_reconnect=True)
-    broadcast_channel = Channel(broad_socket, topic="broadcast-test")
-    broadcast_channel.on_broadcast("test", callback=broadcast_callback).subscribe()
-    time.sleep(6)
+# Setup the broadcast socket and channel
+socket = Socket(URL, JWT, auto_reconnect=True)
+socket.connect()
 
-    # Setup another socket for changes
-    s = Socket(URL, JWT, auto_reconnect=True)
-    channel = Channel(s, topic="changes-test")
-    channel.on_postgres_changes(
-        table="realtime_test",
-        schema="public",
-        event="*",
-        callback=postgres_changes_callback,
-    ).eq("id", 10).subscribe()
+channel = socket.set_channel("test-topic", channel_params={"broadcast": {"self": True}})
+channel.on_broadcast("test", callback=broadcast_callback).subscribe()
 
-    # Setup the socket for set_channel
-    ss = Socket(URL, JWT, auto_reconnect=True)
-    ss.connect()
+channel.send_broadcast("test", {"message": "Hello"})
 
-    # Provide the required channel_params argument
-    socket_channel = ss.set_channel(channel.topic, channel_params={})
-    socket_channel.on_broadcast("test", broadcast_callback).subscribe()
-    socket_channel.send_broadcast("test", {"message": "Hello from the other side"})
-    time.sleep(6)
+socket.listen()
