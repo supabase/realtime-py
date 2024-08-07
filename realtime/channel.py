@@ -28,7 +28,7 @@ class Push:
         self.channel = channel
         self.event = event
         self.payload = payload
-        self.ref = ""
+        self.ref = channel.socket._make_ref()
 
     def send(self):
         asyncio.get_event_loop().run_until_complete(self._send())
