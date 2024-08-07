@@ -6,7 +6,6 @@ import logging
 from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple
 
 from realtime.message import ChannelEvents
-from realtime.push import Push
 from realtime.types import Callback
 
 from .presence import RealtimePresence
