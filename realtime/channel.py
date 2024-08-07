@@ -4,6 +4,8 @@ import asyncio
 import json
 from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple
 
+from realtime.message import ChannelEvents
+from realtime.push import Push
 from realtime.types import Callback
 
 from .presence import RealtimePresence
@@ -230,23 +232,25 @@ class Channel:
         ):
             self.channel_params["filter"] = self.filter
 
-        self._push("phx_join", {"config": self.channel_params})
-        
-    def _push(self, event: str, payload: dict) -> None:
-        message = {
-            "topic": self.topic,
-            "event": event,
-            "payload": payload,
-            "ref": None,
-        }
+        access_token_payload = {}
 
-        try:
-            asyncio.get_event_loop().run_until_complete(
-                self.socket.ws_connection.send(json.dumps(message))
+        if self.socket._access_token is not None:
+            access_token_payload["access_token"] = self.socket._access_token
+
+        self._push(
+            ChannelEvents.join,
+            {"config": self.channel_params, "access_token": access_token_payload},
+        )
+
+    def _push(self, event: str, payload: Dict[str, Any]) -> Push:
+        if not self.joined:
+            raise Exception(
+                f"tried to push '{event}' to '{self.topic}' before joining. Use channel.subscribe() before pushing events"
             )
-        except Exception as e:
-            print(e)
-            return
+
+        push = Push(self, event, payload)
+        push.send()
+        return push
 
     # @Deprecated:
     # You should use `subscribe` instead of this low-level method. It will be removed in the future.

@@ -55,6 +55,7 @@ class Socket:
         self.hb_interval = hb_interval
         self.ws_connection: websockets.client.WebSocketClientProtocol
         self.kept_alive = False
+        self.ref = 0
         self.auto_reconnect = auto_reconnect
 
         self.channels: DefaultDict[str, List[Channel]] = defaultdict(list)
@@ -207,4 +208,8 @@ class Socket:
         for _, channels in self.channels.items():
             for channel in channels:
                 if channel.joined:
-                    channel._push("access_token", {"access_token": token})
+                    channel._push(ChannelEvents.access_token, {"access_token": token})
+
+    def _make_ref(self) -> str:
+        self.ref += 1
+        return f"{self.ref}"
