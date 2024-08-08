@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple
+from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional
 
 from realtime.message import ChannelEvents
 from realtime.types import Callback
@@ -264,7 +264,7 @@ class Channel:
 
         access_token_payload = {}
 
-        if self.socket._access_token is not None:
+        if self.socket.access_token is not None:
             access_token_payload["access_token"] = self.socket._access_token
 
         self._push(
@@ -369,17 +369,7 @@ class Channel:
         :param data: The data to be sent with the message.
         :return: An asyncio.Future object representing the send operation.
         """
-
-        message = {
-            "topic": self.topic,
-            "ref": self.socket._make_ref(),
-            "join_ref": self.join_ref,
-            "event": ChannelEvents.broadcast,
-            "payload": {
-                "type": "broadcast",
-                "event": event,
-                "payload": data,
-            },
-        }
-
-        self.socket.send(message)
+        self._push(
+            ChannelEvents.broadcast,
+            {"type": "broadcast", "event": event, "payload": data},
+        )

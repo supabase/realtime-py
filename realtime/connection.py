@@ -33,10 +33,6 @@ def ensure_connection(func: Callback):
 
 
 class Socket:
-    _ref: int = 0
-    _token: str
-    _access_token: str
-
     def __init__(
         self,
         url: str,
@@ -61,8 +57,8 @@ class Socket:
         self.is_connected = False
         self.params = params
 
-        self._token = token
-        self._access_token = token
+        self.apikey = token
+        self.access_token = token
 
         self.hb_interval = hb_interval
         self.ws_connection: websockets.client.WebSocketClientProtocol
@@ -73,7 +69,7 @@ class Socket:
         self.max_retries = max_retries
         self.initial_backoff = initial_backoff
 
-        self._access_token: Union[str, None] = token
+        self.access_token: Union[str, None] = token
         self._api_key = token
 
     @ensure_connection
@@ -234,7 +230,7 @@ class Socket:
 
     @ensure_connection
     def set_auth(self, token: Union[str, None]) -> None:
-        self._access_token = token
+        self.access_token = token
 
         for _, channels in self.channels.items():
             for channel in channels:
