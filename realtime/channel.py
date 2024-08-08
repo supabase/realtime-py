@@ -44,7 +44,7 @@ class Push:
         }
 
         try:
-            await self.socket.ws_connection.send(json.dumps(message))
+            await self.channel.socket.ws_connection.send(json.dumps(message))
         except Exception as e:
             logging.error(f"send push failed: {e}")
 
@@ -265,7 +265,7 @@ class Channel:
         access_token_payload = {}
 
         if self.socket.access_token is not None:
-            access_token_payload["access_token"] = self.socket._access_token
+            access_token_payload["access_token"] = self.socket.access_token
 
         self._push(
             ChannelEvents.join,

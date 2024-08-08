@@ -2,9 +2,8 @@ import asyncio
 import json
 import logging
 import re
-from collections import defaultdict
 from functools import wraps
-from typing import Any, DefaultDict, Dict, List, Union
+from typing import Any, Dict, Union
 
 import websockets
 
@@ -53,7 +52,6 @@ class Socket:
         """
         self.url = f"{re.sub(r'https://', 'wss://', re.sub(r'http://', 'ws://', url, flags=re.IGNORECASE), flags=re.IGNORECASE)}/realtime/v1/websocket?apikey={token}"
         self.http_endpoint = http_endpoint_url(url)
-        self.channels = defaultdict(list)
         self.is_connected = False
         self.params = params
 
@@ -65,7 +63,7 @@ class Socket:
         self.kept_alive = False
         self.ref = 0
         self.auto_reconnect = auto_reconnect
-        self.channels: DefaultDict[str, List[Channel]] = defaultdict(list)
+        self.channels: Dict[str, Channel] = {}
         self.max_retries = max_retries
         self.initial_backoff = initial_backoff
 
@@ -95,26 +93,25 @@ class Socket:
                 msg = await self.ws_connection.recv()
                 msg = Message(**json.loads(msg))
 
-                logging.info(f"Received message: {msg}")
+                logging.info(f"receive: {msg}")
+                channel = self.channels.get(msg.topic)
 
-                logger.debug(msg)
-                channels = self.channels.get(msg.topic, [])
+                if channel is None:
+                    logging.info(f"Channel {msg.topic} not found")
+                    continue
 
-                logging.info(f"found {len(channels)} channels")
+                for cl in channel.listeners:
+                    if cl.event == msg.event:
+                        cl.callback(msg.payload)
 
-                for channel in channels:
-                    for cl in channel.listeners:
-                        if cl.event == msg.event:
-                            cl.callback(msg.payload)
             except websockets.exceptions.ConnectionClosed:
                 if self.auto_reconnect:
                     logging.info(
                         "Connection with server closed, trying to reconnect..."
                     )
                     await self._connect()
-                    for topic, channels in self.channels.items():
-                        for channel in channels:
-                            await channel.join()
+                    for topic, channel in self.channels.items():
+                        await channel.join()
                 else:
                     logging.exception("Connection with the server closed.")
                     break
@@ -206,7 +203,7 @@ class Socket:
         """
         topic = f"realtime:{topic}"
         chan = Channel(self, topic, channel_params, self.params)
-        self.channels[topic].append(chan)
+        self.channels[topic] = chan
 
         return chan
 
@@ -217,25 +214,23 @@ class Socket:
         :return: None
         """
         topic = channel.topic
-        self.channels[topic].append(channel)
+        self.channels[topic] = channel
 
     def summary(self) -> None:
         """
         Prints a list of topics and event the socket is listening to
         :return: None
         """
-        for topic, chans in self.channels.items():
-            for chan in chans:
-                print(f"Topic: {topic} | Events: {[e for e, _ in chan.listeners]}]")
+        for topic, channel in self.channels.items():
+            print(f"Topic: {topic} | Events: {[e for e, _ in channel.listeners]}]")
 
     @ensure_connection
     def set_auth(self, token: Union[str, None]) -> None:
         self.access_token = token
 
-        for _, channels in self.channels.items():
-            for channel in channels:
-                if channel.joined:
-                    channel._push(ChannelEvents.access_token, {"access_token": token})
+        for _, channel in self.channels.items():
+            if channel.joined:
+                channel._push(ChannelEvents.access_token, {"access_token": token})
 
     def _make_ref(self) -> str:
         self.ref += 1
