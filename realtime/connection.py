@@ -24,7 +24,7 @@ from realtime.types import (
 )
 
 logging.basicConfig(
-    format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s:%(levelname)s - %(message)s", level=logging.DEBUG
 )
 
 logger = logging.getLogger(__name__)
@@ -91,6 +91,7 @@ class Socket:
         )
         self.reconnect_timer: Timer = Timer(self._reconnect, self.reconnect_after_ms)
         self.access_token: Optional[str] = self.params.get("apikey", None)
+        self.api_key = self.access_token
         self.channels: List["RealtimeChannel"] = []
         self.conn: Optional[websockets.client.WebSocketClientProtocol] = None
         self.send_buffer: List[Callable[[], None]] = []
@@ -109,7 +110,7 @@ class Socket:
             return
 
         self.conn = await websockets.connect(self._endpoint_url())
-        await self.setup_connection()
+        asyncio.create_task(self.setup_connection())
 
     async def disconnect(
         self, code: int = CloseCode.NORMAL_CLOSURE, reason: str = ""
@@ -152,9 +153,8 @@ class Socket:
 
     def channel(
         self, topic: str, params: Optional[Dict[str, Any]] = None
-    ) -> "RealtimeChannel":
-        from .channel import RealtimeChannel
-
+    ) -> 'RealtimeChannel':
+        from realtime.channel import RealtimeChannel
         params = params or {}
         chan = RealtimeChannel(self, f"realtime:{topic}", params)
         self.channels.append(chan)

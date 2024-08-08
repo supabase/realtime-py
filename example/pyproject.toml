@@ -8,6 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 realtime = {path = "..", develop = true}
+aiohttp = "^3.10.1"
 
 [build-system]
 requires = ["poetry-core"]

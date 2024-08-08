@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from .channel import RealtimeChannel
 
 
-class REALTIME_PRESENCE_LISTEN_EVENTS(Enum):
+class RealtimePresenceListenEvents(str, Enum):
     SYNC = "sync"
     JOIN = "join"
     LEAVE = "leave"

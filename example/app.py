@@ -1,6 +1,9 @@
 import os
+import asyncio
+import re
+from realtime.channel import RealtimeChannel
 
-from realtime.connection import Socket
+from realtime.connection import Socket, RealtimeClientOptions
 
 
 def broadcast_callback(payload):
@@ -18,17 +21,21 @@ def postgres_changes_callback(payload):
 async def realtime(payload):
     print("async realtime ", payload)
 
+async def main():
+    URL = os.getenv("SUPABASE_URL")
+    JWT = os.getenv("SUPABASE_ANON_KEY")
 
-URL = os.getenv("SUPABASE_URL")
-JWT = os.getenv("SUPABASE_ANON_KEY")
+    URL = re.sub(r'^http', 'ws', f"{URL}/realtime/v1")
+    socket = Socket(URL, options=RealtimeClientOptions(params={"apikey": JWT}))
+    
+    channel: RealtimeChannel = socket.channel("test-topic", {"broadcast": {"self": True}})
 
-# Setup the broadcast socket and channel
-socket = Socket(URL, JWT, auto_reconnect=True)
-socket.connect()
+    await channel.on('broadcast', {"event": "test"}, callback=broadcast_callback).subscribe()
 
-channel = socket.set_channel("test-topic", channel_params={"broadcast": {"self": True}})
-channel.on_broadcast("test", callback=broadcast_callback).subscribe()
+    await channel.send({"type": "broadcast", "event": "test", "payload": "hello"})
 
-channel.send_broadcast("test", {"message": "Hello"})
+    await asyncio.sleep(2)
 
-socket.listen()
+    # await socket.disconnect()
+
+asyncio.run(main())

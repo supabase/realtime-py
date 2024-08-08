@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union
+import json
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import aiohttp
 
@@ -9,8 +10,8 @@ from realtime.connection import Socket
 from realtime.message import ChannelEvents
 from realtime.types import DEFAULT_TIMEOUT, ChannelState
 
-if TYPE_CHECKING:
-    pass
+# if TYPE_CHECKING:
+#     pass
 
 
 class Push:
@@ -124,14 +125,18 @@ class RealtimeChannel:
         self.joined_once: bool = False
         self.push_buffer: List[Push] = []
         self.params = params or {"config": {}}
-        self.params["config"] = {
+
+        config = self.params.get("config", {})
+        config = {
             **{
                 "broadcast": {"ack": False, "self": False},
                 "presence": {"key": ""},
                 "private": False,
             },
-            **self.params["config"],
+            **config
         }
+
+        self.params["config"] = config
         self.socket = socket
         self.topic = topic
         self.sub_topic = topic.replace("realtime:", "")
@@ -157,7 +162,7 @@ class RealtimeChannel:
         self.rejoin_timer = asyncio.create_task(self._rejoin_after_delay())
 
     async def _rejoin_after_delay(self) -> None:
-        await asyncio.sleep(self.socket.reconnect_after_ms / 1000)
+        await asyncio.sleep(10000 / 1000)
         self._rejoin_until_connected()
 
     def _rejoin_until_connected(self) -> None:
@@ -196,14 +201,14 @@ class RealtimeChannel:
     def _on_channel_reply(self, payload: Dict[str, Any], ref: str) -> None:
         self._trigger(self._reply_event_name(ref), payload)
 
-    def subscribe(
+    async def subscribe(
         self,
         callback: Optional[Callable[[str, Any], None]] = None,
         timeout: Optional[int] = None,
     ) -> RealtimeChannel:
         timeout = timeout or self.timeout
         if not self.socket.is_connected():
-            self.socket.connect()
+            await self.socket.connect()
 
         if self.joined_once:
             raise Exception(
@@ -451,7 +456,7 @@ class RealtimeChannel:
         return self
 
     def _can_push(self) -> bool:
-        return self.socket.is_connected() and self._is_joined()
+        return self.socket.is_connected() and self.is_joined
 
     def _is_member(self, type: str, filter: Dict[str, Any]) -> bool:
         return any(
