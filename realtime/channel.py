@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from realtime.message import ChannelEvents
@@ -32,25 +35,113 @@ class Push:
         self.channel = channel
         self.event = event
         self.payload = payload
-        self.ref = channel.socket._make_ref()
+        self.timeout = 10
+
+        self.rec_hooks = []
+        self.ref = None
+        self.ref_event = None
+        self.received_resp = None
+        self.sent = False
+        self.timeout_task = None
+
+    async def resend(self):
+        self._cancel_ref_event()
+        self.ref = ""
+        self.ref_event = None
+        self.received_resp = None
+        self.sent = False
+        await self.send()
 
     async def send(self):
-        self.ref = self.channel.socket._make_ref()
+        if self._has_received("timeout"):
+            return
 
-        message = {
-            "topic": self.channel.topic,
-            "event": self.event,
-            "payload": self.payload,
-            "ref": self.ref,
-        }
+        self.start_timeout()
+        self.sent = True
 
         try:
-            await self.channel.socket.send(message)
+            await self.channel.socket.send(
+                {
+                    "topic": self.channel.topic,
+                    "event": self.event,
+                    "payload": self.payload,
+                    "ref": self.ref,
+                    "join_ref": self.channel.join_push.ref,
+                }
+            )
         except Exception as e:
             logging.error(f"send push failed: {e}")
 
     def update_payload(self, payload: Dict[str, Any]):
         self.payload = {**self.payload, **payload}
+
+    def receive(self, status: str, callback: Callback) -> Push:
+        if self._has_received(status):
+            callback(self.received_resp)
+
+        self.rec_hooks.append({"status": status, "callback": callback})
+        return self
+
+    def start_timeout(self):
+        if self.timeout_task:
+            return
+
+        self.ref = self.channel.socket._make_ref()
+        self.ref_event = self.channel._reply_event_name(self.ref)
+
+        def on_reply(**kwargs):
+            self._cancel_ref_event()
+            self._cancel_timeout()
+            self.received_resp = kwargs.get("payload")
+
+            [status, response] = kwargs["payload"]
+            self._match_receive(status, response)
+
+        self.channel._on(self.ref_event, on_reply)
+
+        async def timeout(self):
+            await asyncio.sleep(self.timeout)
+            self.trigger("timeout", {})
+
+        self.timeout_task = asyncio.create_task(timeout(self))
+
+    def trigger(self, status: str, response: any):
+        if self.ref_event:
+            payload = {
+                "status": status,
+                "response": response,
+            }
+            self.channel._trigger(self.ref_event, payload)
+
+    def destroy(self):
+        self._cancel_ref_event()
+        self._cancel_timeout()
+
+    def _cancel_ref_event(self):
+        if not self.ref_event:
+            return
+
+        self.channel._off(self.ref_event, {})
+
+    def _cancel_timeout(self):
+        if not self.timeout_task:
+            return
+
+        self.timeout_task.cancel()
+        self.timeout_task = None
+
+    def _match_receive(self, status: str, response: Any):
+        for hook in self.rec_hooks:
+            if hook["status"] == status:
+                hook["callback"](response)
+
+    def _has_received(self, status: str):
+        return self.received_resp and self.received_resp.get("status") == status
+
+
+class ChannelStates(StrEnum):
+    JOINED = "joined"
+    CLOSED = "closed"
 
 
 class Channel:
@@ -81,6 +172,7 @@ class Channel:
         self.presence = RealtimePresence(self)
         self.filter = None
         self.current_event = None
+        self.state = ChannelStates.CLOSED
 
         self.params["config"] = {
             "broadcast": {"ack": False, "self": False},
@@ -91,6 +183,49 @@ class Channel:
 
         self.join_push = Push(self, ChannelEvents.join, self.params)
         self.broadcast_endpoint_url = self._broadcast_endpoint_url()
+
+        async def on_join_push_ok(payload: Dict[str, Any]):
+            self.state = ChannelStates.JOINED
+            self.rejoin_timer.reset()
+            for push in self.push_buffer:
+                await push.send()
+            self.push_buffer = []
+
+        def on_join_push_timeout():
+            if not self.is_joining:
+                return
+
+            logging.error(f"join push timeout for channel {self.topic}")
+            self.state = ChannelStates.ERRORED
+            self.rejoin_timer.schedule_timeout()
+
+        self.join_push.receive("ok", on_join_push_ok).receive(
+            "timeout", on_join_push_timeout
+        )
+
+        def on_close(**kwargs):
+            logging.info(f"channel {self.topic} closed")
+            self.rejoin_timer.reset()
+            self.state = ChannelStates.CLOSED
+            self.socket._remove(self)
+
+        def on_error(**kwargs):
+            if self.is_leaving or self.is_closed:
+                return
+
+            logging.info(f"channel {self.topic} error: {kwargs.get('payload')}")
+            self.state = ChannelStates.ERRORED
+            self.rejoin_timer.schedule_timeout()
+
+        self._on("close", on_close)
+        self._on("error", on_error)
+
+        def on_reply(**kwargs):
+            self._trigger(
+                self._reply_event_name(kwargs.get("ref")), kwargs.get("payload")
+            )
+
+        self._on(ChannelEvents.reply, on_reply)
 
     def _broadcast_endpoint_url(self):
         return f"{http_endpoint_url(self.socket.http_endpoint)}/api/broadcast"
@@ -239,7 +374,7 @@ class Channel:
             callback=callback,
         )
 
-    async def subscribe(self) -> Channel:
+    async def subscribe(self, callback: Optional[Callback] = None) -> Channel:
         """
         Subscribe to the channel.
 
@@ -252,34 +387,79 @@ class Channel:
                 "Tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance"
             )
         else:
+            config = self.params.get("config", {})
+            broadcast = config.get("broadcast", {})
+            presence = config.get("presence", {})
+            private = config.get("private", False)
+
+            access_token_payload = {}
+            config = {
+                "broadcast": broadcast,
+                "presence": presence,
+                "private": private,
+            }
+
+            if self.socket.access_token:
+                access_token_payload["access_token"] = self.socket.access_token
+
+            self.join_push.update_payload(
+                {**{"config": config}, **access_token_payload}
+            )
             self.joined = True
-            await self.rejoin()
+
+            def on_join_push_ok(payload: Dict[str, Any]):
+                server_postgres_changes = payload.get("postgres_changes")
+
+                if not server_postgres_changes:
+                    callback and callback("SUBSCRIBED")
+                    return
+
+                client_postgres_changes = self.bindings.get("postgres_changes", [])
+                new_postgres_bindings = []
+
+                bindings_len = len(client_postgres_changes)
+
+                for i in range(bindings_len):
+                    client_binding = client_postgres_changes[i]
+                    server_binding = (
+                        server_postgres_changes[i]
+                        if i < len(server_postgres_changes)
+                        else None
+                    )
+
+                    if (
+                        server_binding
+                        and server_binding.get("event") == client_binding.get("event")
+                        and server_binding.get("schema") == client_binding.get("schema")
+                        and server_binding.get("table") == client_binding.get("table")
+                        and server_binding.get("filter") == client_binding.get("filter")
+                    ):
+                        new_postgres_bindings.append(
+                            {**client_binding, "id": server_binding.get("id")}
+                        )
+                    else:
+                        self.unsubscribe()
+                        return
+
+                self.bindings["postgres_changes"] = new_postgres_bindings
+                callback and callback("SUBSCRIBED")
+
+            def on_join_push_error(payload: Dict[str, Any]):
+                callback and callback("CHANNEL_ERROR", Exception(json.dumps(payload)))
+
+            def on_join_push_timeout():
+                callback and callback("TIMED_OUT")
+
+            self.join_push.receive("ok", on_join_push_ok).receive(
+                "error", on_join_push_error
+            ).receive("timeout", on_join_push_timeout)
+
+            await self._rejoin()
+
         return self
 
-    async def rejoin(self) -> None:
-        """
-        Rejoin the channel.
-
-        :return: None
-        """
-        if not self.joined:
-            return
-
-        if self.current_event == "postgres_changes" and self.filter:
-            self.channel_params["filter"] = self.filter
-
-        params = self.params
-        postgres_changes = [
-            binding.filter for binding in self.bindings.get("postgres_changes", [])
-        ]
-
-        params["config"].setdefault("postgres_changes", []).extend(postgres_changes)
-
-        if self.socket.access_token:
-            params["access_token"] = self.socket.access_token
-
-        self.join_push.update_payload(params)
-        await self.join_push.send()
+    async def _rejoin(self) -> None:
+        await self.join_push.resend()
 
     async def push(self, event: str, payload: Dict[str, Any]) -> Push:
         if not self.joined:
@@ -383,7 +563,7 @@ class Channel:
             {"type": "broadcast", "event": event, "payload": data},
         )
 
-    def _trigger(self, type: str, payload, ref: Optional[str]):
+    def _trigger(self, type: str, payload: Optional[Any], ref: Optional[str] = None):
         type_lowercase = type.lower()
         events = [
             ChannelEvents.close,
@@ -402,21 +582,38 @@ class Channel:
                 self.bindings.get("postgres_changes", []),
             )
             for binding in postgres_changes:
-                binding.callback(payload)
+                binding.callback(payload=payload, ref=ref)
         else:
             bindings = self.bindings.get(type_lowercase, [])
             for binding in bindings:
                 if type_lowercase in ["broadcast", "postgres_changes", "presence"]:
-                    bind_event = binding.filter.get("event", "").lower()
-                    payload_event = payload.get("event", "").lower()
+                    bind_id = binding.id
+                    bind_event = (
+                        binding.filter.get("event", "").lower()
+                        if binding.filter.get("event")
+                        else None
+                    )
+                    payload_event = (
+                        payload.get("event", "").lower()
+                        if payload.get("event")
+                        else None
+                    )
+                    data_type = (
+                        payload.get("data", {}).get("type", "").lower()
+                        if payload.get("data", {}).get("type")
+                        else None
+                    )
 
                     if (
-                        binding.id is not None
-                        and binding.id in payload.get("ids", [])
-                        and (bind_event in [payload_event, "*"])
+                        bind_id
+                        and bind_id in payload.get("ids", [])
+                        and (bind_event == data_type or bind_event == "*")
                     ):
-                        binding.callback(payload)
+                        binding.callback(payload=payload, ref=ref)
                     elif bind_event in [payload_event, "*"]:
-                        binding.callback(payload)
+                        binding.callback(payload=payload, ref=ref)
                 elif binding.type == type_lowercase:
-                    binding.callback(payload)
+                    binding.callback(payload=payload, ref=ref)
+
+    def _reply_event_name(self, ref: str):
+        return f"chan_reply_{ref}"

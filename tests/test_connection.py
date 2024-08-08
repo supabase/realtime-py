@@ -36,7 +36,7 @@ async def test_broadcast_events(socket: Socket):
     )
     received_events = []
 
-    def broadcast_callback(payload):
+    def broadcast_callback(payload, **kwargs):
         print("broadcast: ", payload)
         received_events.append(payload)
 

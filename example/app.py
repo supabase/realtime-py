@@ -4,10 +4,6 @@ import os
 from realtime.connection import Socket
 
 
-def broadcast_callback(payload):
-    print("broadcast: ", payload)
-
-
 def presence_callback(payload):
     print("presence: ", payload)
 
@@ -41,7 +37,7 @@ async def test_broadcast_events(socket: Socket):
     )
     received_events = []
 
-    def broadcast_callback(payload):
+    def broadcast_callback(payload, **kwargs):
         print("broadcast: ", payload)
         received_events.append(payload)
 
@@ -62,6 +58,24 @@ async def test_broadcast_events(socket: Socket):
     assert received_events[2]["payload"]["message"] == "Event 3"
 
 
+async def test_postgres_changes(socket: Socket):
+    await socket.connect()
+
+    channel = socket.channel("test-postgres-changes")
+
+    await channel.on_postgres_changes(
+        "*", table="todos", callback=postgres_changes_callback
+    ).on_postgres_changes(
+        "INSERT", table="todos", callback=postgres_changes_insert_callback
+    ).on_postgres_changes(
+        "DELETE", table="todos", callback=postgres_changes_delete_callback
+    ).on_postgres_changes(
+        "UPDATE", table="todos", callback=postgres_changes_update_callback
+    ).subscribe()
+
+    await socket.listen()
+
+
 async def main():
     URL = os.getenv("SUPABASE_URL")
     JWT = os.getenv("SUPABASE_ANON_KEY")
@@ -70,6 +84,7 @@ async def main():
     socket = Socket(f"{URL}/realtime/v1", JWT, auto_reconnect=True)
 
     await test_broadcast_events(socket)
+    # await test_postgres_changes(socket)
 
 
 asyncio.run(main())
