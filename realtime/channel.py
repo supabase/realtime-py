@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional
 
@@ -21,6 +20,20 @@ class CallbackListener(NamedTuple):
     event: str
     on_params: Dict[str, Any]
     callback: Callback
+
+
+class Binding:
+    def __init__(
+        self,
+        type: str,
+        filter: Dict[str, Any],
+        callback: Callback,
+        id: Optional[str] = None,
+    ):
+        self.type = type
+        self.filter = filter
+        self.callback = callback
+        self.id = id
 
 
 class Push:
@@ -44,7 +57,7 @@ class Push:
         }
 
         try:
-            await self.channel.socket.ws_connection.send(json.dumps(message))
+            await self.channel.socket._send(message)
         except Exception as e:
             logging.error(f"send push failed: {e}")
 
@@ -91,6 +104,8 @@ class Channel:
         self.current_params = None
         self.join_ref: Optional[int] = None
 
+        self.bindings: Dict[str, List[Binding]] = {}
+
         self.params["config"] = {
             "broadcast": {"ack": False, "self": False},
             "presence": {"key": ""},
@@ -103,17 +118,24 @@ class Channel:
     def _broadcast_endpoint_url(self):
         return f"{http_endpoint_url(self.socket.http_endpoint)}/api/broadcast"
 
-    def on(self, event: str, on_params: Dict[str, Any]) -> Channel:
+    def _on(self, type: str, filter: Dict[str, Any], callback: Callback) -> Channel:
         """
         Set up a listener for a specific event.
 
-        :param event: The name of the event to listen for.
-        :param on_params: Additional parameters for the event.
+        :param type: The type of the event to listen for.
+        :param filter: Additional parameters for the event.
+        :param callback: The callback function to execute when the event is received.
         :return: The Channel instance for method chaining.
         """
-        self.current_event = event
-        self.current_params = on_params
+
+        type_lowercase = type.lower()
+        binding = Binding(type=type_lowercase, filter=filter, callback=callback)
+        self.bindings.setdefault(type_lowercase, []).append(binding)
+
         return self
+
+    def _off(self, type: str, filter: Dict[str, Any]) -> Channel:
+        type_lowercase = type.lower()
 
     def on_broadcast(self, event: str, callback: Callback) -> Channel:
         """
@@ -123,11 +145,7 @@ class Channel:
         :param callback: The callback function to execute when the event is received.
         :return: The Channel instance for method chaining.
         """
-        cl = CallbackListener(
-            event="broadcast", on_params={"event": event}, callback=callback
-        )
-        self.listeners.append(cl)
-        return self
+        return self._on("broadcast", {"event": event}, callback)
 
     def eq(self, column: str, value: Any) -> Channel:
         """
@@ -218,14 +236,11 @@ class Channel:
         :param schema: The database schema where the table exists. Default is 'public'.
         :return: The Channel instance for method chaining.
         """
-        self.channel_params = {
-            "postgres_changes": [{"event": event, "schema": schema, "table": table}]
-        }
-        cl = CallbackListener(
-            event="postgres_changes", on_params={"event": event}, callback=callback
+        return self._on(
+            "postgres_changes",
+            {"event": event, "schema": schema, "table": table},
+            callback,
         )
-        self.listeners.append(cl)
-        return self
 
     def subscribe(self) -> Channel:
         """
@@ -255,22 +270,20 @@ class Channel:
         """
         if not self.joined:
             return
-        if (
-            self.current_event == "postgres_changes"
-            and self.filter
-            and self.filter is not None
-        ):
+
+        if self.current_event == "postgres_changes" and self.filter:
             self.channel_params["filter"] = self.filter
 
-        access_token_payload = {}
+        params = self.params
+        postgres_changes = [
+            binding.filter for binding in self.bindings.get("postgres_changes", [])
+        ]
+        params["config"].setdefault("postgres_changes", []).extend(postgres_changes)
 
-        if self.socket.access_token is not None:
-            access_token_payload["access_token"] = self.socket.access_token
+        if self.socket.access_token:
+            params["access_token"] = self.socket.access_token
 
-        self._push(
-            ChannelEvents.join,
-            {"config": self.channel_params, "access_token": access_token_payload},
-        )
+        self._push(ChannelEvents.join, params)
 
     def _push(self, event: str, payload: Dict[str, Any]) -> Push:
         if not self.joined:
@@ -373,3 +386,35 @@ class Channel:
             ChannelEvents.broadcast,
             {"type": "broadcast", "event": event, "payload": data},
         )
+
+    def _trigger(self, type: str, payload, ref: Optional[str]):
+        type_lowercase = type.lower()
+        events = [
+            ChannelEvents.close,
+            ChannelEvents.error,
+            ChannelEvents.leave,
+            ChannelEvents.join,
+        ]
+
+        if ref is not None and type_lowercase in events and ref is not self.join_ref:
+            return
+
+        if type_lowercase in ["insert", "update", "delete"]:
+            postgres_changes = self.bindings.get("postgres_changes", [])
+            for binding in postgres_changes:
+                event = binding.filter.get("event").lower()
+                if event == "*" or event == type_lowercase:
+                    binding.callback(payload)
+
+        else:
+            for binding in self.bindings.get(type_lowercase, []):
+                if type_lowercase in ["broadcast", "postgres_changes", "presence"]:
+                    event = binding.filter.get("event").lower()
+                    if binding.id is not None:
+                        if binding.id in payload.get("ids", []) and (
+                            event == "*" or event == type_lowercase
+                        ):
+                            binding.callback(payload)
+                    else:
+                        if event == "*" or event == type_lowercase:
+                            binding.callback(payload)

@@ -96,13 +96,10 @@ class Socket:
                 logging.info(f"receive: {msg}")
                 channel = self.channels.get(msg.topic)
 
-                if channel is None:
+                if channel:
+                    channel._trigger(msg.event, msg.payload, msg.ref)
+                else:
                     logging.info(f"Channel {msg.topic} not found")
-                    continue
-
-                for cl in channel.listeners:
-                    if cl.event == msg.event:
-                        cl.callback(msg.payload)
 
             except websockets.exceptions.ConnectionClosed:
                 if self.auto_reconnect:
@@ -237,8 +234,9 @@ class Socket:
         return f"{self.ref}"
 
     async def _send(self, message):
+        message = json.dumps(message)
         logger.info(f"Sending: {message}")
-        await self.ws_connection.send(json.dumps(message))
+        await self.ws_connection.send(message)
 
     def send(self, message):
         asyncio.get_event_loop().run_until_complete(self._send(message))
