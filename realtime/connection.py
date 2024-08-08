@@ -71,16 +71,7 @@ class Socket:
         self._api_key = token
 
     @ensure_connection
-    def listen(self) -> None:
-        """
-        Wrapper for async def _listen() to expose a non-async interface
-        In most cases, this should be the last method executed as it starts an infinite listening loop.
-        :return: None
-        """
-        asyncio.get_event_loop().run_until_complete(self.listen_async())
-
-    @ensure_connection
-    async def listen_async(self):
+    async def listen(self) -> None:
         await asyncio.gather(self._listen(), self._keep_alive())
 
     async def _listen(self) -> None:
@@ -91,9 +82,9 @@ class Socket:
         while True:
             try:
                 msg = await self.ws_connection.recv()
-                msg = Message(**json.loads(msg))
-
                 logging.info(f"receive: {msg}")
+
+                msg = Message(**json.loads(msg))
                 channel = self.channels.get(msg.topic)
 
                 if channel:
@@ -113,16 +104,7 @@ class Socket:
                     logging.exception("Connection with the server closed.")
                     break
 
-    def connect(self) -> None:
-        """
-        Wrapper for async def _connect() to expose a non-async interface
-        """
-
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self._connect())
-        self.is_connected = True
-
-    async def _connect(self) -> None:
+    async def connect(self) -> None:
         retries = 0
         backoff = self.initial_backoff
 
@@ -156,16 +138,9 @@ class Socket:
         )
 
     @ensure_connection
-    def close(self) -> None:
-        """
-        Wrapper for async def _close() to expose a non-async interface
-        """
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self._close())
-        self.is_connected = False
-
-    async def _close(self) -> None:
+    async def close(self) -> None:
         await self.ws_connection.close()
+        self.is_connected = False
 
     async def _keep_alive(self) -> None:
         """
@@ -180,7 +155,7 @@ class Socket:
                     payload=HEARTBEAT_PAYLOAD,
                     ref=None,
                 )
-                await self._send(data)
+                await self.send(data)
                 await asyncio.sleep(self.hb_interval)
             except websockets.exceptions.ConnectionClosed:
                 if self.auto_reconnect:
@@ -193,25 +168,16 @@ class Socket:
                     break
 
     @ensure_connection
-    def set_channel(self, topic: str, channel_params: Dict[str, Any]) -> Channel:
+    def channel(self, topic: str, params: Dict[str, Any] = {"config": {}}) -> Channel:
         """
         :param topic: Initializes a channel and creates a two-way association with the socket
         :return: Channel
         """
         topic = f"realtime:{topic}"
-        chan = Channel(self, topic, channel_params, self.params)
+        chan = Channel(self, topic, params)
         self.channels[topic] = chan
 
         return chan
-
-    def add_channel(self, channel: Channel) -> None:
-        """
-        Associates the given channel object with the socket.
-        :param channel: Channel object to associate with the socket.
-        :return: None
-        """
-        topic = channel.topic
-        self.channels[topic] = channel
 
     def summary(self) -> None:
         """
@@ -222,21 +188,18 @@ class Socket:
             print(f"Topic: {topic} | Events: {[e for e, _ in channel.listeners]}]")
 
     @ensure_connection
-    def set_auth(self, token: Union[str, None]) -> None:
+    async def set_auth(self, token: Union[str, None]) -> None:
         self.access_token = token
 
         for _, channel in self.channels.items():
             if channel.joined:
-                channel._push(ChannelEvents.access_token, {"access_token": token})
+                await channel.push(ChannelEvents.access_token, {"access_token": token})
 
     def _make_ref(self) -> str:
         self.ref += 1
         return f"{self.ref}"
 
-    async def _send(self, message):
+    async def send(self, message: Dict[str, Any]) -> None:
         message = json.dumps(message)
         logger.info(f"Sending: {message}")
         await self.ws_connection.send(message)
-
-    def send(self, message):
-        asyncio.get_event_loop().run_until_complete(self._send(message))

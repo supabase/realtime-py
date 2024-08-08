@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional
 
@@ -43,10 +42,7 @@ class Push:
         self.payload = payload
         self.ref = channel.socket._make_ref()
 
-    def send(self):
-        asyncio.get_event_loop().run_until_complete(self._send())
-
-    async def _send(self):
+    async def send(self):
         self.ref = self.channel.socket._make_ref()
 
         message = {
@@ -57,7 +53,7 @@ class Push:
         }
 
         try:
-            await self.channel.socket._send(message)
+            await self.channel.socket.send(message)
         except Exception as e:
             logging.error(f"send push failed: {e}")
 
@@ -77,8 +73,7 @@ class Channel:
         self,
         socket: Socket,
         topic: str,
-        channel_params: Dict[str, Any] = None,
-        params=None,
+        params: Dict[str, Any] = {"config": {}},
     ) -> None:
         """
         Initialize the Channel object.
@@ -87,30 +82,22 @@ class Channel:
         :param topic: Topic that it subscribes to on the realtime server
         :param params: Optional parameters for connection.
         """
-        if channel_params is None:
-            channel_params = {}
-        if params is None:
-            params = {}
-
         self.socket = socket
         self.params = params
-        self.channel_params = channel_params
         self.topic = topic
         self.listeners: List[CallbackListener] = []
         self.joined = False
+        self.bindings: Dict[str, List[Binding]] = {}
         self.presence = RealtimePresence(self)
         self.filter = None
         self.current_event = None
-        self.current_params = None
         self.join_ref: Optional[int] = None
-
-        self.bindings: Dict[str, List[Binding]] = {}
 
         self.params["config"] = {
             "broadcast": {"ack": False, "self": False},
             "presence": {"key": ""},
             "private": False,
-            **self.params.get("config", {}),
+            **params.get("config", {}),
         }
 
         self.broadcast_endpoint_url = self._broadcast_endpoint_url()
@@ -118,7 +105,9 @@ class Channel:
     def _broadcast_endpoint_url(self):
         return f"{http_endpoint_url(self.socket.http_endpoint)}/api/broadcast"
 
-    def _on(self, type: str, filter: Dict[str, Any], callback: Callback) -> Channel:
+    def _on(
+        self, type: str, callback: Callback, filter: Dict[str, Any] = {}
+    ) -> Channel:
         """
         Set up a listener for a specific event.
 
@@ -135,7 +124,25 @@ class Channel:
         return self
 
     def _off(self, type: str, filter: Dict[str, Any]) -> Channel:
+        """
+        Remove a listener for a specific event type and filter.
+
+        :param type: The type of the event to remove the listener for.
+        :param filter: The filter associated with the listener to remove.
+        :return: The Channel instance for method chaining.
+
+        This method removes all bindings for the specified event type that match
+        the given filter. If no matching bindings are found, the method does nothing.
+        """
         type_lowercase = type.lower()
+
+        if type_lowercase in self.bindings:
+            self.bindings[type_lowercase] = [
+                binding
+                for binding in self.bindings[type_lowercase]
+                if binding.filter != filter
+            ]
+        return self
 
     def on_broadcast(self, event: str, callback: Callback) -> Channel:
         """
@@ -145,7 +152,7 @@ class Channel:
         :param callback: The callback function to execute when the event is received.
         :return: The Channel instance for method chaining.
         """
-        return self._on("broadcast", {"event": event}, callback)
+        return self._on("broadcast", filter={"event": event}, callback=callback)
 
     def eq(self, column: str, value: Any) -> Channel:
         """
@@ -238,11 +245,11 @@ class Channel:
         """
         return self._on(
             "postgres_changes",
-            {"event": event, "schema": schema, "table": table},
-            callback,
+            filter={"event": event, "schema": schema, "table": table},
+            callback=callback,
         )
 
-    def subscribe(self) -> Channel:
+    async def subscribe(self) -> Channel:
         """
         Subscribe to the channel.
 
@@ -256,13 +263,13 @@ class Channel:
             )
         else:
             self.joined = True
-            self.rejoin()
+            await self.rejoin()
             if len(self.listeners) == 0:
                 cl = CallbackListener("subscribed", on_params={}, callback=None)
                 self.listeners.append(cl)
         return self
 
-    def rejoin(self) -> None:
+    async def rejoin(self) -> None:
         """
         Rejoin the channel.
 
@@ -278,21 +285,22 @@ class Channel:
         postgres_changes = [
             binding.filter for binding in self.bindings.get("postgres_changes", [])
         ]
+
         params["config"].setdefault("postgres_changes", []).extend(postgres_changes)
 
         if self.socket.access_token:
             params["access_token"] = self.socket.access_token
 
-        self._push(ChannelEvents.join, params)
+        await self.push(ChannelEvents.join, params)
 
-    def _push(self, event: str, payload: Dict[str, Any]) -> Push:
+    async def push(self, event: str, payload: Dict[str, Any]) -> Push:
         if not self.joined:
             raise Exception(
                 f"tried to push '{event}' to '{self.topic}' before joining. Use channel.subscribe() before pushing events"
             )
 
         push = Push(self, event, payload)
-        push.send()
+        await push.send()
         return push
 
     # @Deprecated:
@@ -374,7 +382,7 @@ class Channel:
         self.presence.on_leave(callback)
         return self
 
-    def send_broadcast(self, event: str, data: Any) -> None:
+    async def send_broadcast(self, event: str, data: Any) -> None:
         """
         Sends a broadcast message to the current channel.
 
@@ -382,7 +390,7 @@ class Channel:
         :param data: The data to be sent with the message.
         :return: An asyncio.Future object representing the send operation.
         """
-        self._push(
+        await self.push(
             ChannelEvents.broadcast,
             {"type": "broadcast", "event": event, "payload": data},
         )
@@ -396,25 +404,15 @@ class Channel:
             ChannelEvents.join,
         ]
 
-        if ref is not None and type_lowercase in events and ref is not self.join_ref:
+        if ref is not None and type_lowercase in events and ref != self.join_ref:
             return
 
+        bindings = self.bindings.get(type_lowercase, [])
         if type_lowercase in ["insert", "update", "delete"]:
-            postgres_changes = self.bindings.get("postgres_changes", [])
-            for binding in postgres_changes:
-                event = binding.filter.get("event").lower()
-                if event == "*" or event == type_lowercase:
-                    binding.callback(payload)
+            bindings = self.bindings.get("postgres_changes", [])
 
-        else:
-            for binding in self.bindings.get(type_lowercase, []):
-                if type_lowercase in ["broadcast", "postgres_changes", "presence"]:
-                    event = binding.filter.get("event").lower()
-                    if binding.id is not None:
-                        if binding.id in payload.get("ids", []) and (
-                            event == "*" or event == type_lowercase
-                        ):
-                            binding.callback(payload)
-                    else:
-                        if event == "*" or event == type_lowercase:
-                            binding.callback(payload)
+        for binding in bindings:
+            event = binding.filter.get("event", "").lower()
+            if event == "*" or event == type_lowercase:
+                if binding.id is None or (binding.id in payload.get("ids", [])):
+                    binding.callback(payload)

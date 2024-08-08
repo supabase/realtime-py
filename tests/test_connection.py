@@ -13,8 +13,11 @@ def socket() -> Socket:
     return Socket(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_ANON_KEY"))
 
 
-def test_set_auth(socket: Socket):
-    socket.connect()
+@pytest.mark.asyncio
+async def test_set_auth(socket: Socket):
+    await socket.connect()
 
-    socket.set_auth("jwt")
+    await socket.set_auth("jwt")
     assert socket.access_token == "jwt"
+
+    await socket.close()

@@ -42,9 +42,9 @@ class RealtimePresence:
             else PresenceEvents(state="presence_state", diff="presence_diff")
         )
         # Set up event listeners for presence state and diff
-        self.channel.on(events.state, self._on_state_event)
-        self.channel.on(events.diff, self._on_diff_event)
-        self.channel.on("phx_auth", self._on_auth_event)
+        self.channel._on(events.state, callback=self._on_state_event)
+        self.channel._on(events.diff, callback=self._on_diff_event)
+        self.channel._on("phx_auth", callback=self._on_auth_event)
 
     def on_join(self, callback: Callable[[str, List[Any], List[Any]], None]):
         self.caller["onJoin"] = callback

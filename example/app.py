@@ -1,3 +1,4 @@
+import asyncio
 import os
 
 from realtime.channel import Channel
@@ -32,30 +33,34 @@ async def realtime(payload):
     print("async realtime ", payload)
 
 
-URL = os.getenv("SUPABASE_URL")
-JWT = os.getenv("SUPABASE_ANON_KEY")
+async def main():
+    URL = os.getenv("SUPABASE_URL")
+    JWT = os.getenv("SUPABASE_ANON_KEY")
 
-# Setup the broadcast socket and channel
-socket = Socket(URL, JWT, auto_reconnect=True)
-socket.connect()
+    # Setup the broadcast socket and channel
+    socket = Socket(URL, JWT, auto_reconnect=True)
+    await socket.connect()
 
-socket.set_auth(
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzIzMTQwMTU2LCJpYXQiOjE3MjMxMzY1NTYsImlzcyI6Imh0dHA6Ly8xMjcuMC4wLjE6NTQzMjEvYXV0aC92MSIsInN1YiI6ImYwNDBmNmY4LTA2YTUtNDA1My04YzQzLTcyMjBlZWMzZDMyZSIsImVtYWlsIjoidGVzdEBtYWlsLmNvbSIsInBob25lIjoiIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZW1haWwiLCJwcm92aWRlcnMiOlsiZW1haWwiXX0sInVzZXJfbWV0YWRhdGEiOnt9LCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJhbXIiOlt7Im1ldGhvZCI6InBhc3N3b3JkIiwidGltZXN0YW1wIjoxNzIzMTM2NTU2fV0sInNlc3Npb25faWQiOiIwMjFkNDg1MC1iNThlLTRiNTEtYTU0NC1hZTg0NzAzOTE2ZmEiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.pDYM3iLTzkDcbHjz_UtAUqWj5YfUsVwHsXZC7OKE27I"
-)
+    await socket.set_auth(
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzIzMTQ2Njc0LCJpYXQiOjE3MjMxNDMwNzQsImlzcyI6Imh0dHA6Ly8xMjcuMC4wLjE6NTQzMjEvYXV0aC92MSIsInN1YiI6ImYwNDBmNmY4LTA2YTUtNDA1My04YzQzLTcyMjBlZWMzZDMyZSIsImVtYWlsIjoidGVzdEBtYWlsLmNvbSIsInBob25lIjoiIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZW1haWwiLCJwcm92aWRlcnMiOlsiZW1haWwiXX0sInVzZXJfbWV0YWRhdGEiOnt9LCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJhbXIiOlt7Im1ldGhvZCI6InBhc3N3b3JkIiwidGltZXN0YW1wIjoxNzIzMTQzMDc0fV0sInNlc3Npb25faWQiOiJmOTY2M2ZhNi1jZmM4LTQyMTUtOTA5My0wZmE1Mjg1Y2RjNjQiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.6CE6kvbj18ma2I_XcMIUXBP8yiX4-Rv9DN4fLoxfMtE"
+    )
 
-channel: Channel = socket.set_channel(
-    "test-topic", channel_params={"broadcast": {"self": True}}
-)
-channel.on_broadcast("test", callback=broadcast_callback).on_postgres_changes(
-    "*", table="todos", callback=postgres_changes_callback
-).on_postgres_changes(
-    "INSERT", table="todos", callback=postgres_changes_insert_callback
-).on_postgres_changes(
-    "DELETE", table="todos", callback=postgres_changes_delete_callback
-).on_postgres_changes(
-    "UPDATE", table="todos", callback=postgres_changes_update_callback
-).subscribe()
+    channel: Channel = socket.channel(
+        "test-topic", {"config": {"broadcast": {"self": True}}}
+    )
+    await channel.on_broadcast("test", callback=broadcast_callback).on_postgres_changes(
+        "*", table="todos", callback=postgres_changes_callback
+    ).on_postgres_changes(
+        "INSERT", table="todos", callback=postgres_changes_insert_callback
+    ).on_postgres_changes(
+        "DELETE", table="todos", callback=postgres_changes_delete_callback
+    ).on_postgres_changes(
+        "UPDATE", table="todos", callback=postgres_changes_update_callback
+    ).subscribe()
 
-channel.send_broadcast("test", {"message": "Hello"})
+    await channel.send_broadcast("test", {"message": "Hello"})
 
-socket.listen()
+    await socket.listen()
+
+
+asyncio.run(main())
