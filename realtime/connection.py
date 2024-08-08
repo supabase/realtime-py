@@ -50,7 +50,7 @@ class Socket:
         :param params: Optional parameters for connection.
         :param hb_interval: WS connection is kept alive by sending a heartbeat message. Optional, defaults to 5.
         """
-        self.url = f"{re.sub(r'https://', 'wss://', re.sub(r'http://', 'ws://', url, flags=re.IGNORECASE), flags=re.IGNORECASE)}/realtime/v1/websocket?apikey={token}"
+        self.url = f"{re.sub(r'https://', 'wss://', re.sub(r'http://', 'ws://', url, flags=re.IGNORECASE), flags=re.IGNORECASE)}/websocket?apikey={token}"
         self.http_endpoint = http_endpoint_url(url)
         self.is_connected = False
         self.params = params
@@ -105,6 +105,22 @@ class Socket:
                     break
 
     async def connect(self) -> None:
+        """
+        Establishes a WebSocket connection with exponential backoff retry mechanism.
+
+        This method attempts to connect to the WebSocket server. If the connection fails,
+        it will retry with an exponential backoff strategy up to a maximum number of retries.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If unable to establish a connection after max_retries attempts.
+
+        Note:
+            - The initial backoff time and maximum retries are set during Socket initialization.
+            - The backoff time doubles after each failed attempt, up to a maximum of 60 seconds.
+        """
         retries = 0
         backoff = self.initial_backoff
 
@@ -139,6 +155,15 @@ class Socket:
 
     @ensure_connection
     async def close(self) -> None:
+        """
+        Close the WebSocket connection.
+
+        Returns:
+            None
+
+        Raises:
+            NotConnectedError: If the connection is not established when this method is called.
+        """
         await self.ws_connection.close()
         self.is_connected = False
 
@@ -189,6 +214,18 @@ class Socket:
 
     @ensure_connection
     async def set_auth(self, token: Union[str, None]) -> None:
+        """
+        Set the authentication token for the connection and update all joined channels.
+
+        This method updates the access token for the current connection and sends the new token
+        to all joined channels. This is useful for refreshing authentication or changing users.
+
+        Args:
+            token (Union[str, None]): The new authentication token. Can be None to remove authentication.
+
+        Returns:
+            None
+        """
         self.access_token = token
 
         for _, channel in self.channels.items():
@@ -200,6 +237,21 @@ class Socket:
         return f"{self.ref}"
 
     async def send(self, message: Dict[str, Any]) -> None:
+        """
+        Send a message through the WebSocket connection.
+
+        This method serializes the given message dictionary to JSON,
+        and sends it through the WebSocket connection.
+
+        Args:
+            message (Dict[str, Any]): The message to be sent, as a dictionary.
+
+        Returns:
+            None
+
+        Raises:
+            websockets.exceptions.WebSocketException: If there's an error sending the message.
+        """
         message = json.dumps(message)
-        logger.info(f"Sending: {message}")
+        logger.info(f"send: {message}")
         await self.ws_connection.send(message)

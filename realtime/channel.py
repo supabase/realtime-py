@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from realtime.message import ChannelEvents
 from realtime.types import Callback
@@ -11,14 +11,6 @@ from .transformers import http_endpoint_url
 
 if TYPE_CHECKING:
     from realtime.connection import Socket
-
-
-class CallbackListener(NamedTuple):
-    """A tuple with `event` and `callback`"""
-
-    event: str
-    on_params: Dict[str, Any]
-    callback: Callback
 
 
 class Binding:
@@ -65,8 +57,7 @@ class Channel:
     """
     `Channel` is an abstraction for a topic listener for an existing socket connection.
     Each Channel has its own topic and a list of event-callbacks that responds to messages.
-    Should only be instantiated through `connection.Socket().set_channel(topic)`
-    Topic-Channel has a 1-many relationship.
+    Should only be instantiated through `connection.Socket().channel(topic)`.
     """
 
     def __init__(
@@ -85,13 +76,11 @@ class Channel:
         self.socket = socket
         self.params = params
         self.topic = topic
-        self.listeners: List[CallbackListener] = []
         self.joined = False
         self.bindings: Dict[str, List[Binding]] = {}
         self.presence = RealtimePresence(self)
         self.filter = None
         self.current_event = None
-        self.join_ref: Optional[int] = None
 
         self.params["config"] = {
             "broadcast": {"ack": False, "self": False},
@@ -100,6 +89,7 @@ class Channel:
             **params.get("config", {}),
         }
 
+        self.join_push = Push(self, ChannelEvents.join, self.params)
         self.broadcast_endpoint_url = self._broadcast_endpoint_url()
 
     def _broadcast_endpoint_url(self):
@@ -264,9 +254,6 @@ class Channel:
         else:
             self.joined = True
             await self.rejoin()
-            if len(self.listeners) == 0:
-                cl = CallbackListener("subscribed", on_params={}, callback=None)
-                self.listeners.append(cl)
         return self
 
     async def rejoin(self) -> None:
@@ -291,7 +278,8 @@ class Channel:
         if self.socket.access_token:
             params["access_token"] = self.socket.access_token
 
-        await self.push(ChannelEvents.join, params)
+        self.join_push.update_payload(params)
+        await self.join_push.send()
 
     async def push(self, event: str, payload: Dict[str, Any]) -> Push:
         if not self.joined:
@@ -404,15 +392,31 @@ class Channel:
             ChannelEvents.join,
         ]
 
-        if ref is not None and type_lowercase in events and ref != self.join_ref:
+        if ref is not None and type_lowercase in events and ref != self.join_push.ref:
             return
 
-        bindings = self.bindings.get(type_lowercase, [])
         if type_lowercase in ["insert", "update", "delete"]:
-            bindings = self.bindings.get("postgres_changes", [])
+            postgres_changes = filter(
+                lambda binding: binding.filter.get("event", "").lower()
+                in [type_lowercase, "*"],
+                self.bindings.get("postgres_changes", []),
+            )
+            for binding in postgres_changes:
+                binding.callback(payload)
+        else:
+            bindings = self.bindings.get(type_lowercase, [])
+            for binding in bindings:
+                if type_lowercase in ["broadcast", "postgres_changes", "presence"]:
+                    bind_event = binding.filter.get("event", "").lower()
+                    payload_event = payload.get("event", "").lower()
 
-        for binding in bindings:
-            event = binding.filter.get("event", "").lower()
-            if event == "*" or event == type_lowercase:
-                if binding.id is None or (binding.id in payload.get("ids", [])):
+                    if (
+                        binding.id is not None
+                        and binding.id in payload.get("ids", [])
+                        and (bind_event in [payload_event, "*"])
+                    ):
+                        binding.callback(payload)
+                    elif bind_event in [payload_event, "*"]:
+                        binding.callback(payload)
+                elif binding.type == type_lowercase:
                     binding.callback(payload)

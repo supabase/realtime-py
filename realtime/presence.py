@@ -61,7 +61,7 @@ class RealtimePresence:
     def on_auth_failure(self, callback: Callable[[], None]):
         self.caller["onAuthFailure"] = callback
 
-    def _on_state_event(self, event: str, payload: Dict[str, Any]):
+    def _on_state_event(self, payload: Dict[str, Any]):
         self.state = self._sync_state(self.state, payload)
         for diff in self.pending_diffs:
             self.state = self._sync_diff(self.state, diff)
