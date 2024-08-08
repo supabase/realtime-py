@@ -1,385 +1,507 @@
 from __future__ import annotations
 
 import asyncio
-import json
-import logging
-from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union
 
+import aiohttp
+
+from realtime.connection import Socket
 from realtime.message import ChannelEvents
-from realtime.types import Callback
-
-from .presence import RealtimePresence
-from .transformers import http_endpoint_url
+from realtime.types import DEFAULT_TIMEOUT, ChannelState
 
 if TYPE_CHECKING:
-    from realtime.connection import Socket
-
-
-class CallbackListener(NamedTuple):
-    """A tuple with `event` and `callback`"""
-
-    event: str
-    on_params: Dict[str, Any]
-    callback: Callback
+    pass
 
 
 class Push:
-    def __init__(self, channel: Channel, event: str, payload: Dict[str, Any] = {}):
-        self.channel = channel
-        self.event = event
-        self.payload = payload
-        self.ref = channel.socket._make_ref()
-
-    def send(self):
-        asyncio.get_event_loop().run_until_complete(self._send())
-
-    async def _send(self):
-        self.ref = self.channel.socket._make_ref()
-
-        message = {
-            "topic": self.channel.topic,
-            "event": self.event,
-            "payload": self.payload,
-            "ref": self.ref,
-        }
-
-        try:
-            await self.socket.ws_connection.send(json.dumps(message))
-        except Exception as e:
-            logging.error(f"send push failed: {e}")
-
-    def update_payload(self, payload: Dict[str, Any]):
-        self.payload = {**self.payload, **payload}
-
-
-class Channel:
-    """
-    `Channel` is an abstraction for a topic listener for an existing socket connection.
-    Each Channel has its own topic and a list of event-callbacks that responds to messages.
-    Should only be instantiated through `connection.Socket().set_channel(topic)`
-    Topic-Channel has a 1-many relationship.
-    """
-
     def __init__(
         self,
-        socket: Socket,
-        topic: str,
-        channel_params: Dict[str, Any] = None,
-        params=None,
-    ) -> None:
-        """
-        Initialize the Channel object.
+        channel: RealtimeChannel,
+        event: str,
+        payload: Optional[Dict[str, Any]] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ):
+        self.channel = channel
+        self.event = event
+        self.payload = payload or {}
+        self.timeout = timeout
+        self.sent = False
+        self.timeout_timer: Optional[asyncio.Task] = None
+        self.ref = ""
+        self.received_resp: Optional[Dict[str, Any]] = None
+        self.rec_hooks: List[Dict[str, Union[str, Callable]]] = []
+        self.ref_event: Optional[str] = None
 
-        :param socket: Socket object
-        :param topic: Topic that it subscribes to on the realtime server
-        :param params: Optional parameters for connection.
-        """
-        if channel_params is None:
-            channel_params = {}
-        if params is None:
-            params = {}
+    def resend(self, timeout: int):
+        self.timeout = timeout
+        self._cancel_ref_event()
+        self.ref = ""
+        self.ref_event = None
+        self.received_resp = None
+        self.sent = False
+        self.send()
 
-        self.socket = socket
-        self.params = params
-        self.channel_params = channel_params
-        self.topic = topic
-        self.listeners: List[CallbackListener] = []
-        self.joined = False
-        self.presence = RealtimePresence(self)
-        self.filter = None
-        self.current_event = None
-        self.current_params = None
-        self.join_ref: Optional[int] = None
+    def send(self):
+        if self._has_received("timeout"):
+            return
+        self.start_timeout()
+        self.sent = True
+        self.channel.socket.push(
+            {
+                "topic": self.channel.topic,
+                "event": self.event,
+                "payload": self.payload,
+                "ref": self.ref,
+                "join_ref": self.channel._joinRef(),
+            }
+        )
 
+    def update_payload(self, payload: Dict[str, Any]):
+        self.payload.update(payload)
+
+    def receive(self, status: str, callback: Callable):
+        if self._has_received(status):
+            callback(self.received_resp.get("response"))
+        self.rec_hooks.append({"status": status, "callback": callback})
+        return self
+
+    def start_timeout(self):
+        if self.timeout_timer:
+            return
+        self.ref = self.channel.socket._makeRef()
+        self.ref_event = self.channel._replyEventName(self.ref)
+
+        async def callback(payload: Any):
+            self._cancel_ref_event()
+            self._cancel_timeout()
+            self.received_resp = payload
+            self._match_receive(payload)
+
+        self.channel._on(self.ref_event, {}, callback)
+
+        self.timeout_timer = asyncio.create_task(self._timeout())
+
+    async def _timeout(self):
+        await asyncio.sleep(self.timeout / 1000)
+        self.trigger("timeout", {})
+
+    def trigger(self, status: str, response: Any):
+        if self.ref_event:
+            self.channel._trigger(
+                self.ref_event, {"status": status, "response": response}
+            )
+
+    def destroy(self):
+        self._cancel_ref_event()
+        self._cancel_timeout()
+
+    def _cancel_ref_event(self):
+        if not self.ref_event:
+            return
+        self.channel._off(self.ref_event, {})
+
+    def _cancel_timeout(self):
+        if self.timeout_timer:
+            self.timeout_timer.cancel()
+            self.timeout_timer = None
+
+    def _match_receive(self, payload: Dict[str, Any]):
+        status = payload.get("status")
+        response = payload.get("response")
+        for hook in self.rec_hooks:
+            if hook["status"] == status:
+                hook["callback"](response)
+
+    def _has_received(self, status: str) -> bool:
+        return self.received_resp and self.received_resp.get("status") == status
+
+
+class RealtimeChannel:
+    def __init__(self, socket: Socket, topic: str, params: Dict[str, Any]):
+        self.bindings: Dict[str, List[Dict[str, Any]]] = {}
+        self.timeout: int = 10000
+        self.state: ChannelState = ChannelState.CLOSED
+        self.joined_once: bool = False
+        self.push_buffer: List[Push] = []
+        self.params = params or {"config": {}}
         self.params["config"] = {
-            "broadcast": {"ack": False, "self": False},
-            "presence": {"key": ""},
-            "private": False,
-            **self.params.get("config", {}),
+            **{
+                "broadcast": {"ack": False, "self": False},
+                "presence": {"key": ""},
+                "private": False,
+            },
+            **self.params["config"],
         }
+        self.socket = socket
+        self.topic = topic
+        self.sub_topic = topic.replace("realtime:", "")
+        self.join_push = Push(self, ChannelEvents.join, self.params, self.timeout)
+        self.rejoin_timer: Optional[asyncio.Task] = None
+        self.schedule_rejoin()
+        self.broadcast_endpoint_url = f"{self.socket.endpoint}/api/broadcast"
+        self.private = self.params["config"]["private"]
 
-        self.broadcast_endpoint_url = self._broadcast_endpoint_url()
+        self.join_push.receive("ok", self._on_join_ok)
+        self.on_close(self._on_channel_close)
+        self.on_error(self._on_channel_error)
+        self.join_push.receive("timeout", self._on_join_timeout)
+        self._on(ChannelEvents.reply, {}, self._on_channel_reply)
 
-    def _broadcast_endpoint_url(self):
-        return f"{http_endpoint_url(self.socket.http_endpoint)}/api/broadcast"
+        from .presence import RealtimePresence
 
-    def on(self, event: str, on_params: Dict[str, Any]) -> Channel:
-        """
-        Set up a listener for a specific event.
+        self.presence = RealtimePresence(self)
 
-        :param event: The name of the event to listen for.
-        :param on_params: Additional parameters for the event.
-        :return: The Channel instance for method chaining.
-        """
-        self.current_event = event
-        self.current_params = on_params
-        return self
+    def schedule_rejoin(self) -> None:
+        if self.rejoin_timer:
+            self.rejoin_timer.cancel()
+        self.rejoin_timer = asyncio.create_task(self._rejoin_after_delay())
 
-    def on_broadcast(self, event: str, callback: Callback) -> Channel:
-        """
-        Set up a listener for a specific broadcast event.
+    async def _rejoin_after_delay(self) -> None:
+        await asyncio.sleep(self.socket.reconnect_after_ms / 1000)
+        self._rejoin_until_connected()
 
-        :param event: The name of the broadcast event to listen for.
-        :param callback: The callback function to execute when the event is received.
-        :return: The Channel instance for method chaining.
-        """
-        cl = CallbackListener(
-            event="broadcast", on_params={"event": event}, callback=callback
-        )
-        self.listeners.append(cl)
-        return self
+    def _rejoin_until_connected(self) -> None:
+        self._rejoin()
+        if not self.socket.is_connected():
+            self.schedule_rejoin()
 
-    def eq(self, column: str, value: Any) -> Channel:
-        """
-        Set up a filter for equality.
+    def _on_join_ok(self) -> None:
+        self.state = ChannelState.JOINED
+        self.rejoin_timer.reset()
+        for push_event in self.push_buffer:
+            push_event.send()
+        self.push_buffer = []
 
-        :param column: The column to filter on.
-        :param value: The value to compare against.
-        :return: The Channel instance for method chaining.
-        """
-        self.filter = f"{column}=eq.{value}"
-        return self
+    def _on_channel_close(self) -> None:
+        if self.rejoin_timer:
+            self.rejoin_timer.cancel()
+        self.socket.log("channel", f"close {self.topic} {self._join_ref()}")
+        self.state = ChannelState.CLOSED
+        self.socket._remove(self)
 
-    def neq(self, column: str, value: Any) -> Channel:
-        """
-        Set up a filter for inequality.
+    def _on_channel_error(self, reason: str) -> None:
+        if self._is_leaving() or self._is_closed():
+            return
+        self.socket.log("channel", f"error {self.topic}", reason)
+        self.state = ChannelState.ERRORED
+        self.schedule_rejoin()
 
-        :param column: The column to filter on.
-        :param value: The value to compare against.
-        :return: The Channel instance for method chaining.
-        """
-        self.filter = f"{column}=neq.{value}"
-        return self
+    def _on_join_timeout(self) -> None:
+        if not self._is_joining():
+            return
+        self.socket.log("channel", f"timeout {self.topic}", self.join_push.timeout)
+        self.state = ChannelState.ERRORED
+        self.schedule_rejoin()
 
-    def lt(self, column: str, value: Any) -> Channel:
-        """
-        Set up a filter for less than comparison.
+    def _on_channel_reply(self, payload: Dict[str, Any], ref: str) -> None:
+        self._trigger(self._reply_event_name(ref), payload)
 
-        :param column: The column to filter on.
-        :param value: The value to compare against.
-        :return: The Channel instance for method chaining.
-        """
-        self.filter = f"{column}=lt.{value}"
-        return self
-
-    def lte(self, column: str, value: Any) -> Channel:
-        """
-        Set up a filter for less than or equal to comparison.
-
-        :param column: The column to filter on.
-        :param value: The value to compare against.
-        :return: The Channel instance for method chaining.
-        """
-        self.filter = f"{column}=lte.{value}"
-        return self
-
-    def gt(self, column: str, value: Any) -> Channel:
-        """
-        Set up a filter for greater than comparison.
-
-        :param column: The column to filter on.
-        :param value: The value to compare against.
-        :return: The Channel instance for method chaining.
-        """
-        self.filter = f"{column}=gt.{value}"
-        return self
-
-    def gte(self, column: str, value: Any) -> Channel:
-        """
-        Set up a filter for greater than or equal to comparison.
-
-        :param column: The column to filter on.
-        :param value: The value to compare against.
-        :return: The Channel instance for method chaining.
-        """
-        self.filter = f"{column}=gte.{value}"
-        return self
-
-    def in_(self, column: str, values: List[Any]) -> Channel:
-        """
-        Set up a filter for containment within a list.
-
-        :param column: The column to filter on.
-        :param values: The list of values to check for containment.
-        :return: The Channel instance for method chaining.
-        """
-        self.filter = f"{column}=in.({','.join(values)})"
-        return self
-
-    def on_postgres_changes(
-        self, event: str, table: str, callback: Callback, schema: str = "public"
-    ) -> Channel:
-        """
-        Set up a listener for a specific Postgres changes event.
-
-        :param event: The name of the Postgres changes event to listen for.
-        :param table: The table name for which changes should be monitored.
-        :param callback: The callback function to execute when the event is received.
-        :param schema: The database schema where the table exists. Default is 'public'.
-        :return: The Channel instance for method chaining.
-        """
-        self.channel_params = {
-            "postgres_changes": [{"event": event, "schema": schema, "table": table}]
-        }
-        cl = CallbackListener(
-            event="postgres_changes", on_params={"event": event}, callback=callback
-        )
-        self.listeners.append(cl)
-        return self
-
-    def subscribe(self) -> Channel:
-        """
-        Subscribe to the channel.
-
-        :return: The Channel instance for method chaining.
-        """
-        if not self.socket.is_connected:
+    def subscribe(
+        self,
+        callback: Optional[Callable[[str, Any], None]] = None,
+        timeout: Optional[int] = None,
+    ) -> RealtimeChannel:
+        timeout = timeout or self.timeout
+        if not self.socket.is_connected():
             self.socket.connect()
-        if self.joined:
+
+        if self.joined_once:
             raise Exception(
-                "Tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance"
+                "tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance"
             )
         else:
-            self.joined = True
-            self.rejoin()
-            if len(self.listeners) == 0:
-                cl = CallbackListener("subscribed", on_params={}, callback=None)
-                self.listeners.append(cl)
+            config = self.params["config"]
+            self.on_error(lambda e: callback and callback("CHANNEL_ERROR", e))
+            self.on_close(lambda: callback and callback("CLOSED"))
+
+            access_token_payload = {}
+            config = {
+                "broadcast": config["broadcast"],
+                "presence": config["presence"],
+                "postgres_changes": [
+                    r["filter"] for r in self.bindings.get("postgres_changes", [])
+                ],
+                "private": config["private"],
+            }
+
+            if self.socket.access_token:
+                access_token_payload["access_token"] = self.socket.access_token
+
+            self.update_join_payload({**{"config": config}, **access_token_payload})
+            self.joined_once = True
+            self._rejoin(timeout)
+
+            self.join_push.receive("ok", self._on_subscribe_ok(callback))
+            self.join_push.receive("error", self._on_subscribe_error(callback))
+            self.join_push.receive("timeout", self._on_subscribe_timeout(callback))
+
         return self
 
-    def rejoin(self) -> None:
-        """
-        Rejoin the channel.
+    def _on_subscribe_ok(
+        self, callback: Optional[Callable[[str, Any], None]]
+    ) -> Callable[[Dict[str, Any]], None]:
+        def inner(response: Dict[str, Any]) -> None:
+            server_postgres_filters = response.get("postgres_changes")
+            if server_postgres_filters is None:
+                callback and callback("SUBSCRIBED")
+                return
 
-        :return: None
-        """
-        if not self.joined:
-            return
-        if (
-            self.current_event == "postgres_changes"
-            and self.filter
-            and self.filter is not None
-        ):
-            self.channel_params["filter"] = self.filter
+            client_postgres_bindings = self.bindings.get("postgres_changes", [])
+            new_postgres_bindings = []
 
-        access_token_payload = {}
+            for i, client_postgres_binding in enumerate(client_postgres_bindings):
+                server_postgres_filter = (
+                    server_postgres_filters[i]
+                    if i < len(server_postgres_filters)
+                    else None
+                )
 
-        if self.socket._access_token is not None:
-            access_token_payload["access_token"] = self.socket._access_token
+                if (
+                    server_postgres_filter
+                    and server_postgres_filter["event"]
+                    == client_postgres_binding["filter"]["event"]
+                    and server_postgres_filter["schema"]
+                    == client_postgres_binding["filter"]["schema"]
+                    and server_postgres_filter["table"]
+                    == client_postgres_binding["filter"]["table"]
+                    and server_postgres_filter["filter"]
+                    == client_postgres_binding["filter"]["filter"]
+                ):
+                    new_postgres_bindings.append(
+                        {**client_postgres_binding, "id": server_postgres_filter["id"]}
+                    )
+                else:
+                    self.unsubscribe()
+                    callback and callback(
+                        "CHANNEL_ERROR",
+                        Exception(
+                            "mismatch between server and client bindings for postgres changes"
+                        ),
+                    )
+                    return
 
-        self._push(
-            ChannelEvents.join,
-            {"config": self.channel_params, "access_token": access_token_payload},
+            self.bindings["postgres_changes"] = new_postgres_bindings
+            callback and callback("SUBSCRIBED")
+
+        return inner
+
+    def _on_subscribe_error(
+        self, callback: Optional[Callable[[str, Any], None]]
+    ) -> Callable[[Dict[str, Any]], None]:
+        def inner(error: Dict[str, Any]) -> None:
+            callback and callback(
+                "CHANNEL_ERROR", Exception(json.dumps(error.values()) or "error")
+            )
+
+        return inner
+
+    def _on_subscribe_timeout(
+        self, callback: Optional[Callable[[str, Any], None]]
+    ) -> Callable[[], None]:
+        def inner() -> None:
+            callback and callback("TIMED_OUT")
+
+        return inner
+
+    def presence_state(self) -> Dict[str, Any]:
+        return self.presence.state
+
+    async def track(
+        self, payload: Dict[str, Any], opts: Optional[Dict[str, Any]] = None
+    ) -> Any:
+        opts = opts or {}
+        return await self.send(
+            {
+                "type": "presence",
+                "event": "track",
+                "payload": payload,
+            },
+            opts.get("timeout", self.timeout),
         )
 
-    def _push(self, event: str, payload: Dict[str, Any]) -> Push:
-        if not self.joined:
+    async def untrack(self, opts: Optional[Dict[str, Any]] = None) -> Any:
+        opts = opts or {}
+        return await self.send(
+            {
+                "type": "presence",
+                "event": "untrack",
+            },
+            opts,
+        )
+
+    def on(
+        self,
+        type: str,
+        filter: Dict[str, Any],
+        callback: Callable[[Any, Optional[str]], None],
+    ) -> RealtimeChannel:
+        return self._on(type, filter, callback)
+
+    async def send(
+        self, args: Dict[str, Any], opts: Optional[Dict[str, Any]] = None
+    ) -> str:
+        opts = opts or {}
+        if not self._can_push() and args["type"] == "broadcast":
+            options = {
+                "headers": {
+                    "Authorization": (
+                        f"Bearer {self.socket.access_token}"
+                        if self.socket.access_token
+                        else ""
+                    ),
+                    "apikey": self.socket.api_key if self.socket.api_key else "",
+                    "Content-Type": "application/json",
+                },
+                "json": {
+                    "messages": [
+                        {
+                            "topic": self.sub_topic,
+                            "event": args["event"],
+                            "payload": args["payload"],
+                            "private": self.private,
+                        }
+                    ]
+                },
+            }
+            try:
+                response = await self._fetch_with_timeout(
+                    self.broadcast_endpoint_url,
+                    options,
+                    opts.get("timeout", self.timeout),
+                )
+                return "ok" if response and response.status < 300 else "error"
+            except aiohttp.ClientError:
+                return "error"
+        else:
+            return await self._push(
+                args["type"], args, opts.get("timeout", self.timeout)
+            )
+
+    def update_join_payload(self, payload: Dict[str, Any]) -> None:
+        self.join_push.update_payload(payload)
+
+    async def unsubscribe(self, timeout: Optional[int] = None) -> str:
+        timeout = timeout or self.timeout
+        self.state = ChannelState.LEAVING
+        on_close = lambda: self.socket.log(
+            "channel", f"leave {self.topic}"
+        ) or self._trigger(ChannelEvents.close, "leave", self._join_ref())
+        self.rejoin_timer.reset()
+        self.join_push.destroy()
+
+        promise = asyncio.Event()
+
+        leave_push = Push(self, ChannelEvents.leave, {}, timeout)
+        leave_push.receive("ok", lambda: on_close() or promise.set())
+        leave_push.receive("timeout", lambda: on_close() or promise.set())
+        leave_push.receive("error", lambda: promise.set())
+        leave_push.send()
+
+        if not self._can_push():
+            leave_push.trigger("ok", {})
+
+        return "ok" if await asyncio.wait_for(promise.wait(), timeout) else "timed out"
+
+    async def _fetch_with_timeout(
+        self, url: str, options: Dict[str, Any], timeout: float
+    ) -> Optional[aiohttp.ClientResponse]:
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(url, **options, timeout=timeout) as response:
+                    await response.text()  # Ensure the response body is read
+                    return response
+            except asyncio.TimeoutError:
+                return None
+
+    def _push(
+        self, event: str, payload: Dict[str, Any], timeout: Optional[int] = None
+    ) -> Push:
+        if not self.joined_once:
             raise Exception(
                 f"tried to push '{event}' to '{self.topic}' before joining. Use channel.subscribe() before pushing events"
             )
+        push_event = Push(self, event, payload, timeout)
+        if self._can_push():
+            push_event.send()
+        else:
+            push_event.start_timeout()
+            self.push_buffer.append(push_event)
+        return push_event
 
-        push = Push(self, event, payload)
-        push.send()
-        return push
-
-    # @Deprecated:
-    # You should use `subscribe` instead of this low-level method. It will be removed in the future.
-    async def join(self) -> Channel:
-        """
-        Coroutine that attempts to join Phoenix Realtime server via a certain topic.
-
-        :return: Channel
-        """
-        try:
-            await self.socket._send(
-                {
-                    "topic": self.topic,
-                    "event": "phx_join",
-                    "payload": {"config": self.channel_params},
-                    "ref": None,
-                }
-            )
-        except Exception as e:
-            print(e)
-            return self
-
-    def off(self, event: str) -> None:
-        """
-        Stop responding to a certain event.
-
-        :param event: The event to stop responding to.
-        :return: None
-        """
-        self.listeners = [
-            callback for callback in self.listeners if callback.event != event
-        ]
-
-    def track(self, user_status: Dict[str, Any]) -> None:
-        """
-        Track a user's presence.
-
-        :param user_status: User's presence status.
-        :return: None
-        """
-        self.presence.track(user_status)
-
-    def untrack(self) -> None:
-        """
-        Untrack a user's presence.
-
-        :return: None
-        """
-        self.presence.untrack()
-
-    def on_presence_sync(self, callback: Callback) -> Channel:
-        """
-        Register a callback for presence sync events.
-
-        :param callback: The callback function to execute when a presence sync event occurs.
-        :return: The Channel instance for method chaining.
-        """
-        self.presence.on_sync(callback)
-        return self
-
-    def on_presence_join(self, callback: Callback) -> Channel:
-        """
-        Register a callback for presence join events.
-
-        :param callback: The callback function to execute when a presence join event occurs.
-        :return: The Channel instance for method chaining.
-        """
-        self.presence.on_join(callback)
-        return self
-
-    def on_presence_leave(self, callback: Callback) -> Channel:
-        """
-        Register a callback for presence leave events.
-
-        :param callback: The callback function to execute when a presence leave event occurs.
-        :return: The Channel instance for method chaining.
-        """
-        self.presence.on_leave(callback)
-        return self
-
-    def send_broadcast(self, event: str, data: Any) -> None:
-        """
-        Sends a broadcast message to the current channel.
-
-        :param event: The name of the broadcast event.
-        :param data: The data to be sent with the message.
-        :return: An asyncio.Future object representing the send operation.
-        """
-
-        message = {
-            "topic": self.topic,
-            "ref": self.socket._make_ref(),
-            "join_ref": self.join_ref,
-            "event": ChannelEvents.broadcast,
-            "payload": {
-                "type": "broadcast",
-                "event": event,
-                "payload": data,
-            },
+    def _on(
+        self,
+        type: str,
+        filter: Dict[str, Any],
+        callback: Callable[[Any, Optional[str]], None],
+    ) -> RealtimeChannel:
+        self.bindings[type] = self.bindings.get(type, [])
+        binding = {
+            "type": type,
+            "filter": filter,
+            "callback": callback,
         }
+        self.bindings[type].append(binding)
+        return self
 
-        self.socket.send(message)
+    def _off(self, type: str, filter: Dict[str, Any]) -> RealtimeChannel:
+        if type in self.bindings:
+            self.bindings[type] = [
+                b for b in self.bindings[type] if b["filter"] != filter
+            ]
+        return self
+
+    def _can_push(self) -> bool:
+        return self.socket.is_connected() and self._is_joined()
+
+    def _is_member(self, type: str, filter: Dict[str, Any]) -> bool:
+        return any(
+            b["type"] == type and b["filter"] == filter
+            for b in self.bindings.get(type, [])
+        )
+
+    def _join_ref(self) -> str:
+        return self.join_push.ref
+
+    def _rejoin(self, timeout: Optional[int] = None) -> None:
+        timeout = timeout or self.timeout
+        if self.state in {ChannelState.LEAVING, ChannelState.CLOSED}:
+            return
+        self.socket._leave_open_topic(self.topic)
+        self.state = ChannelState.JOINING
+        self.join_push.resend(timeout)
+
+    def _trigger(
+        self,
+        type: str,
+        filter: Dict[str, Any],
+        payload: Any = None,
+        ref: Optional[str] = None,
+    ) -> None:
+        for binding in self.bindings.get(type, []):
+            if binding["filter"] == filter:
+                binding["callback"](payload, ref)
+
+    def _reply_event_name(self, ref: str) -> str:
+        return f"resp_{ref}"
+
+    @property
+    def is_closed(self) -> bool:
+        return self.state == ChannelState.CLOSED
+
+    @property
+    def is_joined(self) -> bool:
+        return self.state == ChannelState.JOINED
+
+    @property
+    def is_joining(self) -> bool:
+        return self.state == ChannelState.JOINING
+
+    @property
+    def is_leaving(self) -> bool:
+        return self.state == ChannelState.LEAVING
+
+    def on_close(self, callback: Callable[[], None]) -> None:
+        self._on(ChannelState.CLOSED, {}, callback)
+
+    def on_error(self, callback: Callable[[Any], None]) -> None:
+        self._on(ChannelState.ERRORED, {}, lambda e: callback(e))

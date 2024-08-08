@@ -2,17 +2,26 @@ import asyncio
 import json
 import logging
 import re
-from collections import defaultdict
 from functools import wraps
-from typing import Any, DefaultDict, Dict, List, Union
+from typing import Any, Callable, Dict, List, Optional
+from urllib.parse import urlencode
 
 import websockets
+from websockets.frames import CloseCode
+from websockets.protocol import State
 
-from realtime.channel import Channel
 from realtime.exceptions import NotConnectedError
-from realtime.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, Message
-from realtime.transformers import http_endpoint_url
-from realtime.types import Callback, T_ParamSpec, T_Retval
+from realtime.message import ChannelEvents
+from realtime.types import (
+    DEFAULT_HEADERS,
+    DEFAULT_TIMEOUT,
+    VSN,
+    Callback,
+    ConnectionState,
+    RealtimeClientOptions,
+    T_ParamSpec,
+    T_Retval,
+)
 
 logging.basicConfig(
     format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
@@ -32,222 +41,228 @@ def ensure_connection(func: Callback):
     return wrapper
 
 
+class Timer:
+    def __init__(self, callback: Callable[[], None], timeout: int):
+        self.callback: Callable[[], None] = callback
+        self.timeout: int = timeout
+        self.timer: Optional[asyncio.TimerHandle] = None
+
+    def reset(self) -> None:
+        if self.timer:
+            self.timer.cancel()
+        self.timer = asyncio.get_event_loop().call_later(self.timeout, self.callback)
+
+    def schedule_timeout(self) -> None:
+        self.reset()
+
+
+class Serializer:
+    def decode(self, raw_message: str) -> Dict[str, Any]:
+        return json.loads(raw_message)
+
+    def encode(self, payload: Dict[str, Any]) -> str:
+        return json.dumps(payload)
+
+
 class Socket:
-    _ref: int = 0
-    _token: str
-    _access_token: str
-
     def __init__(
-        self,
-        url: str,
-        token: str,
-        auto_reconnect: bool = False,
-        params: Dict[str, Any] = {},
-        hb_interval: int = 5,
-        max_retries: int = 5,
-        initial_backoff: float = 1.0,
-    ) -> None:
-        """
-        `Socket` is the abstraction for an actual socket connection that receives and 'reroutes' `Message` according to its `topic` and `event`.
-        Socket-Channel has a 1-many relationship.
-        Socket-Topic has a 1-many relationship.
-        :param url: Websocket URL of the Realtime server. starts with `ws://` or `wss://`. Also accepts default Supabase URL: `http://` or `https://`
-        :param params: Optional parameters for connection.
-        :param hb_interval: WS connection is kept alive by sending a heartbeat message. Optional, defaults to 5.
-        """
-        self.url = f"{re.sub(r'https://', 'wss://', re.sub(r'http://', 'ws://', url, flags=re.IGNORECASE), flags=re.IGNORECASE)}/realtime/v1/websocket?apikey={token}"
-        self.http_endpoint = http_endpoint_url(url)
-        self.channels = defaultdict(list)
-        self.is_connected = False
-        self.params = params
-
-        self._token = token
-        self._access_token = token
-
-        self.hb_interval = hb_interval
-        self.ws_connection: websockets.client.WebSocketClientProtocol
-        self.kept_alive = False
-        self.ref = 0
-        self.auto_reconnect = auto_reconnect
-        self.channels: DefaultDict[str, List[Channel]] = defaultdict(list)
-        self.max_retries = max_retries
-        self.initial_backoff = initial_backoff
-
-        self._access_token: Union[str, None] = token
-        self._api_key = token
-
-    @ensure_connection
-    def listen(self) -> None:
-        """
-        Wrapper for async def _listen() to expose a non-async interface
-        In most cases, this should be the last method executed as it starts an infinite listening loop.
-        :return: None
-        """
-        asyncio.get_event_loop().run_until_complete(self.listen_async())
-
-    @ensure_connection
-    async def listen_async(self):
-        await asyncio.gather(self._listen(), self._keep_alive())
-
-    async def _listen(self) -> None:
-        """
-        An infinite loop that keeps listening.
-        :return: None
-        """
-        while True:
-            try:
-                msg = await self.ws_connection.recv()
-                msg = Message(**json.loads(msg))
-
-                logging.info(f"Received message: {msg}")
-
-                logger.debug(msg)
-                channels = self.channels.get(msg.topic, [])
-
-                logging.info(f"found {len(channels)} channels")
-
-                for channel in channels:
-                    for cl in channel.listeners:
-                        if cl.event == msg.event:
-                            cl.callback(msg.payload)
-            except websockets.exceptions.ConnectionClosed:
-                if self.auto_reconnect:
-                    logging.info(
-                        "Connection with server closed, trying to reconnect..."
-                    )
-                    await self._connect()
-                    for topic, channels in self.channels.items():
-                        for channel in channels:
-                            await channel.join()
-                else:
-                    logging.exception("Connection with the server closed.")
-                    break
-
-    def connect(self) -> None:
-        """
-        Wrapper for async def _connect() to expose a non-async interface
-        """
-
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self._connect())
-        self.is_connected = True
-
-    async def _connect(self) -> None:
-        retries = 0
-        backoff = self.initial_backoff
-
-        while retries < self.max_retries:
-            try:
-                ws_connection = await websockets.connect(self.url)
-                if ws_connection.open:
-                    logging.info("Connection was successful")
-                    self.ws_connection = ws_connection
-                    self.is_connected = True
-                    return
-                else:
-                    raise Exception("Failed to open WebSocket connection")
-            except Exception as e:
-                retries += 1
-                if retries >= self.max_retries or not self.auto_reconnect:
-                    logging.error(
-                        f"Failed to establish WebSocket connection after {retries} attempts: {e}"
-                    )
-                    raise
-                else:
-                    wait_time = backoff * (2 ** (retries - 1))  # Exponential backoff
-                    logging.info(
-                        f"Connection attempt {retries} failed. Retrying in {wait_time:.2f} seconds..."
-                    )
-                    await asyncio.sleep(wait_time)
-                    backoff = min(backoff * 2, 60)  # Cap the backoff at 60 seconds
-
-        raise Exception(
-            f"Failed to establish WebSocket connection after {self.max_retries} attempts"
+        self, endpoint: str, options: RealtimeClientOptions = RealtimeClientOptions()
+    ):
+        self.endpoint: str = f"{endpoint}/websocket"
+        self.http_endpoint: str = self._http_endpoint_url(endpoint)
+        self.timeout = options.timeout or DEFAULT_TIMEOUT
+        self.params: Dict[str, str] = options.params or {}
+        self.headers: Dict[str, str] = {
+            **DEFAULT_HEADERS,
+            **(options.headers or {}),
+        }
+        self.heartbeat_interval_ms: int = options.heartbeat_interval_ms or 30000
+        self.logger: Callable = self._noop  # options.get('logger', self._noop)
+        self.encode: Callable[[Dict[str, Any], Callable[[str], None]], None] = (
+            self._default_encode
+        )  # options.get('encode', self._default_encode)
+        self.decode: Callable[[str], Dict[str, Any]] = (
+            self._default_decode
+        )  # options.get('decode', self._default_decode)
+        self.reconnect_after_ms: Callable[[int], int] = (
+            options.reconnect_after_ms
+            if options.reconnect_after_ms is not None
+            else self._default_reconnect_after_ms
         )
+        self.reconnect_timer: Timer = Timer(self._reconnect, self.reconnect_after_ms)
+        self.access_token: Optional[str] = self.params.get("apikey", None)
+        self.channels: List["RealtimeChannel"] = []
+        self.conn: Optional[websockets.client.WebSocketClientProtocol] = None
+        self.send_buffer: List[Callable[[], None]] = []
+        self.serializer: Serializer = Serializer()
+        self.state_change_callbacks: Dict[str, List[Callable]] = {
+            "open": [],
+            "close": [],
+            "error": [],
+            "message": [],
+        }
+        self.pending_heartbeat_ref: Optional[str] = None
+        self.ref: int = 0
 
-    @ensure_connection
-    def close(self) -> None:
-        """
-        Wrapper for async def _close() to expose a non-async interface
-        """
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self._close())
-        self.is_connected = False
+    async def connect(self) -> None:
+        if self.conn:
+            return
 
-    async def _close(self) -> None:
-        await self.ws_connection.close()
+        self.conn = await websockets.connect(self._endpoint_url())
+        await self.setup_connection()
 
-    async def _keep_alive(self) -> None:
-        """
-        Sending heartbeat to server every 5 seconds
-        Ping - pong messages to verify connection is alive
-        """
-        while True:
-            try:
-                data = dict(
-                    topic=PHOENIX_CHANNEL,
-                    event=ChannelEvents.heartbeat,
-                    payload=HEARTBEAT_PAYLOAD,
-                    ref=None,
-                )
-                await self._send(data)
-                await asyncio.sleep(self.hb_interval)
-            except websockets.exceptions.ConnectionClosed:
-                if self.auto_reconnect:
-                    logging.info(
-                        "Connection with server closed, trying to reconnect..."
-                    )
-                    await self._connect()
-                else:
-                    logging.exception("Connection with the server closed.")
-                    break
+    async def disconnect(
+        self, code: int = CloseCode.NORMAL_CLOSURE, reason: str = ""
+    ) -> None:
+        if self.conn:
+            await self.conn.close(code, reason)
+            self.conn = None
+            self.reconnect_timer.reset()
 
-    @ensure_connection
-    def set_channel(self, topic: str, channel_params: Dict[str, Any]) -> Channel:
-        """
-        :param topic: Initializes a channel and creates a two-way association with the socket
-        :return: Channel
-        """
-        topic = f"realtime:{topic}"
-        chan = Channel(self, topic, channel_params, self.params)
-        self.channels[topic].append(chan)
+    async def remove_channel(self, channel: "RealtimeChannel") -> str:
+        status = await channel.unsubscribe()
+        if not self.channels:
+            await self.disconnect()
+        return status
 
+    async def remove_all_channels(self) -> List[str]:
+        statuses = await asyncio.gather(
+            *[channel.unsubscribe() for channel in self.channels]
+        )
+        await self.disconnect()
+        return statuses
+
+    def log(self, kind: str, msg: str, data: Any = None) -> None:
+        self.logger(kind, msg, data)
+
+    def connection_state(self) -> str:
+        if self.conn:
+            if self.conn.state == State.OPEN:
+                return ConnectionState.OPEN
+            elif self.conn.state == State.CLOSED:
+                return ConnectionState.CLOSED
+            elif self.conn.state == State.CONNECTING:
+                return ConnectionState.CONNECTING
+            elif self.conn.state == State.CLOSING:
+                return ConnectionState.CLOSING
+        return ConnectionState.CLOSED
+
+    def is_connected(self) -> bool:
+        return self.connection_state() == ConnectionState.OPEN
+
+    def channel(
+        self, topic: str, params: Optional[Dict[str, Any]] = None
+    ) -> "RealtimeChannel":
+        from .channel import RealtimeChannel
+
+        params = params or {}
+        chan = RealtimeChannel(self, f"realtime:{topic}", params)
+        self.channels.append(chan)
         return chan
 
-    def add_channel(self, channel: Channel) -> None:
-        """
-        Associates the given channel object with the socket.
-        :param channel: Channel object to associate with the socket.
-        :return: None
-        """
-        topic = channel.topic
-        self.channels[topic].append(channel)
+    def push(self, data: Dict[str, Any]) -> None:
+        callback = lambda: self.conn.send(self.encode(data))
+        self.log("push", f"{data}")
+        if self.is_connected():
+            callback()
+        else:
+            self.send_buffer.append(callback)
 
-    def summary(self) -> None:
-        """
-        Prints a list of topics and event the socket is listening to
-        :return: None
-        """
-        for topic, chans in self.channels.items():
-            for chan in chans:
-                print(f"Topic: {topic} | Events: {[e for e, _ in chan.listeners]}]")
+    def set_auth(self, token: Optional[str]) -> None:
+        self.access_token = token
+        for channel in self.channels:
+            if token:
+                channel.update_join_payload({"access_token": token})
+            if channel.joined_once and channel.is_joined:
+                channel._push(ChannelEvents.access_token, {"access_token": token})
 
-    @ensure_connection
-    def set_auth(self, token: Union[str, None]) -> None:
-        self._access_token = token
+    def _default_reconnect_after_ms(self, tries: int) -> int:
+        return [1000, 2000, 5000, 10000][tries - 1] if tries <= 4 else 10000
 
-        for _, channels in self.channels.items():
-            for channel in channels:
-                if channel.joined:
-                    channel._push(ChannelEvents.access_token, {"access_token": token})
+    def _noop(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+    def _default_encode(
+        self, payload: Dict[str, Any], callback: Callable[[str], None]
+    ) -> None:
+        callback(json.dumps(payload))
+
+    def _default_decode(self, raw_message: str) -> Dict[str, Any]:
+        return json.loads(raw_message)
 
     def _make_ref(self) -> str:
         self.ref += 1
-        return f"{self.ref}"
+        if self.ref == self.ref:
+            self.ref = 0
+        return str(self.ref)
 
-    async def _send(self, message):
-        logger.info(f"Sending: {message}")
-        await self.ws_connection.send(json.dumps(message))
+    def _append_params(self, url: str, params: Dict[str, str]) -> str:
+        if not params:
+            return url
+        query = urlencode(params)
+        return f"{url}?{query}"
 
-    def send(self, message):
-        asyncio.get_event_loop().run_until_complete(self._send(message))
+    def _http_endpoint_url(self, socket_url: str) -> str:
+        url = re.sub(r"^ws", "http", socket_url, flags=re.IGNORECASE)
+        url = re.sub(
+            r"(\/socket\/websocket|\/socket|\/websocket)\/?$",
+            "",
+            url,
+            flags=re.IGNORECASE,
+        )
+        url = re.sub(r"\/+$", "", url)
+        return url
+
+    async def setup_connection(self) -> None:
+        async for msg in self.conn:
+            await self._on_conn_message(msg)
+        await self.conn.wait_closed()
+
+    async def _on_conn_message(self, raw_message: str) -> None:
+        msg = self.decode(raw_message)
+        topic, event, payload, ref = (
+            msg["topic"],
+            msg["event"],
+            msg["payload"],
+            msg["ref"],
+        )
+        if ref == self.pending_heartbeat_ref or event == payload.get("type"):
+            self.pending_heartbeat_ref = None
+        self.log(
+            "receive",
+            f"{payload.get('status', '')} {topic} {event} ({ref or ''})",
+            payload,
+        )
+        for channel in self.channels:
+            if channel._is_member(topic):
+                channel._trigger(event, payload, ref)
+        for callback in self.state_change_callbacks["message"]:
+            callback(msg)
+
+    def _endpoint_url(self) -> str:
+        return self._append_params(self.endpoint, {**self.params, "vsn": VSN})
+
+    async def _reconnect(self) -> None:
+        await self.disconnect()
+        await self.connect()
+
+    async def _send_heartbeat(self) -> None:
+        if not self.is_connected():
+            return
+        if self.pending_heartbeat_ref:
+            self.pending_heartbeat_ref = None
+            self.log(
+                "transport", "heartbeat timeout. Attempting to re-establish connection"
+            )
+            await self.conn.close(CloseCode.NORMAL_CLOSURE, "heartbeat timeout")
+            return
+        self.pending_heartbeat_ref = self._make_ref()
+        self.push(
+            {
+                "topic": "phoenix",
+                "event": "heartbeat",
+                "payload": {},
+                "ref": self.pending_heartbeat_ref,
+            }
+        )
+        self.set_auth(self.access_token)
