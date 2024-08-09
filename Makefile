@@ -13,7 +13,7 @@ tests_pre_commit:
 run_tests: tests
 
 tests_only:
-	poetry run pytest --cov=./ --cov-report=xml --cov-report=html -vv
+	poetry run pytest -vv
 
 build_sync:
 	poetry run unasync realtime tests
