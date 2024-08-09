@@ -344,7 +344,7 @@ class Channel:
                         client_binding.id = server_binding.get("id")
                         new_postgres_bindings.append(client_binding)
                     else:
-                        self.unsubscribe()
+                        asyncio.create_task(self.unsubscribe())
                         return
 
                 self.bindings["postgres_changes"] = new_postgres_bindings
@@ -373,12 +373,12 @@ class Channel:
         self.rejoin_timer.reset()
         self.join_push.destroy()
 
-        def _on_close(*args):
+        def _close(*args):
             logging.info(f"channel {self.topic} leave")
             self._trigger(ChannelEvents.close, "leave")
 
         leave_push = Push(self, ChannelEvents.leave, {})
-        leave_push.receive("ok", _on_close).receive("timeout", _on_close)
+        leave_push.receive("ok", _close).receive("timeout", _close)
 
         await leave_push.send()
 
