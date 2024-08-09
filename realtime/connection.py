@@ -15,7 +15,7 @@ from realtime.transformers import http_endpoint_url
 from realtime.types import Callback, T_ParamSpec, T_Retval
 
 logging.basicConfig(
-    format="%(asctime)s:%(levelname)s - %(message)s", level=logging.DEBUG
+    format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
 )
 
 logger = logging.getLogger(__name__)

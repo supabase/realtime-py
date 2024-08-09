@@ -1,6 +1,7 @@
 import asyncio
 import os
 
+from realtime.channel import Channel
 from realtime.connection import Socket
 
 
@@ -75,6 +76,35 @@ async def test_postgres_changes(socket: Socket):
     await socket.listen()
 
 
+async def test_presence(socket: Socket):
+    await socket.connect()
+
+    asyncio.create_task(socket.listen())
+
+    channel: Channel = socket.channel("room")
+
+    def on_sync():
+        print("on_sync", channel.presence.state)
+
+    def on_join():
+        print("on_join", channel.presence.state)
+
+    def on_leave():
+        print("on_leave", channel.presence.state)
+
+    await channel.on_presence_sync(on_sync).on_presence_join(on_join).on_presence_leave(
+        on_leave
+    ).subscribe()
+
+    await channel.track({"user_id": "1"})
+
+    await asyncio.sleep(1)
+
+    # await channel.untrack()
+
+    # await asyncio.sleep(1)
+
+
 async def main():
     URL = os.getenv("SUPABASE_URL")
     JWT = os.getenv("SUPABASE_ANON_KEY")
@@ -84,7 +114,8 @@ async def main():
     await socket.connect()
 
     # await test_broadcast_events(socket)
-    await test_postgres_changes(socket)
+    # await test_postgres_changes(socket)
+    await test_presence(socket)
 
 
 asyncio.run(main())

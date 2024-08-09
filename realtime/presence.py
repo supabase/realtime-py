@@ -11,15 +11,15 @@ class Presence:
         self.payload = payload
 
 
-class PresenceOpts:
-    def __init__(self, events: "PresenceEvents"):
-        self.events = events
-
-
 class PresenceEvents:
     def __init__(self, state: str, diff: str):
         self.state = state
         self.diff = diff
+
+
+class PresenceOpts:
+    def __init__(self, events: PresenceEvents):
+        self.events = events
 
 
 class RealtimePresence:
@@ -68,14 +68,15 @@ class RealtimePresence:
         self.pending_diffs = []
         self.caller["onSync"]()
 
-    def _on_diff_event(self, event: str, payload: Dict[str, Any]):
+    def _on_diff_event(self, payload: Dict[str, Any], **kwargs):
+        data = payload.get("payload")
         if self.in_pending_sync_state():
-            self.pending_diffs.append(payload)
+            self.pending_diffs.append(data)
         else:
             self.state = self._sync_diff(self.state, payload)
             self.caller["onSync"]()
 
-    def _on_auth_event(self, event: str, payload: Dict[str, Any]):
+    def _on_auth_event(self, payload: Dict[str, Any], **kwargs):
         if payload.get("status") == "ok":
             self.caller["onAuthSuccess"]()
         else:

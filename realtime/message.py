@@ -34,6 +34,7 @@ class ChannelEvents(str, Enum):
     heartbeat = "heartbeat"
     access_token = "access_token"
     broadcast = "broadcast"
+    presence = "presence"
 
 
 PHOENIX_CHANNEL = "phoenix"

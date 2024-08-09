@@ -516,22 +516,22 @@ class Channel:
             callback for callback in self.listeners if callback.event != event
         ]
 
-    def track(self, user_status: Dict[str, Any]) -> None:
+    async def track(self, user_status: Dict[str, Any]) -> None:
         """
         Track a user's presence.
 
         :param user_status: User's presence status.
         :return: None
         """
-        self.presence.track(user_status)
+        await self.send_presence("track", user_status)
 
-    def untrack(self) -> None:
+    async def untrack(self) -> None:
         """
         Untrack a user's presence.
 
         :return: None
         """
-        self.presence.untrack()
+        await self.send_presence("untrack", {})
 
     def on_presence_sync(self, callback: Callback) -> Channel:
         """
@@ -575,6 +575,9 @@ class Channel:
             ChannelEvents.broadcast,
             {"type": "broadcast", "event": event, "payload": data},
         )
+
+    async def send_presence(self, event: str, data: Any) -> None:
+        await self.push(ChannelEvents.presence, {"event": event, "payload": data})
 
     def _trigger(self, type: str, payload: Optional[Any], ref: Optional[str] = None):
         type_lowercase = type.lower()
