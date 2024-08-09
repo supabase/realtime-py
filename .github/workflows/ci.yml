@@ -37,18 +37,11 @@ jobs:
       - name: Setup Local Supabase
         run: |
           supabase start --workdir tests
-          supabase status --workdir tests -o env > supabase_env.txt
+          supabase status --workdir tests -o env > tests/.env \
+            --override-name auth.anon_key=SUPABASE_ANON_KEY \
+            --override-name api.url=SUPABASE_API_URL
       
-      - name: Load Supabase Environment
-        id: supabase_env
-        run: |
-          echo "SUPABASE_ENV<<EOF" >> $GITHUB_OUTPUT
-          cat supabase_env.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - name: Run Tests
-        env:
-          ${{ steps.supabase_env.outputs.SUPABASE_ENV }}
         run: make run_tests
 
       # - name: Upload Coverage
