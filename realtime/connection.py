@@ -10,9 +10,16 @@ import websockets
 
 from realtime.channel import Channel
 from realtime.exceptions import NotConnectedError
-from realtime.message import PHOENIX_CHANNEL, ChannelEvents, Message
+from realtime.message import Message
 from realtime.transformers import http_endpoint_url
-from realtime.types import DEFAULT_TIMEOUT, Callback, T_ParamSpec, T_Retval
+from realtime.types import (
+    DEFAULT_TIMEOUT,
+    PHOENIX_CHANNEL,
+    Callback,
+    ChannelEvents,
+    T_ParamSpec,
+    T_Retval,
+)
 
 logging.basicConfig(
     format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO

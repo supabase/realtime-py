@@ -4,10 +4,9 @@ import asyncio
 import json
 import logging
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
-from realtime.message import ChannelEvents
-from realtime.types import DEFAULT_TIMEOUT, Callback
+from realtime.types import DEFAULT_TIMEOUT, Callback, ChannelEvents, ChannelStates
 
 from .presence import RealtimePresence
 from .transformers import http_endpoint_url
@@ -149,9 +148,11 @@ class Push:
         return self.received_resp and self.received_resp.get("status") == status
 
 
-class ChannelStates(StrEnum):
-    JOINED = "joined"
-    CLOSED = "closed"
+class RealtimeSubscribeStates(StrEnum):
+    SUBSCRIBED = "SUBSCRIBED"
+    TIMED_OUT = "TIMED_OUT"
+    CLOSED = "CLOSED"
+    CHANNEL_ERROR = "CHANNEL_ERROR"
 
 
 class Channel:
@@ -238,9 +239,179 @@ class Channel:
 
         self._on(ChannelEvents.reply, on_reply)
 
-    def _broadcast_endpoint_url(self):
-        return f"{http_endpoint_url(self.socket.http_endpoint)}/api/broadcast"
+    # Properties
+    @property
+    def is_closed(self):
+        return self.state == ChannelStates.CLOSED
 
+    @property
+    def is_joining(self):
+        return self.state == ChannelStates.JOINING
+
+    @property
+    def is_leaving(self):
+        return self.state == ChannelStates.LEAVING
+
+    @property
+    def is_errored(self):
+        return self.state == ChannelStates.ERRORED
+
+    @property
+    def is_joined(self):
+        return self.state == ChannelStates.JOINED
+
+    # Core channel methods
+    async def subscribe(
+        self,
+        callback: Optional[
+            Callable[[RealtimeSubscribeStates], Optional[Exception]]
+        ] = None,
+    ) -> Channel:
+        """
+        Subscribe to the channel.
+
+        :return: The Channel instance for method chaining.
+        """
+        if not self.socket.is_connected:
+            self.socket.connect()
+        if self.joined:
+            raise Exception(
+                "Tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance"
+            )
+        else:
+            config = self.params.get("config", {})
+            broadcast = config.get("broadcast", {})
+            presence = config.get("presence", {})
+            private = config.get("private", False)
+
+            access_token_payload = {}
+            config = {
+                "broadcast": broadcast,
+                "presence": presence,
+                "private": private,
+                "postgres_changes": list(
+                    map(lambda x: x.filter, self.bindings.get("postgres_changes", []))
+                ),
+            }
+
+            if self.socket.access_token:
+                access_token_payload["access_token"] = self.socket.access_token
+
+            self.join_push.update_payload(
+                {**{"config": config}, **access_token_payload}
+            )
+            self.joined = True
+
+            def on_join_push_ok(payload: Dict[str, Any]):
+                server_postgres_changes: List[Dict[str, Any]] = payload.get(
+                    "postgres_changes", []
+                )
+
+                if len(server_postgres_changes) == 0:
+                    callback and callback(RealtimeSubscribeStates.SUBSCRIBED, None)
+                    return
+
+                client_postgres_changes = self.bindings.get("postgres_changes", [])
+                new_postgres_bindings = []
+
+                bindings_len = len(client_postgres_changes)
+
+                for i in range(bindings_len):
+                    client_binding = client_postgres_changes[i]
+                    event = client_binding.filter.get("event")
+                    schema = client_binding.filter.get("schema")
+                    table = client_binding.filter.get("table")
+                    filter = client_binding.filter.get("filter")
+
+                    server_binding = (
+                        server_postgres_changes[i]
+                        if i < len(server_postgres_changes)
+                        else None
+                    )
+
+                    if (
+                        server_binding
+                        and server_binding.get("event") == event
+                        and server_binding.get("schema") == schema
+                        and server_binding.get("table") == table
+                        and server_binding.get("filter") == filter
+                    ):
+                        client_binding.id = server_binding.get("id")
+                        new_postgres_bindings.append(client_binding)
+                    else:
+                        self.unsubscribe()
+                        return
+
+                self.bindings["postgres_changes"] = new_postgres_bindings
+                callback and callback(RealtimeSubscribeStates.SUBSCRIBED, None)
+
+            def on_join_push_error(payload: Dict[str, Any]):
+                callback and callback(
+                    RealtimeSubscribeStates.CHANNEL_ERROR,
+                    Exception(json.dumps(payload)),
+                )
+
+            def on_join_push_timeout():
+                callback and callback(RealtimeSubscribeStates.TIMED_OUT, None)
+
+            self.join_push.receive("ok", on_join_push_ok).receive(
+                "error", on_join_push_error
+            ).receive("timeout", on_join_push_timeout)
+
+            await self._rejoin()
+
+        return self
+
+    async def push(
+        self, event: str, payload: Dict[str, Any], timeout: Optional[int] = None
+    ) -> Push:
+        if not self.joined:
+            raise Exception(
+                f"tried to push '{event}' to '{self.topic}' before joining. Use channel.subscribe() before pushing events"
+            )
+
+        timeout = timeout or self.timeout
+
+        push = Push(self, event, payload, timeout)
+        if self._can_push():
+            await push.send()
+        else:
+            push.start_timeout()
+            self.push_buffer.append(push)
+
+        return push
+
+    async def join(self) -> Channel:
+        """
+        Coroutine that attempts to join Phoenix Realtime server via a certain topic.
+
+        :return: Channel
+        """
+        try:
+            await self.socket._send(
+                {
+                    "topic": self.topic,
+                    "event": "phx_join",
+                    "payload": {"config": self.channel_params},
+                    "ref": None,
+                }
+            )
+        except Exception as e:
+            print(e)
+            return self
+
+    def off(self, event: str) -> None:
+        """
+        Stop responding to a certain event.
+
+        :param event: The event to stop responding to.
+        :return: None
+        """
+        self.listeners = [
+            callback for callback in self.listeners if callback.event != event
+        ]
+
+    # Event handling methods
     def _on(
         self, type: str, callback: Callback, filter: Dict[str, Any] = {}
     ) -> Channel:
@@ -290,6 +461,25 @@ class Channel:
         """
         return self._on("broadcast", filter={"event": event}, callback=callback)
 
+    def on_postgres_changes(
+        self, event: str, table: str, callback: Callback, schema: str = "public"
+    ) -> Channel:
+        """
+        Set up a listener for a specific Postgres changes event.
+
+        :param event: The name of the Postgres changes event to listen for.
+        :param table: The table name for which changes should be monitored.
+        :param callback: The callback function to execute when the event is received.
+        :param schema: The database schema where the table exists. Default is 'public'.
+        :return: The Channel instance for method chaining.
+        """
+        return self._on(
+            "postgres_changes",
+            filter={"event": event, "schema": schema, "table": table},
+            callback=callback,
+        )
+
+    # Filter methods
     def eq(self, column: str, value: Any) -> Channel:
         """
         Set up a filter for equality.
@@ -367,174 +557,7 @@ class Channel:
         self.filter = f"{column}=in.({','.join(values)})"
         return self
 
-    def on_postgres_changes(
-        self, event: str, table: str, callback: Callback, schema: str = "public"
-    ) -> Channel:
-        """
-        Set up a listener for a specific Postgres changes event.
-
-        :param event: The name of the Postgres changes event to listen for.
-        :param table: The table name for which changes should be monitored.
-        :param callback: The callback function to execute when the event is received.
-        :param schema: The database schema where the table exists. Default is 'public'.
-        :return: The Channel instance for method chaining.
-        """
-        return self._on(
-            "postgres_changes",
-            filter={"event": event, "schema": schema, "table": table},
-            callback=callback,
-        )
-
-    async def subscribe(self, callback: Optional[Callback] = None) -> Channel:
-        """
-        Subscribe to the channel.
-
-        :return: The Channel instance for method chaining.
-        """
-        if not self.socket.is_connected:
-            self.socket.connect()
-        if self.joined:
-            raise Exception(
-                "Tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance"
-            )
-        else:
-            config = self.params.get("config", {})
-            broadcast = config.get("broadcast", {})
-            presence = config.get("presence", {})
-            private = config.get("private", False)
-
-            access_token_payload = {}
-            config = {
-                "broadcast": broadcast,
-                "presence": presence,
-                "private": private,
-                "postgres_changes": list(
-                    map(lambda x: x.filter, self.bindings.get("postgres_changes", []))
-                ),
-            }
-
-            if self.socket.access_token:
-                access_token_payload["access_token"] = self.socket.access_token
-
-            self.join_push.update_payload(
-                {**{"config": config}, **access_token_payload}
-            )
-            self.joined = True
-
-            def on_join_push_ok(payload: Dict[str, Any]):
-                server_postgres_changes: List[Dict[str, Any]] = payload.get(
-                    "postgres_changes", []
-                )
-
-                if len(server_postgres_changes) == 0:
-                    callback and callback("SUBSCRIBED")
-                    return
-
-                client_postgres_changes = self.bindings.get("postgres_changes", [])
-                new_postgres_bindings = []
-
-                bindings_len = len(client_postgres_changes)
-
-                for i in range(bindings_len):
-                    client_binding = client_postgres_changes[i]
-                    event = client_binding.filter.get("event")
-                    schema = client_binding.filter.get("schema")
-                    table = client_binding.filter.get("table")
-                    filter = client_binding.filter.get("filter")
-
-                    server_binding = (
-                        server_postgres_changes[i]
-                        if i < len(server_postgres_changes)
-                        else None
-                    )
-
-                    if (
-                        server_binding
-                        and server_binding.get("event") == event
-                        and server_binding.get("schema") == schema
-                        and server_binding.get("table") == table
-                        and server_binding.get("filter") == filter
-                    ):
-                        client_binding.id = server_binding.get("id")
-                        new_postgres_bindings.append(client_binding)
-                    else:
-                        self.unsubscribe()
-                        return
-
-                self.bindings["postgres_changes"] = new_postgres_bindings
-                callback and callback("SUBSCRIBED")
-
-            def on_join_push_error(payload: Dict[str, Any]):
-                callback and callback("CHANNEL_ERROR", Exception(json.dumps(payload)))
-
-            def on_join_push_timeout():
-                callback and callback("TIMED_OUT")
-
-            self.join_push.receive("ok", on_join_push_ok).receive(
-                "error", on_join_push_error
-            ).receive("timeout", on_join_push_timeout)
-
-            await self._rejoin()
-
-        return self
-
-    async def _rejoin(self) -> None:
-        await self.join_push.resend()
-
-    async def push(
-        self, event: str, payload: Dict[str, Any], timeout: Optional[int] = None
-    ) -> Push:
-        if not self.joined:
-            raise Exception(
-                f"tried to push '{event}' to '{self.topic}' before joining. Use channel.subscribe() before pushing events"
-            )
-
-        timeout = timeout or self.timeout
-
-        push = Push(self, event, payload, timeout)
-        if self._can_push():
-            await push.send()
-        else:
-            push.start_timeout()
-            self.push_buffer.append(push)
-
-        return push
-
-    def _can_push(self):
-        return self.socket.is_connected and self.joined
-
-    # @Deprecated:
-    # You should use `subscribe` instead of this low-level method. It will be removed in the future.
-    async def join(self) -> Channel:
-        """
-        Coroutine that attempts to join Phoenix Realtime server via a certain topic.
-
-        :return: Channel
-        """
-        try:
-            await self.socket._send(
-                {
-                    "topic": self.topic,
-                    "event": "phx_join",
-                    "payload": {"config": self.channel_params},
-                    "ref": None,
-                }
-            )
-        except Exception as e:
-            print(e)
-            return self
-
-    def off(self, event: str) -> None:
-        """
-        Stop responding to a certain event.
-
-        :param event: The event to stop responding to.
-        :return: None
-        """
-        self.listeners = [
-            callback for callback in self.listeners if callback.event != event
-        ]
-
+    # Presence methods
     async def track(self, user_status: Dict[str, Any]) -> None:
         """
         Track a user's presence.
@@ -582,6 +605,7 @@ class Channel:
         self.presence.on_leave(callback)
         return self
 
+    # Broadcast methods
     async def send_broadcast(self, event: str, data: Any) -> None:
         """
         Sends a broadcast message to the current channel.
@@ -594,6 +618,16 @@ class Channel:
             ChannelEvents.broadcast,
             {"type": "broadcast", "event": event, "payload": data},
         )
+
+    # Internal methods
+    def _broadcast_endpoint_url(self):
+        return f"{http_endpoint_url(self.socket.http_endpoint)}/api/broadcast"
+
+    async def _rejoin(self) -> None:
+        await self.join_push.resend()
+
+    def _can_push(self):
+        return self.socket.is_connected and self.joined
 
     async def send_presence(self, event: str, data: Any) -> None:
         await self.push(ChannelEvents.presence, {"event": event, "payload": data})
