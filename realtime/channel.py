@@ -7,7 +7,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from realtime.message import ChannelEvents
-from realtime.types import Callback
+from realtime.types import DEFAULT_TIMEOUT, Callback
 
 from .presence import RealtimePresence
 from .transformers import http_endpoint_url
@@ -37,11 +37,17 @@ class Hook:
 
 
 class Push:
-    def __init__(self, channel: Channel, event: str, payload: Dict[str, Any] = {}):
+    def __init__(
+        self,
+        channel: Channel,
+        event: str,
+        payload: Dict[str, Any] = {},
+        timeout=DEFAULT_TIMEOUT,
+    ):
         self.channel = channel
         self.event = event
         self.payload = payload
-        self.timeout = 10
+        self.timeout = timeout
         self.rec_hooks: List[Hook] = []
         self.ref = None
         self.ref_event = None
@@ -177,7 +183,8 @@ class Channel:
         self.filter = None
         self.current_event = None
         self.state = ChannelStates.CLOSED
-
+        self.push_buffer: List[Push] = []
+        self.timeout = self.socket.timeout
         self.params["config"] = {
             "broadcast": {"ack": False, "self": False},
             "presence": {"key": ""},
@@ -188,14 +195,14 @@ class Channel:
         self.join_push = Push(self, ChannelEvents.join, self.params)
         self.broadcast_endpoint_url = self._broadcast_endpoint_url()
 
-        async def on_join_push_ok(payload: Dict[str, Any]):
+        async def on_join_push_ok(payload: Dict[str, Any], **kwargs):
             self.state = ChannelStates.JOINED
             self.rejoin_timer.reset()
             for push in self.push_buffer:
                 await push.send()
             self.push_buffer = []
 
-        def on_join_push_timeout():
+        def on_join_push_timeout(**kwargs):
             if not self.is_joining:
                 return
 
@@ -474,15 +481,27 @@ class Channel:
     async def _rejoin(self) -> None:
         await self.join_push.resend()
 
-    async def push(self, event: str, payload: Dict[str, Any]) -> Push:
+    async def push(
+        self, event: str, payload: Dict[str, Any], timeout: Optional[int] = None
+    ) -> Push:
         if not self.joined:
             raise Exception(
                 f"tried to push '{event}' to '{self.topic}' before joining. Use channel.subscribe() before pushing events"
             )
 
-        push = Push(self, event, payload)
-        await push.send()
+        timeout = timeout or self.timeout
+
+        push = Push(self, event, payload, timeout)
+        if self._can_push():
+            await push.send()
+        else:
+            push.start_timeout()
+            self.push_buffer.append(push)
+
         return push
+
+    def _can_push(self):
+        return self.socket.is_connected and self.joined
 
     # @Deprecated:
     # You should use `subscribe` instead of this low-level method. It will be removed in the future.

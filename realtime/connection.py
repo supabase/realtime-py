@@ -12,7 +12,7 @@ from realtime.channel import Channel
 from realtime.exceptions import NotConnectedError
 from realtime.message import PHOENIX_CHANNEL, ChannelEvents, Message
 from realtime.transformers import http_endpoint_url
-from realtime.types import Callback, T_ParamSpec, T_Retval
+from realtime.types import DEFAULT_TIMEOUT, Callback, T_ParamSpec, T_Retval
 
 logging.basicConfig(
     format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
@@ -44,12 +44,16 @@ class Socket:
         initial_backoff: float = 1.0,
     ) -> None:
         """
-        `Socket` is the abstraction for an actual socket connection that receives and 'reroutes' `Message` according to its `topic` and `event`.
-        Socket-Channel has a 1-many relationship.
-        Socket-Topic has a 1-many relationship.
-        :param url: Websocket URL of the Realtime server. starts with `ws://` or `wss://`. Also accepts default Supabase URL: `http://` or `https://`
-        :param params: Optional parameters for connection.
-        :param hb_interval: WS connection is kept alive by sending a heartbeat message. Optional, defaults to 5.
+        Initialize a Socket instance for WebSocket communication.
+
+        :param url: WebSocket URL of the Realtime server. Starts with `ws://` or `wss://`.
+                    Also accepts default Supabase URL: `http://` or `https://`.
+        :param token: Authentication token for the WebSocket connection.
+        :param auto_reconnect: If True, automatically attempt to reconnect on disconnection. Defaults to False.
+        :param params: Optional parameters for the connection. Defaults to an empty dictionary.
+        :param hb_interval: Interval (in seconds) for sending heartbeat messages to keep the connection alive. Defaults to 30.
+        :param max_retries: Maximum number of reconnection attempts. Defaults to 5.
+        :param initial_backoff: Initial backoff time (in seconds) for reconnection attempts. Defaults to 1.0.
         """
         self.url = f"{re.sub(r'https://', 'wss://', re.sub(r'http://', 'ws://', url, flags=re.IGNORECASE), flags=re.IGNORECASE)}/websocket?apikey={token}"
         self.http_endpoint = http_endpoint_url(url)
@@ -65,6 +69,7 @@ class Socket:
         self.channels: Dict[str, Channel] = {}
         self.max_retries = max_retries
         self.initial_backoff = initial_backoff
+        self.timeout = DEFAULT_TIMEOUT
 
     async def _listen(self) -> None:
         """

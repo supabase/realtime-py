@@ -7,3 +7,6 @@ T_Retval = TypeVar("T_Retval")
 
 # Custom types
 Callback = Callable[T_ParamSpec, T_Retval]
+
+
+DEFAULT_TIMEOUT = 10

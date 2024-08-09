@@ -1,9 +1,7 @@
-import asyncio
 import os
 
 import pytest
 from dotenv import load_dotenv
-from realtime.channel import Channel
 
 from realtime.connection import Socket
 
@@ -33,4 +31,3 @@ def socket() -> Socket:
 #         print("on_leave", channel.presence.state)
 
 #     await channel.on_presence_sync(on_sync).on_presence_join(on_join).on_presence_leave(on_leave).subscribe()
-
