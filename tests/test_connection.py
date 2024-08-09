@@ -29,7 +29,7 @@ async def test_set_auth(socket: Socket):
 @pytest.mark.asyncio
 async def test_broadcast_events(socket: Socket):
     await socket.connect()
-    task = asyncio.create_task(socket.listen())
+    asyncio.create_task(socket.listen())
 
     channel = socket.channel(
         "test-broadcast", params={"config": {"broadcast": {"self": True}}}
@@ -56,5 +56,4 @@ async def test_broadcast_events(socket: Socket):
     assert received_events[1]["payload"]["message"] == "Event 2"
     assert received_events[2]["payload"]["message"] == "Event 3"
 
-    task.cancel()
     await socket.close()

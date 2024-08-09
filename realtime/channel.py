@@ -30,17 +30,22 @@ class Binding:
         self.id = id
 
 
+class Hook:
+    def __init__(self, status: str, callback: Callback):
+        self.status = status
+        self.callback = callback
+
+
 class Push:
     def __init__(self, channel: Channel, event: str, payload: Dict[str, Any] = {}):
         self.channel = channel
         self.event = event
         self.payload = payload
         self.timeout = 10
-
-        self.rec_hooks = []
+        self.rec_hooks: List[Hook] = []
         self.ref = None
         self.ref_event = None
-        self.received_resp = None
+        self.received_resp: Optional[Dict[str, Any]] = None
         self.sent = False
         self.timeout_task = None
 
@@ -77,9 +82,9 @@ class Push:
 
     def receive(self, status: str, callback: Callback) -> Push:
         if self._has_received(status):
-            callback(self.received_resp)
+            callback(self.received_resp.get("response", {}))
 
-        self.rec_hooks.append({"status": status, "callback": callback})
+        self.rec_hooks.append(Hook(status, callback))
         return self
 
     def start_timeout(self):
@@ -93,9 +98,7 @@ class Push:
             self._cancel_ref_event()
             self._cancel_timeout()
             self.received_resp = kwargs.get("payload")
-
-            [status, response] = kwargs["payload"]
-            self._match_receive(status, response)
+            self._match_receive(**self.received_resp)
 
         self.channel._on(self.ref_event, on_reply)
 
@@ -105,7 +108,7 @@ class Push:
 
         self.timeout_task = asyncio.create_task(timeout(self))
 
-    def trigger(self, status: str, response: any):
+    def trigger(self, status: str, response: Any):
         if self.ref_event:
             payload = {
                 "status": status,
@@ -132,8 +135,9 @@ class Push:
 
     def _match_receive(self, status: str, response: Any):
         for hook in self.rec_hooks:
-            if hook["status"] == status:
-                hook["callback"](response)
+            if hook.status == status:
+                # FIXME: callback can be a coroutine, how to handle that?
+                hook.callback(response)
 
     def _has_received(self, status: str):
         return self.received_resp and self.received_resp.get("status") == status
@@ -397,6 +401,9 @@ class Channel:
                 "broadcast": broadcast,
                 "presence": presence,
                 "private": private,
+                "postgres_changes": list(
+                    map(lambda x: x.filter, self.bindings.get("postgres_changes", []))
+                ),
             }
 
             if self.socket.access_token:
@@ -408,9 +415,11 @@ class Channel:
             self.joined = True
 
             def on_join_push_ok(payload: Dict[str, Any]):
-                server_postgres_changes = payload.get("postgres_changes")
+                server_postgres_changes: List[Dict[str, Any]] = payload.get(
+                    "postgres_changes", []
+                )
 
-                if not server_postgres_changes:
+                if len(server_postgres_changes) == 0:
                     callback and callback("SUBSCRIBED")
                     return
 
@@ -421,6 +430,11 @@ class Channel:
 
                 for i in range(bindings_len):
                     client_binding = client_postgres_changes[i]
+                    event = client_binding.filter.get("event")
+                    schema = client_binding.filter.get("schema")
+                    table = client_binding.filter.get("table")
+                    filter = client_binding.filter.get("filter")
+
                     server_binding = (
                         server_postgres_changes[i]
                         if i < len(server_postgres_changes)
@@ -429,14 +443,13 @@ class Channel:
 
                     if (
                         server_binding
-                        and server_binding.get("event") == client_binding.get("event")
-                        and server_binding.get("schema") == client_binding.get("schema")
-                        and server_binding.get("table") == client_binding.get("table")
-                        and server_binding.get("filter") == client_binding.get("filter")
+                        and server_binding.get("event") == event
+                        and server_binding.get("schema") == schema
+                        and server_binding.get("table") == table
+                        and server_binding.get("filter") == filter
                     ):
-                        new_postgres_bindings.append(
-                            {**client_binding, "id": server_binding.get("id")}
-                        )
+                        client_binding.id = server_binding.get("id")
+                        new_postgres_bindings.append(client_binding)
                     else:
                         self.unsubscribe()
                         return
@@ -603,7 +616,6 @@ class Channel:
                         if payload.get("data", {}).get("type")
                         else None
                     )
-
                     if (
                         bind_id
                         and bind_id in payload.get("ids", [])

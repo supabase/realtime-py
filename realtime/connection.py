@@ -2,19 +2,20 @@ import asyncio
 import json
 import logging
 import re
+from ast import List
 from functools import wraps
-from typing import Any, Dict, Union
+from typing import Any, Callable, Dict, Optional, Union
 
 import websockets
 
 from realtime.channel import Channel
 from realtime.exceptions import NotConnectedError
-from realtime.message import HEARTBEAT_PAYLOAD, PHOENIX_CHANNEL, ChannelEvents, Message
+from realtime.message import PHOENIX_CHANNEL, ChannelEvents, Message
 from realtime.transformers import http_endpoint_url
 from realtime.types import Callback, T_ParamSpec, T_Retval
 
 logging.basicConfig(
-    format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s:%(levelname)s - %(message)s", level=logging.DEBUG
 )
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ class Socket:
         token: str,
         auto_reconnect: bool = False,
         params: Dict[str, Any] = {},
-        hb_interval: int = 5,
+        hb_interval: int = 30,
         max_retries: int = 5,
         initial_backoff: float = 1.0,
     ) -> None:
@@ -54,25 +55,16 @@ class Socket:
         self.http_endpoint = http_endpoint_url(url)
         self.is_connected = False
         self.params = params
-
         self.apikey = token
         self.access_token = token
-
+        self.send_buffer: List[Callable] = []
         self.hb_interval = hb_interval
-        self.ws_connection: websockets.client.WebSocketClientProtocol
-        self.kept_alive = False
+        self.ws_connection: Optional[websockets.client.WebSocketClientProtocol] = None
         self.ref = 0
         self.auto_reconnect = auto_reconnect
         self.channels: Dict[str, Channel] = {}
         self.max_retries = max_retries
         self.initial_backoff = initial_backoff
-
-        self.access_token: Union[str, None] = token
-        self._api_key = token
-
-    @ensure_connection
-    async def listen(self) -> None:
-        await asyncio.gather(self._listen(), self._keep_alive())
 
     async def _listen(self) -> None:
         """
@@ -126,12 +118,10 @@ class Socket:
 
         while retries < self.max_retries:
             try:
-                ws_connection = await websockets.connect(self.url)
-                if ws_connection.open:
+                self.ws_connection = await websockets.connect(self.url)
+                if self.ws_connection.open:
                     logging.info("Connection was successful")
-                    self.ws_connection = ws_connection
-                    self.is_connected = True
-                    return
+                    return await self._on_connect()
                 else:
                     raise Exception("Failed to open WebSocket connection")
             except Exception as e:
@@ -153,6 +143,19 @@ class Socket:
             f"Failed to establish WebSocket connection after {self.max_retries} attempts"
         )
 
+    async def listen(self):
+        await asyncio.gather(self._listen(), self._heartbeat())
+
+    async def _on_connect(self):
+        self.is_connected = True
+        await self._flush_send_buffer()
+
+    async def _flush_send_buffer(self):
+        if self.is_connected and len(self.send_buffer) > 0:
+            for callback in self.send_buffer:
+                await callback()
+            self.send_buffer = []
+
     @ensure_connection
     async def close(self) -> None:
         """
@@ -164,20 +167,17 @@ class Socket:
         Raises:
             NotConnectedError: If the connection is not established when this method is called.
         """
+
         await self.ws_connection.close()
         self.is_connected = False
 
-    async def _keep_alive(self) -> None:
-        """
-        Sending heartbeat to server every 5 seconds
-        Ping - pong messages to verify connection is alive
-        """
-        while True:
+    async def _heartbeat(self) -> None:
+        while self.is_connected:
             try:
                 data = dict(
                     topic=PHOENIX_CHANNEL,
                     event=ChannelEvents.heartbeat,
-                    payload=HEARTBEAT_PAYLOAD,
+                    payload={},
                     ref=None,
                 )
                 await self.send(data)
@@ -241,7 +241,9 @@ class Socket:
         Send a message through the WebSocket connection.
 
         This method serializes the given message dictionary to JSON,
-        and sends it through the WebSocket connection.
+        and sends it through the WebSocket connection. If the connection
+        is not currently established, the message will be buffered and sent
+        once the connection is re-established.
 
         Args:
             message (Dict[str, Any]): The message to be sent, as a dictionary.
@@ -252,6 +254,14 @@ class Socket:
         Raises:
             websockets.exceptions.WebSocketException: If there's an error sending the message.
         """
+
         message = json.dumps(message)
         logger.info(f"send: {message}")
-        await self.ws_connection.send(message)
+
+        async def send_message():
+            await self.ws_connection.send(message)
+
+        if self.is_connected:
+            await send_message()
+        else:
+            self.send_buffer.append(send_message)

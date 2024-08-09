@@ -8,19 +8,19 @@ def presence_callback(payload):
     print("presence: ", payload)
 
 
-def postgres_changes_callback(payload):
+def postgres_changes_callback(payload, **kwargs):
     print("*: ", payload)
 
 
-def postgres_changes_insert_callback(payload):
+def postgres_changes_insert_callback(payload, **kwargs):
     print("INSERT: ", payload)
 
 
-def postgres_changes_delete_callback(payload):
+def postgres_changes_delete_callback(payload, **kwargs):
     print("DELETE: ", payload)
 
 
-def postgres_changes_update_callback(payload):
+def postgres_changes_update_callback(payload, **kwargs):
     print("UPDATE: ", payload)
 
 
@@ -30,7 +30,6 @@ async def realtime(payload):
 
 async def test_broadcast_events(socket: Socket):
     await socket.connect()
-    asyncio.create_task(socket.listen())
 
     channel = socket.channel(
         "test-broadcast", params={"config": {"broadcast": {"self": True}}}
@@ -82,9 +81,10 @@ async def main():
 
     # Setup the broadcast socket and channel
     socket = Socket(f"{URL}/realtime/v1", JWT, auto_reconnect=True)
+    await socket.connect()
 
-    await test_broadcast_events(socket)
-    # await test_postgres_changes(socket)
+    # await test_broadcast_events(socket)
+    await test_postgres_changes(socket)
 
 
 asyncio.run(main())
