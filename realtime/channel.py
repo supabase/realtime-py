@@ -154,7 +154,6 @@ class Push:
     def _match_receive(self, status: str, response: Any):
         for hook in self.rec_hooks:
             if hook.status == status:
-                # FIXME: callback can be a coroutine, how to handle that?
                 hook.callback(response)
 
     def _has_received(self, status: str):
