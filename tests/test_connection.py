@@ -11,7 +11,8 @@ load_dotenv()
 
 @pytest.fixture
 def socket() -> Socket:
-    url = f"{os.getenv("SUPABASE_URL")}/realtime/v1"
+    url = os.getenv("SUPABASE_URL")
+    url = f"{url}/realtime/v1"
     key = os.getenv("SUPABASE_ANON_KEY")
     return Socket(url, key)
 

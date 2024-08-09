@@ -39,8 +39,8 @@ jobs:
           supabase start --workdir tests
           supabase status --workdir tests -o env > tests/.env \
             --override-name auth.anon_key=SUPABASE_ANON_KEY \
-            --override-name api.url=SUPABASE_API_URL
-      
+            --override-name api.url=SUPABASE_URL
+
       - name: Run Tests
         run: make run_tests
 
