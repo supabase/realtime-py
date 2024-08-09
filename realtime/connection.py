@@ -266,7 +266,7 @@ class Socket:
         self.access_token = token
 
         for _, channel in self.channels.items():
-            if channel.joined:
+            if channel._joined_once and channel.is_joined:
                 await channel.push(ChannelEvents.access_token, {"access_token": token})
 
     def _make_ref(self) -> str:

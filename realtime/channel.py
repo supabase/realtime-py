@@ -42,7 +42,7 @@ class Binding:
         self.id = id
 
 
-class Hook:
+class _Hook:
     def __init__(self, status: str, callback: Callback):
         self.status = status
         self.callback = callback
@@ -60,7 +60,7 @@ class Push:
         self.event = event
         self.payload = payload
         self.timeout = timeout
-        self.rec_hooks: List[Hook] = []
+        self.rec_hooks: List[_Hook] = []
         self.ref = None
         self.ref_event = None
         self.received_resp: Optional[Dict[str, Any]] = None
@@ -102,7 +102,7 @@ class Push:
         if self._has_received(status):
             callback(self.received_resp.get("response", {}))
 
-        self.rec_hooks.append(Hook(status, callback))
+        self.rec_hooks.append(_Hook(status, callback))
         return self
 
     def start_timeout(self):
@@ -209,13 +209,11 @@ class Channel:
         self.socket = socket
         self.params = params
         self.topic = topic
-        self.joined = False
+        self._joined_once = False
         self.bindings: Dict[str, List[Binding]] = {}
         self.presence = RealtimePresence(self)
-        self.filter = None
-        self.current_event = None
         self.state = ChannelStates.CLOSED
-        self.push_buffer: List[Push] = []
+        self._push_buffer: List[Push] = []
         self.timeout = self.socket.timeout
         self.params["config"] = {
             "broadcast": {"ack": False, "self": False},
@@ -232,9 +230,9 @@ class Channel:
         def on_join_push_ok(payload: Dict[str, Any], *args):
             self.state = ChannelStates.JOINED
             self.rejoin_timer.reset()
-            for push in self.push_buffer:
+            for push in self._push_buffer:
                 asyncio.create_task(push.send())
-            self.push_buffer = []
+            self._push_buffer = []
 
         def on_join_push_timeout(*args):
             if not self.is_joining:
@@ -309,7 +307,7 @@ class Channel:
         """
         if not self.socket.is_connected:
             await self.socket.connect()
-        if self.joined:
+        if self._joined_once:
             raise Exception(
                 "Tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance"
             )
@@ -335,7 +333,7 @@ class Channel:
             self.join_push.update_payload(
                 {**{"config": config}, **access_token_payload}
             )
-            self.joined = True
+            self._joined_once = True
 
             def on_join_push_ok(payload: Dict[str, Any]):
                 server_postgres_changes: List[Dict[str, Any]] = payload.get(
@@ -418,7 +416,7 @@ class Channel:
     async def push(
         self, event: str, payload: Dict[str, Any], timeout: Optional[int] = None
     ) -> Push:
-        if not self.joined:
+        if not self._joined_once:
             raise Exception(
                 f"tried to push '{event}' to '{self.topic}' before joining. Use channel.subscribe() before pushing events"
             )
@@ -430,7 +428,7 @@ class Channel:
             await push.send()
         else:
             push.start_timeout()
-            self.push_buffer.append(push)
+            self._push_buffer.append(push)
 
         return push
 
@@ -536,84 +534,6 @@ class Channel:
             callback=callback,
         )
 
-    # Filter methods
-    def eq(self, column: str, value: Any) -> Channel:
-        """
-        Set up a filter for equality.
-
-        :param column: The column to filter on.
-        :param value: The value to compare against.
-        :return: The Channel instance for method chaining.
-        """
-        self.filter = f"{column}=eq.{value}"
-        return self
-
-    def neq(self, column: str, value: Any) -> Channel:
-        """
-        Set up a filter for inequality.
-
-        :param column: The column to filter on.
-        :param value: The value to compare against.
-        :return: The Channel instance for method chaining.
-        """
-        self.filter = f"{column}=neq.{value}"
-        return self
-
-    def lt(self, column: str, value: Any) -> Channel:
-        """
-        Set up a filter for less than comparison.
-
-        :param column: The column to filter on.
-        :param value: The value to compare against.
-        :return: The Channel instance for method chaining.
-        """
-        self.filter = f"{column}=lt.{value}"
-        return self
-
-    def lte(self, column: str, value: Any) -> Channel:
-        """
-        Set up a filter for less than or equal to comparison.
-
-        :param column: The column to filter on.
-        :param value: The value to compare against.
-        :return: The Channel instance for method chaining.
-        """
-        self.filter = f"{column}=lte.{value}"
-        return self
-
-    def gt(self, column: str, value: Any) -> Channel:
-        """
-        Set up a filter for greater than comparison.
-
-        :param column: The column to filter on.
-        :param value: The value to compare against.
-        :return: The Channel instance for method chaining.
-        """
-        self.filter = f"{column}=gt.{value}"
-        return self
-
-    def gte(self, column: str, value: Any) -> Channel:
-        """
-        Set up a filter for greater than or equal to comparison.
-
-        :param column: The column to filter on.
-        :param value: The value to compare against.
-        :return: The Channel instance for method chaining.
-        """
-        self.filter = f"{column}=gte.{value}"
-        return self
-
-    def in_(self, column: str, values: List[Any]) -> Channel:
-        """
-        Set up a filter for containment within a list.
-
-        :param column: The column to filter on.
-        :param values: The list of values to check for containment.
-        :return: The Channel instance for method chaining.
-        """
-        self.filter = f"{column}=in.({','.join(values)})"
-        return self
-
     # Presence methods
     async def track(self, user_status: Dict[str, Any]) -> None:
         """
@@ -688,7 +608,7 @@ class Channel:
         await self.join_push.resend()
 
     def _can_push(self):
-        return self.socket.is_connected and self.joined
+        return self.socket.is_connected and self._joined_once
 
     async def send_presence(self, event: str, data: Any) -> None:
         await self.push(ChannelEvents.presence, {"event": event, "payload": data})
