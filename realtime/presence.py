@@ -2,7 +2,7 @@
  Defines the RealtimePresence class and its dependencies.
 """
 
-from enum import StrEnum
+from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Union
 
 type PresenceOnJoinCallback = Callable[[str, List[Any], List[Any]], None]
@@ -20,7 +20,7 @@ class Presence(Dict[str, Any]):
 RealtimePresenceState = Dict[str, List[Presence[T]]]
 
 
-class RealtimePresenceListenEvents(StrEnum):
+class RealtimePresenceListenEvents(str, Enum):
     SYNC = "SYNC"
     JOIN = "JOIN"
     LEAVE = "LEAVE"

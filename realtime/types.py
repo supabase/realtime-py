@@ -1,4 +1,4 @@
-from enum import StrEnum
+from enum import Enum
 from typing import Callable, TypeVar
 
 from typing_extensions import ParamSpec
@@ -14,7 +14,7 @@ DEFAULT_TIMEOUT = 10
 PHOENIX_CHANNEL = "phoenix"
 
 
-class ChannelEvents(StrEnum):
+class ChannelEvents(str, Enum):
     """
     ChannelEvents are a bunch of constant strings that are defined according to
     what the Phoenix realtime server expects.
@@ -31,7 +31,7 @@ class ChannelEvents(StrEnum):
     presence = "presence"
 
 
-class ChannelStates(StrEnum):
+class ChannelStates(str, Enum):
     JOINED = "joined"
     CLOSED = "closed"
     ERRORED = "errored"

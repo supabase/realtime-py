@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from enum import StrEnum
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 from realtime.types import DEFAULT_TIMEOUT, Callback, ChannelEvents, ChannelStates
@@ -148,7 +148,7 @@ class Push:
         return self.received_resp and self.received_resp.get("status") == status
 
 
-class RealtimeSubscribeStates(StrEnum):
+class RealtimeSubscribeStates(str, Enum):
     SUBSCRIBED = "SUBSCRIBED"
     TIMED_OUT = "TIMED_OUT"
     CLOSED = "CLOSED"
