@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 from realtime.types import DEFAULT_TIMEOUT, Callback, ChannelEvents, ChannelStates
 
-from .presence import RealtimePresence
+from .presence import PresenceOnJoinCallback, PresenceOnLeaveCallback, RealtimePresence
 from .transformers import http_endpoint_url
 
 if TYPE_CHECKING:
@@ -259,6 +259,10 @@ class Channel:
     @property
     def is_joined(self):
         return self.state == ChannelStates.JOINED
+
+    @property
+    def join_ref(self):
+        return self.join_push.ref
 
     # Core channel methods
     async def subscribe(
@@ -575,7 +579,7 @@ class Channel:
         """
         await self.send_presence("untrack", {})
 
-    def on_presence_sync(self, callback: Callback) -> Channel:
+    def on_presence_sync(self, callback: Callable[[], None]) -> Channel:
         """
         Register a callback for presence sync events.
 
@@ -585,7 +589,7 @@ class Channel:
         self.presence.on_sync(callback)
         return self
 
-    def on_presence_join(self, callback: Callback) -> Channel:
+    def on_presence_join(self, callback: PresenceOnJoinCallback) -> Channel:
         """
         Register a callback for presence join events.
 
@@ -595,7 +599,7 @@ class Channel:
         self.presence.on_join(callback)
         return self
 
-    def on_presence_leave(self, callback: Callback) -> Channel:
+    def on_presence_leave(self, callback: PresenceOnLeaveCallback) -> Channel:
         """
         Register a callback for presence leave events.
 

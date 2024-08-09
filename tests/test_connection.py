@@ -47,9 +47,7 @@ async def test_broadcast_events(socket: Socket):
     # Send 3 broadcast events
     for i in range(3):
         await channel.send_broadcast("test-event", {"message": f"Event {i+1}"})
-
-    # Wait a short time to ensure all events are processed
-    await asyncio.sleep(1)
+        await asyncio.sleep(1)
 
     assert len(received_events) == 3
     assert received_events[0]["payload"]["message"] == "Event 1"

@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import os
 
 from realtime.channel import Channel
@@ -86,23 +87,28 @@ async def test_presence(socket: Socket):
     def on_sync():
         print("on_sync", channel.presence.state)
 
-    def on_join():
-        print("on_join", channel.presence.state)
+    def on_join(key, current_presences, new_presences):
+        print("on_join", key, current_presences, new_presences)
 
-    def on_leave():
-        print("on_leave", channel.presence.state)
+    def on_leave(key, current_presences, left_presences):
+        print("on_leave", key, current_presences, left_presences)
 
     await channel.on_presence_sync(on_sync).on_presence_join(on_join).on_presence_leave(
         on_leave
     ).subscribe()
 
-    await channel.track({"user_id": "1"})
-
+    await channel.track(
+        {"user_id": "1", "online_at": datetime.datetime.now().isoformat()}
+    )
     await asyncio.sleep(1)
 
-    # await channel.untrack()
+    await channel.track(
+        {"user_id": "2", "online_at": datetime.datetime.now().isoformat()}
+    )
+    await asyncio.sleep(1)
 
-    # await asyncio.sleep(1)
+    await channel.untrack()
+    await asyncio.sleep(1)
 
 
 async def main():
