@@ -277,3 +277,13 @@ class Socket:
             await send_message()
         else:
             self.send_buffer.append(send_message)
+
+    async def _leave_open_topic(self, topic: str):
+        dup_channels = [
+            ch
+            for ch in self.channels.values()
+            if ch.topic == topic and (ch.is_joined or ch.is_joining)
+        ]
+
+        for ch in dup_channels:
+            await ch.unsubscribe()

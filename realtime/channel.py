@@ -6,6 +6,7 @@ import logging
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
+from realtime.timer import Timer
 from realtime.types import DEFAULT_TIMEOUT, Callback, ChannelEvents, ChannelStates
 
 from .presence import PresenceOnJoinCallback, PresenceOnLeaveCallback, RealtimePresence
@@ -194,13 +195,15 @@ class Channel:
         }
 
         self.join_push = Push(self, ChannelEvents.join, self.params)
+        self.rejoin_timer = Timer(self._rejoin_until_connected, lambda tries: 2**tries)
+
         self.broadcast_endpoint_url = self._broadcast_endpoint_url()
 
-        async def on_join_push_ok(payload: Dict[str, Any], **kwargs):
+        def on_join_push_ok(payload: Dict[str, Any], **kwargs):
             self.state = ChannelStates.JOINED
             self.rejoin_timer.reset()
             for push in self.push_buffer:
-                await push.send()
+                asyncio.create_task(push.send())
             self.push_buffer = []
 
         def on_join_push_timeout(**kwargs):
@@ -365,6 +368,24 @@ class Channel:
             await self._rejoin()
 
         return self
+
+    async def unsubscribe(self):
+        self.state = ChannelStates.LEAVING
+
+        self.rejoin_timer.reset()
+        self.join_push.destroy()
+
+        def _on_close(**kwargs):
+            logging.info(f"channel {self.topic} leave")
+            self._trigger(ChannelEvents.close, "leave")
+
+        leave_push = Push(self, ChannelEvents.leave, {})
+        leave_push.receive("ok", _on_close).receive("timeout", _on_close)
+
+        await leave_push.send()
+
+        if not self._can_push():
+            leave_push.trigger("ok", {})
 
     async def push(
         self, event: str, payload: Dict[str, Any], timeout: Optional[int] = None
@@ -628,6 +649,10 @@ class Channel:
         return f"{http_endpoint_url(self.socket.http_endpoint)}/api/broadcast"
 
     async def _rejoin(self) -> None:
+        if self.is_leaving:
+            return
+        await self.socket._leave_open_topic(self.topic)
+        self.state = ChannelStates.JOINING
         await self.join_push.resend()
 
     def _can_push(self):
@@ -689,3 +714,8 @@ class Channel:
 
     def _reply_event_name(self, ref: str):
         return f"chan_reply_{ref}"
+
+    async def _rejoin_until_connected(self):
+        await self.rejoin_timer.schedule_timeout()
+        if self.socket.is_connected:
+            await self._rejoin()

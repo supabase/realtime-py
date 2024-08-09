@@ -25,7 +25,7 @@ def socket() -> Socket:
 async def test_presence(socket: Socket):
     await socket.connect()
 
-    asyncio.create_task(socket.listen())
+    listen_task = asyncio.create_task(socket.listen())
 
     channel: Channel = socket.channel("room")
 
@@ -94,6 +94,9 @@ async def test_presence(socket: Socket):
     assert channel.presence.state == {}
     assert len(leave_events) == 2
     assert leave_events[0] != leave_events[1]
+
+    await socket.close()
+    listen_task.cancel()
 
 
 def test_transform_state_raw_presence_state():
