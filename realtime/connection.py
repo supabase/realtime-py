@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 import websockets
 
-from realtime.channel import Channel
+from realtime.channel import Channel, RealtimeChannelOptions
 from realtime.exceptions import NotConnectedError
 from realtime.message import Message
 from realtime.transformers import http_endpoint_url
@@ -204,7 +204,7 @@ class Socket:
                     break
 
     @ensure_connection
-    def channel(self, topic: str, params: Dict[str, Any] = {"config": {}}) -> Channel:
+    def channel(self, topic: str, params: RealtimeChannelOptions = {}) -> Channel:
         """
         :param topic: Initializes a channel and creates a two-way association with the socket
         :return: Channel

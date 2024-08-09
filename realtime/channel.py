@@ -4,7 +4,16 @@ import asyncio
 import json
 import logging
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Optional
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    TypedDict,
+)
 
 from realtime.timer import Timer
 from realtime.types import DEFAULT_TIMEOUT, Callback, ChannelEvents, ChannelStates
@@ -159,6 +168,25 @@ class RealtimeSubscribeStates(str, Enum):
     CHANNEL_ERROR = "CHANNEL_ERROR"
 
 
+class RealtimeChannelBroadcastConfig(TypedDict):
+    ack: bool
+    self: bool
+
+
+class RealtimeChannelPresenceConfig(TypedDict):
+    key: str
+
+
+class RealtimeChannelConfig(TypedDict):
+    broadcast: RealtimeChannelBroadcastConfig
+    presence: RealtimeChannelPresenceConfig
+    private: bool
+
+
+class RealtimeChannelOptions(TypedDict):
+    config: RealtimeChannelConfig
+
+
 class Channel:
     """
     `Channel` is an abstraction for a topic listener for an existing socket connection.
@@ -170,7 +198,7 @@ class Channel:
         self,
         socket: Socket,
         topic: str,
-        params: Dict[str, Any] = {"config": {}},
+        params: RealtimeChannelOptions = {"config": {}},
     ) -> None:
         """
         Initialize the Channel object.
