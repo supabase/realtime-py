@@ -60,6 +60,8 @@ def _on_subscribe(status: RealtimeSubscribeStates, err: Optional[Exception]):
 
 await channel.subscribe(_on_subscribe)
 
+# Listen for all incoming events, often the last thing you want to do.
+await socket.listen()
 ```
 
 ### Notes:
