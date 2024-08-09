@@ -3,17 +3,17 @@
 """
 
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar, Union
 
-type PresenceOnJoinCallback = Callable[[str, List[Any], List[Any]], None]
-type PresenceOnLeaveCallback = Callable[[str, List[Any], List[Any]], None]
+PresenceOnJoinCallback = Callable[[str, List[Any], List[Any]], None]
+PresenceOnLeaveCallback = Callable[[str, List[Any], List[Any]], None]
 
 from typing import Dict, List, Literal, TypeVar
 
 T = TypeVar("T", bound=Dict[str, Any])
 
 
-class Presence(Dict[str, Any]):
+class Presence(Generic[T], Dict[str, Any]):
     presence_ref: str
 
 
@@ -82,7 +82,7 @@ class PresenceOpts:
 class RealtimePresence:
     def __init__(self, channel, opts: Optional[PresenceOpts] = None):
         self.channel = channel
-        self.state: RealtimePresenceState = {}
+        self.state: RealtimePresenceState[T] = {}
         self.pending_diffs: List[RawPresenceDiff] = []
         self.join_ref: Optional[str] = None
         self.caller = {
@@ -150,11 +150,11 @@ class RealtimePresence:
 
     def _sync_state(
         self,
-        current_state: RealtimePresenceState,
-        new_state: Union[RawPresenceState, RealtimePresenceState],
+        current_state: RealtimePresenceState[T],
+        new_state: Union[RawPresenceState, RealtimePresenceState[T]],
         onJoin: PresenceOnJoinCallback,
         onLeave: PresenceOnLeaveCallback,
-    ) -> RealtimePresenceState:
+    ) -> RealtimePresenceState[T]:
         state = {key: list(value) for key, value in current_state.items()}
         transformed_state = RealtimePresence._transform_state(new_state)
 
@@ -194,11 +194,11 @@ class RealtimePresence:
 
     def _sync_diff(
         self,
-        state: RealtimePresenceState,
+        state: RealtimePresenceState[T],
         diff: Union[RawPresenceDiff, PresenceDiff],
         onJoin: PresenceOnJoinCallback,
         onLeave: PresenceOnLeaveCallback,
-    ) -> RealtimePresenceState:
+    ) -> RealtimePresenceState[T]:
         joins = RealtimePresence._transform_state(diff.get("joins", {}))
         leaves = RealtimePresence._transform_state(diff.get("leaves", {}))
 
@@ -245,9 +245,10 @@ class RealtimePresence:
     def in_pending_sync_state(self) -> bool:
         return self.join_ref is None or self.join_ref != self.channel.join_ref
 
+    @staticmethod
     def _transform_state(
-        state: Union[RawPresenceState, RealtimePresenceState]
-    ) -> RealtimePresenceState:
+        state: Union[RawPresenceState, RealtimePresenceState[T]]
+    ) -> RealtimePresenceState[T]:
         """
         Transform the raw presence state into a standardized RealtimePresenceState format.
 
@@ -256,10 +257,10 @@ class RealtimePresence:
         Phoenix channel's presence format to our internal representation.
 
         Args:
-            state (Union[RawPresenceState, RealtimePresenceState]): The presence state to transform.
+            state (Union[RawPresenceState, RealtimePresenceState[T]]): The presence state to transform.
 
         Returns:
-            RealtimePresenceState: The transformed presence state.
+            RealtimePresenceState[T]: The transformed presence state.
 
         Example:
             Input (RawPresenceState):
@@ -282,7 +283,7 @@ class RealtimePresence:
                 "user2": [{"user_id": "user2", "status": "offline"}]
             }
         """
-        new_state: RealtimePresenceState = {}
+        new_state: RealtimePresenceState[T] = {}
         for key, presences in state.items():
             if isinstance(presences, dict) and "metas" in presences:
                 new_state[key] = []

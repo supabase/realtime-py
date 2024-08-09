@@ -27,7 +27,7 @@ jobs:
       - name: Set up Poetry
         uses: abatilo/actions-poetry@v3.0.0
         with:
-          poetry-version: 1.3.2
+          poetry-version: latest
 
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1
