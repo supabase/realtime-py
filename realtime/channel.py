@@ -100,10 +100,10 @@ class Push:
         self.ref = self.channel.socket._make_ref()
         self.ref_event = self.channel._reply_event_name(self.ref)
 
-        def on_reply(**kwargs):
+        def on_reply(payload, *args):
             self._cancel_ref_event()
             self._cancel_timeout()
-            self.received_resp = kwargs.get("payload")
+            self.received_resp = payload
             self._match_receive(**self.received_resp)
 
         self.channel._on(self.ref_event, on_reply)
@@ -199,14 +199,14 @@ class Channel:
 
         self.broadcast_endpoint_url = self._broadcast_endpoint_url()
 
-        def on_join_push_ok(payload: Dict[str, Any], **kwargs):
+        def on_join_push_ok(payload: Dict[str, Any], *args):
             self.state = ChannelStates.JOINED
             self.rejoin_timer.reset()
             for push in self.push_buffer:
                 asyncio.create_task(push.send())
             self.push_buffer = []
 
-        def on_join_push_timeout(**kwargs):
+        def on_join_push_timeout(*args):
             if not self.is_joining:
                 return
 
@@ -218,27 +218,25 @@ class Channel:
             "timeout", on_join_push_timeout
         )
 
-        def on_close(**kwargs):
+        def on_close(*args):
             logging.info(f"channel {self.topic} closed")
             self.rejoin_timer.reset()
             self.state = ChannelStates.CLOSED
             self.socket._remove(self)
 
-        def on_error(**kwargs):
+        def on_error(payload, *args):
             if self.is_leaving or self.is_closed:
                 return
 
-            logging.info(f"channel {self.topic} error: {kwargs.get('payload')}")
+            logging.info(f"channel {self.topic} error: {payload}")
             self.state = ChannelStates.ERRORED
             self.rejoin_timer.schedule_timeout()
 
         self._on("close", on_close)
         self._on("error", on_error)
 
-        def on_reply(**kwargs):
-            self._trigger(
-                self._reply_event_name(kwargs.get("ref")), kwargs.get("payload")
-            )
+        def on_reply(payload, ref):
+            self._trigger(self._reply_event_name(ref), payload)
 
         self._on(ChannelEvents.reply, on_reply)
 
@@ -375,7 +373,7 @@ class Channel:
         self.rejoin_timer.reset()
         self.join_push.destroy()
 
-        def _on_close(**kwargs):
+        def _on_close(*args):
             logging.info(f"channel {self.topic} leave")
             self._trigger(ChannelEvents.close, "leave")
 
@@ -680,7 +678,7 @@ class Channel:
                 self.bindings.get("postgres_changes", []),
             )
             for binding in postgres_changes:
-                binding.callback(payload=payload, ref=ref)
+                binding.callback(payload, ref)
         else:
             bindings = self.bindings.get(type_lowercase, [])
             for binding in bindings:
@@ -706,11 +704,11 @@ class Channel:
                         and bind_id in payload.get("ids", [])
                         and (bind_event == data_type or bind_event == "*")
                     ):
-                        binding.callback(payload=payload, ref=ref)
+                        binding.callback(payload, ref)
                     elif bind_event in [payload_event, "*"]:
-                        binding.callback(payload=payload, ref=ref)
+                        binding.callback(payload, ref)
                 elif binding.type == type_lowercase:
-                    binding.callback(payload=payload, ref=ref)
+                    binding.callback(payload, ref)
 
     def _reply_event_name(self, ref: str):
         return f"chan_reply_{ref}"

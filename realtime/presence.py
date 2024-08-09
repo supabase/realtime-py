@@ -118,7 +118,7 @@ class RealtimePresence:
     def on_auth_failure(self, callback: Callable[[], None]):
         self.caller["onAuthFailure"] = callback
 
-    def _on_state_event(self, payload: RawPresenceState, **kwargs):
+    def _on_state_event(self, payload: RawPresenceState, *args):
         onJoin = self.caller["onJoin"]
         onLeave = self.caller["onLeave"]
         onSync = self.caller["onSync"]
@@ -131,7 +131,7 @@ class RealtimePresence:
         self.pending_diffs = []
         onSync()
 
-    def _on_diff_event(self, payload: Dict[str, Any], **kwargs):
+    def _on_diff_event(self, payload: Dict[str, Any], *args):
         onJoin = self.caller["onJoin"]
         onLeave = self.caller["onLeave"]
         onSync = self.caller["onSync"]
@@ -142,7 +142,7 @@ class RealtimePresence:
             self.state = self._sync_diff(self.state, payload, onJoin, onLeave)
             onSync()
 
-    def _on_auth_event(self, payload: Dict[str, Any], **kwargs):
+    def _on_auth_event(self, payload: Dict[str, Any], *args):
         if payload.get("status") == "ok":
             self.caller["onAuthSuccess"]()
         else:

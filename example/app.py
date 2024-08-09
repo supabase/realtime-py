@@ -10,19 +10,19 @@ def presence_callback(payload):
     print("presence: ", payload)
 
 
-def postgres_changes_callback(payload, **kwargs):
+def postgres_changes_callback(payload, *args):
     print("*: ", payload)
 
 
-def postgres_changes_insert_callback(payload, **kwargs):
+def postgres_changes_insert_callback(payload, *args):
     print("INSERT: ", payload)
 
 
-def postgres_changes_delete_callback(payload, **kwargs):
+def postgres_changes_delete_callback(payload, *args):
     print("DELETE: ", payload)
 
 
-def postgres_changes_update_callback(payload, **kwargs):
+def postgres_changes_update_callback(payload, *args):
     print("UPDATE: ", payload)
 
 
@@ -38,7 +38,7 @@ async def test_broadcast_events(socket: Socket):
     )
     received_events = []
 
-    def broadcast_callback(payload, **kwargs):
+    def broadcast_callback(payload, *args):
         print("broadcast: ", payload)
         received_events.append(payload)
 
@@ -112,8 +112,8 @@ async def test_presence(socket: Socket):
 
 
 async def main():
-    URL = os.getenv("SUPABASE_URL")
-    JWT = os.getenv("SUPABASE_ANON_KEY")
+    URL = os.getenv("SUPABASE_URL") or "http://127.0.0.1:54321"
+    JWT = os.getenv("SUPABASE_ANON_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
 
     # Setup the broadcast socket and channel
     socket = Socket(f"{URL}/realtime/v1", JWT, auto_reconnect=True)
