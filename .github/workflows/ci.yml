@@ -30,7 +30,7 @@ jobs:
           poetry-version: 1.3.2
 
       - name: Install Supabase CLI
-        uses: supabase/setup-setup-cli@v1
+        uses: supabase/setup-cli@v1
         with:
           version: latest
 
