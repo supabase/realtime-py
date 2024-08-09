@@ -20,11 +20,11 @@ from realtime.types import (
     T_Retval,
 )
 
-logging.basicConfig(
-    format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
-)
+# logging.basicConfig(
+#     format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
+# )
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 def ensure_connection(func: Callback):
@@ -293,7 +293,7 @@ class Socket:
         """
 
         message = json.dumps(message)
-        logger.info(f"send: {message}")
+        logging.info(f"send: {message}")
 
         async def send_message():
             await self.ws_connection.send(message)

@@ -3,7 +3,17 @@
 """
 
 from enum import Enum
-from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    TypedDict,
+    TypeVar,
+    Union,
+)
 
 PresenceOnJoinCallback = Callable[[str, List[Any], List[Any]], None]
 PresenceOnLeaveCallback = Callable[[str, List[Any], List[Any]], None]
@@ -38,9 +48,6 @@ class RealtimePresenceLeavePayload(Dict[str, Any]):
     key: str
     current_presences: List[Presence[T]]
     left_presences: List[Presence[T]]
-
-
-from typing import Any, Callable, Dict, List, TypedDict
 
 
 class PresenceMeta(TypedDict, total=False):
