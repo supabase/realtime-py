@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Optional
 
 from realtime.timer import Timer
 from realtime.types import DEFAULT_TIMEOUT, Callback, ChannelEvents, ChannelStates
@@ -14,6 +14,9 @@ from .transformers import http_endpoint_url
 
 if TYPE_CHECKING:
     from realtime.connection import Socket
+
+
+RealtimePostgresChangesListenEvent = Literal["*", "INSERT", "UPDATE", "DELETE"]
 
 
 class Binding:
@@ -278,7 +281,7 @@ class Channel:
         :return: The Channel instance for method chaining.
         """
         if not self.socket.is_connected:
-            self.socket.connect()
+            await self.socket.connect()
         if self.joined:
             raise Exception(
                 "Tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance"
@@ -485,7 +488,11 @@ class Channel:
         return self._on("broadcast", filter={"event": event}, callback=callback)
 
     def on_postgres_changes(
-        self, event: str, table: str, callback: Callback, schema: str = "public"
+        self,
+        event: RealtimePostgresChangesListenEvent,
+        table: str,
+        callback: Callback,
+        schema: str = "public",
     ) -> Channel:
         """
         Set up a listener for a specific Postgres changes event.

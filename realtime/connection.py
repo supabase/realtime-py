@@ -2,9 +2,8 @@ import asyncio
 import json
 import logging
 import re
-from ast import List
 from functools import wraps
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import websockets
 
@@ -215,6 +214,32 @@ class Socket:
         self.channels[topic] = chan
 
         return chan
+
+    def get_channels(self) -> List[Channel]:
+        return list(self.channels.values())
+
+    async def remove_channel(self, channel: Channel) -> None:
+        """
+        Unsubscribes and removes a channel from the socket
+        :param channel: Channel to remove
+        :return: None
+        """
+        if channel.topic in self.channels:
+            await self.channels[channel.topic].unsubscribe()
+            del self.channels[channel.topic]
+
+        if len(self.channels) == 0:
+            await self.close()
+
+    async def remove_all_channels(self) -> None:
+        """
+        Unsubscribes and removes all channels from the socket
+        :return: None
+        """
+        for _, channel in self.channels.items():
+            await channel.unsubscribe()
+
+        await self.close()
 
     def summary(self) -> None:
         """
