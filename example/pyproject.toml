@@ -8,6 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 realtime = {path = "..", develop = true}
+python-dotenv = "^1.0.1"
 
 [build-system]
 requires = ["poetry-core"]

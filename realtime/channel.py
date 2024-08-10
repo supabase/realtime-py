@@ -180,7 +180,7 @@ class Channel:
     async def subscribe(
         self,
         callback: Optional[
-            Callable[[RealtimeSubscribeStates], Optional[Exception]]
+            Callable[[RealtimeSubscribeStates, Optional[Exception]], None]
         ] = None,
     ) -> Channel:
         """
