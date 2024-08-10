@@ -66,11 +66,11 @@ async def test_broadcast_events(socket: Socket):
     )
     received_events = []
 
-    def broadcast_callback(payload, *args):
+    def broadcast_callback(payload):
         print("broadcast: ", payload)
         received_events.append(payload)
 
-    await channel.on_broadcast("test-event", callback=broadcast_callback).subscribe()
+    await channel.on_broadcast("test-event", broadcast_callback).subscribe()
 
     await asyncio.sleep(1)
 
@@ -99,27 +99,27 @@ async def test_postgrest_changes(socket: Socket):
     channel: Channel = socket.channel("test-postgres-changes")
     received_events = {"all": [], "insert": [], "update": [], "delete": []}
 
-    def all_changes_callback(payload, *args):
+    def all_changes_callback(payload):
         print("all_changes_callback: ", payload)
         received_events["all"].append(payload)
 
     insert_event = asyncio.Event()
 
-    def insert_callback(payload, *args):
+    def insert_callback(payload):
         print("insert_callback: ", payload)
         received_events["insert"].append(payload)
         insert_event.set()
 
     update_event = asyncio.Event()
 
-    def update_callback(payload, *args):
+    def update_callback(payload):
         print("update_callback: ", payload)
         received_events["update"].append(payload)
         update_event.set()
 
     delete_event = asyncio.Event()
 
-    def delete_callback(payload, *args):
+    def delete_callback(payload):
         print("delete_callback: ", payload)
         received_events["delete"].append(payload)
         delete_event.set()
@@ -127,11 +127,11 @@ async def test_postgrest_changes(socket: Socket):
     subscribed_event = asyncio.Event()
 
     await channel.on_postgres_changes(
-        "*", "todos", all_changes_callback
-    ).on_postgres_changes("INSERT", "todos", insert_callback).on_postgres_changes(
-        "UPDATE", "todos", update_callback
+        "*", all_changes_callback, table="todos"
+    ).on_postgres_changes("INSERT", insert_callback, table="todos").on_postgres_changes(
+        "UPDATE", update_callback, table="todos"
     ).on_postgres_changes(
-        "DELETE", "todos", delete_callback
+        "DELETE", delete_callback, table="todos"
     ).subscribe(
         lambda state, error: (
             subscribed_event.set()

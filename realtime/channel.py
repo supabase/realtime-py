@@ -385,7 +385,9 @@ class Channel:
             ]
         return self
 
-    def on_broadcast(self, event: str, callback: Callback) -> Channel:
+    def on_broadcast(
+        self, event: str, callback: Callable[[Dict[str, Any]], None]
+    ) -> Channel:
         """
         Set up a listener for a specific broadcast event.
 
@@ -393,13 +395,17 @@ class Channel:
         :param callback: The callback function to execute when the event is received.
         :return: The Channel instance for method chaining.
         """
-        return self._on("broadcast", filter={"event": event}, callback=callback)
+        return self._on(
+            "broadcast",
+            filter={"event": event},
+            callback=lambda payload, _: callback(payload),
+        )
 
     def on_postgres_changes(
         self,
         event: RealtimePostgresChangesListenEvent,
-        table: str,
-        callback: Callback,
+        callback: Callable[[Dict[str, Any]], None],
+        table: str = "*",
         schema: str = "public",
     ) -> Channel:
         """
@@ -414,7 +420,7 @@ class Channel:
         return self._on(
             "postgres_changes",
             filter={"event": event, "schema": schema, "table": table},
-            callback=callback,
+            callback=lambda payload, _: callback(payload),
         )
 
     # Presence methods

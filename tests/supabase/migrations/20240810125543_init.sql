@@ -16,4 +16,3 @@ CREATE POLICY "allow access to authenticated users" ON todos AS permissive
 
 ALTER publication supabase_realtime
     ADD TABLE todos;
-
