@@ -9,10 +9,9 @@ CREATE TABLE todos(
 
 ALTER TABLE todos ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "allow access to authenticated users" ON todos AS permissive
-    FOR ALL TO authenticated
-        USING (TRUE)
-        WITH CHECK (TRUE);
+ALTER POLICY "Allow access to authenticated users" ON "public"."todos" TO authenticated
+    USING (TRUE)
+    WITH CHECK (TRUE);
 
 ALTER publication supabase_realtime
     ADD TABLE todos;
