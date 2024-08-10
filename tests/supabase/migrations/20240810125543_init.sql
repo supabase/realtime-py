@@ -9,7 +9,7 @@ CREATE TABLE todos(
 
 ALTER TABLE todos ENABLE ROW LEVEL SECURITY;
 
-ALTER POLICY "Allow access to authenticated users" ON "public"."todos" TO authenticated
+CREATE POLICY "Allow access to authenticated users" ON "public"."todos" TO authenticated
     USING (TRUE)
     WITH CHECK (TRUE);
 
