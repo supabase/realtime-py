@@ -32,8 +32,10 @@ async def test_presence(socket: Socket):
     join_events: List[Tuple[str, List[Dict], List[Dict]]] = []
     leave_events: List[Tuple[str, List[Dict], List[Dict]]] = []
 
+    sync_event = asyncio.Event()
+
     def on_sync():
-        pass
+        sync_event.set()
 
     def on_join(key: str, current_presences: List[Dict], new_presences: List[Dict]):
         join_events.append((key, current_presences, new_presences))
@@ -45,11 +47,16 @@ async def test_presence(socket: Socket):
         on_leave
     ).subscribe()
 
+    # Wait for the first sync event, which should be immediate
+    await asyncio.wait_for(sync_event.wait(), 5)
+    sync_event.clear()
+
     # Track first user
     user1 = {"user_id": "1", "online_at": datetime.datetime.now().isoformat()}
     await channel.track(user1)
 
-    await asyncio.sleep(1)
+    await asyncio.wait_for(sync_event.wait(), 5)
+    sync_event.clear()
 
     # Assert first user is in the presence state
     presences = [(state, value) for state, value in channel.presence.state.items()]
@@ -70,7 +77,8 @@ async def test_presence(socket: Socket):
     user2 = {"user_id": "2", "online_at": datetime.datetime.now().isoformat()}
     await channel.track(user2)
 
-    await asyncio.sleep(1)
+    await asyncio.wait_for(sync_event.wait(), 5)
+    sync_event.clear()
 
     # Assert both users are in the presence state
     presences = channel.presence.state
@@ -85,10 +93,10 @@ async def test_presence(socket: Socket):
     assert join_events[1][2][0]["online_at"] == user2["online_at"]
     assert "presence_ref" in join_events[1][2][0]
 
-    # # Untrack all users
+    # Untrack all users
     await channel.untrack()
 
-    await asyncio.sleep(1)
+    await asyncio.wait_for(sync_event.wait(), 5)
 
     # Assert presence state is empty and leave events were triggered
     assert channel.presence.state == {}

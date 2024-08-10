@@ -66,18 +66,28 @@ async def test_broadcast_events(socket: Socket):
     )
     received_events = []
 
+    semaphore = asyncio.Semaphore(0)
+
     def broadcast_callback(payload):
         print("broadcast: ", payload)
         received_events.append(payload)
+        semaphore.release()
 
-    await channel.on_broadcast("test-event", broadcast_callback).subscribe()
+    subscribe_event = asyncio.Event()
+    await channel.on_broadcast("test-event", broadcast_callback).subscribe(
+        lambda state, error: (
+            subscribe_event.set()
+            if state == RealtimeSubscribeStates.SUBSCRIBED
+            else None
+        )
+    )
 
-    await asyncio.sleep(1)
+    await asyncio.wait_for(subscribe_event.wait(), 5)
 
     # Send 3 broadcast events
     for i in range(3):
         await channel.send_broadcast("test-event", {"message": f"Event {i+1}"})
-        await asyncio.sleep(1)
+        await asyncio.wait_for(semaphore.acquire(), 5)
 
     assert len(received_events) == 3
     assert received_events[0]["payload"]["message"] == "Event 1"
