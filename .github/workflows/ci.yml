@@ -37,6 +37,7 @@ jobs:
       - name: Setup Local Supabase
         run: |
           supabase start --workdir tests
+          supabase db reset --workdir tests
           supabase status --workdir tests -o env > tests/.env \
             --override-name auth.anon_key=SUPABASE_ANON_KEY \
             --override-name api.url=SUPABASE_URL
