@@ -23,7 +23,7 @@ from .push import Push
 from .transformers import http_endpoint_url
 
 if TYPE_CHECKING:
-    from .connection import Socket
+    from .client import RealtimeClient
 
 
 RealtimePostgresChangesListenEvent = Literal["*", "INSERT", "UPDATE", "DELETE"]
@@ -73,19 +73,19 @@ class Channel:
     """
     `Channel` is an abstraction for a topic listener for an existing socket connection.
     Each Channel has its own topic and a list of event-callbacks that responds to messages.
-    Should only be instantiated through `connection.Socket().channel(topic)`.
+    Should only be instantiated through `connection.RealtimeClient().channel(topic)`.
     """
 
     def __init__(
         self,
-        socket: Socket,
+        socket: RealtimeClient,
         topic: str,
         params: RealtimeChannelOptions = {"config": {}},
     ) -> None:
         """
         Initialize the Channel object.
 
-        :param socket: Socket object
+        :param socket: RealtimeClient object
         :param topic: Topic that it subscribes to on the realtime server
         :param params: Optional parameters for connection.
         """

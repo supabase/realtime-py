@@ -7,22 +7,22 @@ import pytest
 from dotenv import load_dotenv
 
 from realtime.channel import Channel
-from realtime.connection import Socket
+from realtime.client import RealtimeClient
 from realtime.presence import RealtimePresence
 
 load_dotenv()
 
 
 @pytest.fixture
-def socket() -> Socket:
+def socket() -> RealtimeClient:
     url = os.getenv("SUPABASE_URL")
     url = f"{url}/realtime/v1"
     key = os.getenv("SUPABASE_ANON_KEY")
-    return Socket(url, key)
+    return RealtimeClient(url, key)
 
 
 @pytest.mark.asyncio
-async def test_presence(socket: Socket):
+async def test_presence(socket: RealtimeClient):
     await socket.connect()
 
     listen_task = asyncio.create_task(socket.listen())

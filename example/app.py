@@ -3,7 +3,7 @@ import datetime
 import os
 
 from realtime.channel import Channel
-from realtime.connection import Socket
+from realtime.client import RealtimeClient
 
 
 def presence_callback(payload):
@@ -30,7 +30,7 @@ async def realtime(payload):
     print("async realtime ", payload)
 
 
-async def test_broadcast_events(socket: Socket):
+async def test_broadcast_events(socket: RealtimeClient):
     await socket.connect()
 
     channel = socket.channel(
@@ -59,7 +59,7 @@ async def test_broadcast_events(socket: Socket):
     assert received_events[2]["payload"]["message"] == "Event 3"
 
 
-async def test_postgres_changes(socket: Socket):
+async def test_postgres_changes(socket: RealtimeClient):
     await socket.connect()
 
     channel = socket.channel("test-postgres-changes")
@@ -77,7 +77,7 @@ async def test_postgres_changes(socket: Socket):
     await socket.listen()
 
 
-async def test_presence(socket: Socket):
+async def test_presence(socket: RealtimeClient):
     await socket.connect()
 
     asyncio.create_task(socket.listen())
@@ -119,7 +119,7 @@ async def main():
     )
 
     # Setup the broadcast socket and channel
-    socket = Socket(f"{URL}/realtime/v1", JWT, auto_reconnect=True)
+    socket = RealtimeClient(f"{URL}/realtime/v1", JWT, auto_reconnect=True)
     await socket.connect()
 
     # await test_broadcast_events(socket)

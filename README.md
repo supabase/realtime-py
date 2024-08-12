@@ -42,11 +42,11 @@ pip3 install realtime==2.0.0
 ```python
 import asyncio
 from typing import Optional
-from realtime.connection import Socket
+from realtime.client import RealtimeClient
 from realtime.channel import RealtimeSubscribeStates
 
-socket = Socket(REALTIME_URL, API_KEY)
-channel = socket.channel('test-channel')
+client = RealtimeClient(REALTIME_URL, API_KEY)
+channel = client.channel('test-channel')
 
 def _on_subscribe(status: RealtimeSubscribeStates, err: Optional[Exception]):
     if status == RealtimeSubscribeStates.SUBSCRIBED:
@@ -61,7 +61,7 @@ def _on_subscribe(status: RealtimeSubscribeStates, err: Optional[Exception]):
 await channel.subscribe(_on_subscribe)
 
 # Listen for all incoming events, often the last thing you want to do.
-await socket.listen()
+await client.listen()
 ```
 
 ### Notes:
@@ -77,7 +77,7 @@ Your client can send and receive messages based on the `event`.
 ```python
 # Setup...
 
-channel = socket.channel(
+channel = client.channel(
     "broadcast-test", {"config": {"broadcast": {"ack": False, "self": False}}}
 )
 
@@ -98,7 +98,7 @@ Your client can track and sync state that's stored in the channel.
 ```python
 # Setup...
 
-channel = socket.channel(
+channel = client.channel(
     "presence-test",
     {
         "config": {
@@ -123,7 +123,7 @@ Receive database changes on the client.
 ```python
 # Setup...
 
-channel = socket.channel("db-changes")
+channel = client.channel("db-changes")
 
 channel.on_postgres_changes(
     "*",
@@ -161,7 +161,7 @@ You can see all the channels that your client has instantiatied.
 ```python
 # Setup...
 
-socket.get_channels()
+client.get_channels()
 ```
 
 ## Cleanup
@@ -173,11 +173,11 @@ It is highly recommended that you clean up your channels after you're done with 
 ```python
 # Setup...
 
-channel = socket.channel('some-channel-to-remove')
+channel = client.channel('some-channel-to-remove')
 
 channel.subscribe()
 
-await socket.remove_channel(channel)
+await client.remove_channel(channel)
 ```
 
 - Remove all channels
@@ -185,13 +185,13 @@ await socket.remove_channel(channel)
 ```python
 # Setup...
 
-channel1 = socket.channel('a-channel-to-remove')
-channel2 = socket.channel('another-channel-to-remove')
+channel1 = client.channel('a-channel-to-remove')
+channel2 = client.channel('another-channel-to-remove')
 
 await channel1.subscribe()
 await channel2.subscribe()
 
-await socket.remove_all_channels()
+await client.remove_all_channels()
 ```
 
 ## Credits

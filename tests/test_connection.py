@@ -7,7 +7,7 @@ import pytest
 from dotenv import load_dotenv
 
 from realtime.channel import Channel, RealtimeSubscribeStates
-from realtime.connection import Socket
+from realtime.client import RealtimeClient
 
 load_dotenv()
 
@@ -20,10 +20,10 @@ ANON_KEY = (
 
 
 @pytest.fixture
-def socket() -> Socket:
+def socket() -> RealtimeClient:
     url = f"{URL}/realtime/v1"
     key = ANON_KEY
-    return Socket(url, key)
+    return RealtimeClient(url, key)
 
 
 async def access_token() -> str:
@@ -47,7 +47,7 @@ async def access_token() -> str:
 
 
 @pytest.mark.asyncio
-async def test_set_auth(socket: Socket):
+async def test_set_auth(socket: RealtimeClient):
     await socket.connect()
 
     await socket.set_auth("jwt")
@@ -57,7 +57,7 @@ async def test_set_auth(socket: Socket):
 
 
 @pytest.mark.asyncio
-async def test_broadcast_events(socket: Socket):
+async def test_broadcast_events(socket: RealtimeClient):
     await socket.connect()
     listen_task = asyncio.create_task(socket.listen())
 
@@ -99,7 +99,7 @@ async def test_broadcast_events(socket: Socket):
 
 
 @pytest.mark.asyncio
-async def test_postgrest_changes(socket: Socket):
+async def test_postgrest_changes(socket: RealtimeClient):
     token = await access_token()
 
     await socket.connect()

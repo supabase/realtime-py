@@ -38,7 +38,7 @@ def ensure_connection(func: Callback):
     return wrapper
 
 
-class Socket:
+class RealtimeClient:
     def __init__(
         self,
         url: str,
@@ -50,7 +50,7 @@ class Socket:
         initial_backoff: float = 1.0,
     ) -> None:
         """
-        Initialize a Socket instance for WebSocket communication.
+        Initialize a RealtimeClient instance for WebSocket communication.
 
         :param url: WebSocket URL of the Realtime server. Starts with `ws://` or `wss://`.
                     Also accepts default Supabase URL: `http://` or `https://`.
@@ -121,7 +121,7 @@ class Socket:
             Exception: If unable to establish a connection after max_retries attempts.
 
         Note:
-            - The initial backoff time and maximum retries are set during Socket initialization.
+            - The initial backoff time and maximum retries are set during RealtimeClient initialization.
             - The backoff time doubles after each failed attempt, up to a maximum of 60 seconds.
         """
         retries = 0
