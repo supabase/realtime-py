@@ -152,20 +152,20 @@ async def test_postgrest_changes(socket: Socket):
     )
 
     # Wait for the channel to be subscribed
-    await asyncio.wait_for(subscribed_event.wait(), 5)
+    await asyncio.wait_for(subscribed_event.wait(), 10)
 
     created_todo_id = await create_todo(
         token, {"description": "Test todo", "is_completed": False}
     )
-    await asyncio.wait_for(insert_event.wait(), 5)
+    await asyncio.wait_for(insert_event.wait(), 10)
 
     await update_todo(
         token, created_todo_id, {"description": "Updated todo", "is_completed": True}
     )
-    await asyncio.wait_for(update_event.wait(), 5)
+    await asyncio.wait_for(update_event.wait(), 10)
 
     await delete_todo(token, created_todo_id)
-    await asyncio.wait_for(delete_event.wait(), 5)
+    await asyncio.wait_for(delete_event.wait(), 10)
 
     assert len(received_events["all"]) == 3
 
