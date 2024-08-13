@@ -2,22 +2,16 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from realtime.types import DEFAULT_TIMEOUT, Callback
+from ..types import DEFAULT_TIMEOUT, Callback, _Hook
 
 if TYPE_CHECKING:
-    from .channel import Channel
+    from .channel import AsyncRealtimeChannel
 
 
-class _Hook:
-    def __init__(self, status: str, callback: Callback):
-        self.status = status
-        self.callback = callback
-
-
-class Push:
+class AsyncPush:
     def __init__(
         self,
-        channel: "Channel",
+        channel: "AsyncRealtimeChannel",
         event: str,
         payload: Dict[str, Any] = {},
         timeout: int = DEFAULT_TIMEOUT,
@@ -64,7 +58,7 @@ class Push:
     def update_payload(self, payload: Dict[str, Any]):
         self.payload = {**self.payload, **payload}
 
-    def receive(self, status: str, callback: Callback) -> "Push":
+    def receive(self, status: str, callback: Callback) -> "AsyncPush":
         if self._has_received(status):
             callback(self.received_resp.get("response", {}))
 

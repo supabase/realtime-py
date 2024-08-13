@@ -3,73 +3,32 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    List,
-    Literal,
-    Optional,
-    TypedDict,
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+
+from realtime.types import (
+    Binding,
+    Callback,
+    ChannelEvents,
+    ChannelStates,
+    RealtimeChannelOptions,
+    RealtimePostgresChangesListenEvent,
+    RealtimeSubscribeStates,
 )
 
-from realtime.timer import Timer
-from realtime.types import Callback, ChannelEvents, ChannelStates
-
-from .presence import PresenceOnJoinCallback, PresenceOnLeaveCallback, RealtimePresence
-from .push import Push
-from .transformers import http_endpoint_url
+from ..transformers import http_endpoint_url
+from .presence import (
+    AsyncRealtimePresence,
+    PresenceOnJoinCallback,
+    PresenceOnLeaveCallback,
+)
+from .push import AsyncPush
+from .timer import AsyncTimer
 
 if TYPE_CHECKING:
-    from .client import RealtimeClient
+    from .client import AsyncRealtimeClient
 
 
-RealtimePostgresChangesListenEvent = Literal["*", "INSERT", "UPDATE", "DELETE"]
-
-
-class Binding:
-    def __init__(
-        self,
-        type: str,
-        filter: Dict[str, Any],
-        callback: Callback,
-        id: Optional[str] = None,
-    ):
-        self.type = type
-        self.filter = filter
-        self.callback = callback
-        self.id = id
-
-
-class RealtimeSubscribeStates(str, Enum):
-    SUBSCRIBED = "SUBSCRIBED"
-    TIMED_OUT = "TIMED_OUT"
-    CLOSED = "CLOSED"
-    CHANNEL_ERROR = "CHANNEL_ERROR"
-
-
-class RealtimeChannelBroadcastConfig(TypedDict):
-    ack: bool
-    self: bool
-
-
-class RealtimeChannelPresenceConfig(TypedDict):
-    key: str
-
-
-class RealtimeChannelConfig(TypedDict):
-    broadcast: RealtimeChannelBroadcastConfig
-    presence: RealtimeChannelPresenceConfig
-    private: bool
-
-
-class RealtimeChannelOptions(TypedDict):
-    config: RealtimeChannelConfig
-
-
-class Channel:
+class AsyncRealtimeChannel:
     """
     `Channel` is an abstraction for a topic listener for an existing socket connection.
     Each Channel has its own topic and a list of event-callbacks that responds to messages.
@@ -78,7 +37,7 @@ class Channel:
 
     def __init__(
         self,
-        socket: RealtimeClient,
+        socket: AsyncRealtimeClient,
         topic: str,
         params: RealtimeChannelOptions = {"config": {}},
     ) -> None:
@@ -94,9 +53,9 @@ class Channel:
         self.topic = topic
         self._joined_once = False
         self.bindings: Dict[str, List[Binding]] = {}
-        self.presence = RealtimePresence(self)
+        self.presence = AsyncRealtimePresence(self)
         self.state = ChannelStates.CLOSED
-        self._push_buffer: List[Push] = []
+        self._push_buffer: List[AsyncPush] = []
         self.timeout = self.socket.timeout
         self.params["config"] = {
             "broadcast": {"ack": False, "self": False},
@@ -105,8 +64,10 @@ class Channel:
             **params.get("config", {}),
         }
 
-        self.join_push = Push(self, ChannelEvents.join, self.params)
-        self.rejoin_timer = Timer(self._rejoin_until_connected, lambda tries: 2**tries)
+        self.join_push = AsyncPush(self, ChannelEvents.join, self.params)
+        self.rejoin_timer = AsyncTimer(
+            self._rejoin_until_connected, lambda tries: 2**tries
+        )
 
         self.broadcast_endpoint_url = self._broadcast_endpoint_url()
 
@@ -182,7 +143,7 @@ class Channel:
         callback: Optional[
             Callable[[RealtimeSubscribeStates, Optional[Exception]], None]
         ] = None,
-    ) -> Channel:
+    ) -> AsyncRealtimeChannel:
         """
         Subscribe to the channel.
 
@@ -288,7 +249,7 @@ class Channel:
             logging.info(f"channel {self.topic} leave")
             self._trigger(ChannelEvents.close, "leave")
 
-        leave_push = Push(self, ChannelEvents.leave, {})
+        leave_push = AsyncPush(self, ChannelEvents.leave, {})
         leave_push.receive("ok", _close).receive("timeout", _close)
 
         await leave_push.send()
@@ -298,7 +259,7 @@ class Channel:
 
     async def push(
         self, event: str, payload: Dict[str, Any], timeout: Optional[int] = None
-    ) -> Push:
+    ) -> AsyncPush:
         if not self._joined_once:
             raise Exception(
                 f"tried to push '{event}' to '{self.topic}' before joining. Use channel.subscribe() before pushing events"
@@ -306,7 +267,7 @@ class Channel:
 
         timeout = timeout or self.timeout
 
-        push = Push(self, event, payload, timeout)
+        push = AsyncPush(self, event, payload, timeout)
         if self._can_push():
             await push.send()
         else:
@@ -315,7 +276,7 @@ class Channel:
 
         return push
 
-    async def join(self) -> Channel:
+    async def join(self) -> AsyncRealtimeChannel:
         """
         Coroutine that attempts to join Phoenix Realtime server via a certain topic.
 
@@ -348,7 +309,7 @@ class Channel:
     # Event handling methods
     def _on(
         self, type: str, callback: Callback, filter: Dict[str, Any] = {}
-    ) -> Channel:
+    ) -> AsyncRealtimeChannel:
         """
         Set up a listener for a specific event.
 
@@ -364,7 +325,7 @@ class Channel:
 
         return self
 
-    def _off(self, type: str, filter: Dict[str, Any]) -> Channel:
+    def _off(self, type: str, filter: Dict[str, Any]) -> AsyncRealtimeChannel:
         """
         Remove a listener for a specific event type and filter.
 
@@ -387,7 +348,7 @@ class Channel:
 
     def on_broadcast(
         self, event: str, callback: Callable[[Dict[str, Any]], None]
-    ) -> Channel:
+    ) -> AsyncRealtimeChannel:
         """
         Set up a listener for a specific broadcast event.
 
@@ -407,7 +368,7 @@ class Channel:
         callback: Callable[[Dict[str, Any]], None],
         table: str = "*",
         schema: str = "public",
-    ) -> Channel:
+    ) -> AsyncRealtimeChannel:
         """
         Set up a listener for a specific Postgres changes event.
 
@@ -441,7 +402,7 @@ class Channel:
         """
         await self.send_presence("untrack", {})
 
-    def on_presence_sync(self, callback: Callable[[], None]) -> Channel:
+    def on_presence_sync(self, callback: Callable[[], None]) -> AsyncRealtimeChannel:
         """
         Register a callback for presence sync events.
 
@@ -451,7 +412,9 @@ class Channel:
         self.presence.on_sync(callback)
         return self
 
-    def on_presence_join(self, callback: PresenceOnJoinCallback) -> Channel:
+    def on_presence_join(
+        self, callback: PresenceOnJoinCallback
+    ) -> AsyncRealtimeChannel:
         """
         Register a callback for presence join events.
 
@@ -461,7 +424,9 @@ class Channel:
         self.presence.on_join(callback)
         return self
 
-    def on_presence_leave(self, callback: PresenceOnLeaveCallback) -> Channel:
+    def on_presence_leave(
+        self, callback: PresenceOnLeaveCallback
+    ) -> AsyncRealtimeChannel:
         """
         Register a callback for presence leave events.
 

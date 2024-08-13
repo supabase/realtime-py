@@ -1,15 +1,15 @@
 import asyncio
 from typing import Optional
 
-from realtime.channel import RealtimeSubscribeStates
-from realtime.client import RealtimeClient
+from realtime._async.channel import RealtimeSubscribeStates
+from realtime._async.client import AsyncRealtimeClient
 
 
 async def main():
     REALTIME_URL = "ws://localhost:4000/websocket"
     API_KEY = "1234567890"
 
-    socket = RealtimeClient(REALTIME_URL, API_KEY)
+    socket = AsyncRealtimeClient(REALTIME_URL, API_KEY)
     channel = socket.channel("test-channel")
 
     def _on_subscribe(status: RealtimeSubscribeStates, err: Optional[Exception]):
@@ -25,7 +25,7 @@ async def main():
     await channel.subscribe(_on_subscribe)
 
 
-async def test(socket: RealtimeClient):
+async def test(socket: AsyncRealtimeClient):
     channel = socket.channel("db-changes")
 
     channel.on_postgres_changes(

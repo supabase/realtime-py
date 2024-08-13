@@ -2,7 +2,7 @@ import asyncio
 from typing import Callable
 
 
-class Timer:
+class AsyncTimer:
     def __init__(self, callback: Callable, timer_calc: Callable[[int], int]):
         self.callback = callback
         self.timer_calc = timer_calc

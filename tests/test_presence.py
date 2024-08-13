@@ -6,28 +6,26 @@ from typing import Dict, List, Tuple
 import pytest
 from dotenv import load_dotenv
 
-from realtime.channel import Channel
-from realtime.client import RealtimeClient
-from realtime.presence import RealtimePresence
+from realtime import AsyncRealtimeChannel, AsyncRealtimeClient, AsyncRealtimePresence
 
 load_dotenv()
 
 
 @pytest.fixture
-def socket() -> RealtimeClient:
+def socket() -> AsyncRealtimeClient:
     url = os.getenv("SUPABASE_URL")
     url = f"{url}/realtime/v1"
     key = os.getenv("SUPABASE_ANON_KEY")
-    return RealtimeClient(url, key)
+    return AsyncRealtimeClient(url, key)
 
 
 @pytest.mark.asyncio
-async def test_presence(socket: RealtimeClient):
+async def test_presence(socket: AsyncRealtimeClient):
     await socket.connect()
 
     listen_task = asyncio.create_task(socket.listen())
 
-    channel: Channel = socket.channel("room")
+    channel: AsyncRealtimeChannel = socket.channel("room")
 
     join_events: List[Tuple[str, List[Dict], List[Dict]]] = []
     leave_events: List[Tuple[str, List[Dict], List[Dict]]] = []
@@ -133,7 +131,7 @@ def test_transform_state_raw_presence_state():
         "user2": [{"presence_ref": "GHI789", "user_id": "user2", "status": "offline"}],
     }
 
-    result = RealtimePresence._transform_state(raw_state)
+    result = AsyncRealtimePresence._transform_state(raw_state)
     assert result == expected_output
 
 
@@ -143,7 +141,7 @@ def test_transform_state_already_transformed():
         "user2": [{"presence_ref": "GHI789", "user_id": "user2", "status": "offline"}],
     }
 
-    result = RealtimePresence._transform_state(transformed_state)
+    result = AsyncRealtimePresence._transform_state(transformed_state)
     assert result == transformed_state
 
 
@@ -171,13 +169,13 @@ def test_transform_state_mixed_input():
         "user2": [{"user_id": "user2", "status": "offline"}],
     }
 
-    result = RealtimePresence._transform_state(mixed_state)
+    result = AsyncRealtimePresence._transform_state(mixed_state)
     assert result == expected_output
 
 
 def test_transform_state_empty_input():
     empty_state = {}
-    result = RealtimePresence._transform_state(empty_state)
+    result = AsyncRealtimePresence._transform_state(empty_state)
     assert result == {}
 
 
@@ -206,5 +204,5 @@ def test_transform_state_additional_fields():
         ]
     }
 
-    result = RealtimePresence._transform_state(state_with_additional_fields)
+    result = AsyncRealtimePresence._transform_state(state_with_additional_fields)
     assert result == expected_output
