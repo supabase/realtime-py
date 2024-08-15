@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "realtime"
-version = "2.0.0"
+version = "1.0.6" # {x-release-please-version}
 description = ""
 authors = [
     "Joel Lee <joel@joellee.org>",
@@ -21,7 +21,6 @@ pytest = "^8.3.1"
 python-dotenv = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies]
-python-semantic-release = ">=8.3,<10.0"
 black = ">=23.11,<25.0"
 isort = "^5.12.0"
 pre-commit = "^3.5.0"
