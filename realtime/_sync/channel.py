@@ -217,6 +217,12 @@ class SyncRealtimeChannel:
                         new_postgres_bindings.append(client_binding)
                     else:
                         asyncio.create_task(self.unsubscribe())
+                        callback and callback(
+                            RealtimeSubscribeStates.CHANNEL_ERROR,
+                            Exception(
+                                "mismatch between server and client bindings for postgres changes"
+                            ),
+                        )
                         return
 
                 self.bindings["postgres_changes"] = new_postgres_bindings
@@ -295,17 +301,6 @@ class SyncRealtimeChannel:
             print(e)
             return self
 
-    def off(self, event: str) -> None:
-        """
-        Stop responding to a certain event.
-
-        :param event: The event to stop responding to.
-        :return: None
-        """
-        self.listeners = [
-            callback for callback in self.listeners if callback.event != event
-        ]
-
     # Event handling methods
     def _on(
         self, type: str, callback: Callback, filter: Dict[str, Any] = {}
@@ -368,6 +363,7 @@ class SyncRealtimeChannel:
         callback: Callable[[Dict[str, Any]], None],
         table: str = "*",
         schema: str = "public",
+        filter: Optional[str] = None,
     ) -> SyncRealtimeChannel:
         """
         Set up a listener for a specific Postgres changes event.
@@ -378,9 +374,14 @@ class SyncRealtimeChannel:
         :param schema: The database schema where the table exists. Default is 'public'.
         :return: The Channel instance for method chaining.
         """
+
+        binding_filter = {"event": event, "schema": schema, "table": table}
+        if filter:
+            binding_filter["filter"] = filter
+
         return self._on(
             "postgres_changes",
-            filter={"event": event, "schema": schema, "table": table},
+            filter=binding_filter,
             callback=lambda payload, _: callback(payload),
         )
 
