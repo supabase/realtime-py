@@ -1,8 +1,13 @@
 import asyncio
 import datetime
+import logging
 import os
 
 from realtime import AsyncRealtimeChannel, AsyncRealtimeClient
+
+logging.basicConfig(
+    format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
+)
 
 
 def presence_callback(payload):
@@ -122,8 +127,8 @@ async def main():
     await socket.connect()
 
     # await test_broadcast_events(socket)
-    # await test_postgres_changes(socket)
-    await test_presence(socket)
+    await test_postgres_changes(socket)
+    # await test_presence(socket)
 
 
 asyncio.run(main())

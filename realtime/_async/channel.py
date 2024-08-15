@@ -301,17 +301,6 @@ class AsyncRealtimeChannel:
             print(e)
             return self
 
-    def off(self, event: str) -> None:
-        """
-        Stop responding to a certain event.
-
-        :param event: The event to stop responding to.
-        :return: None
-        """
-        self.listeners = [
-            callback for callback in self.listeners if callback.event != event
-        ]
-
     # Event handling methods
     def _on(
         self, type: str, callback: Callback, filter: Dict[str, Any] = {}
@@ -385,9 +374,14 @@ class AsyncRealtimeChannel:
         :param schema: The database schema where the table exists. Default is 'public'.
         :return: The Channel instance for method chaining.
         """
+
+        binding_filter = {"event": event, "schema": schema, "table": table}
+        if filter:
+            binding_filter["filter"] = filter
+
         return self._on(
             "postgres_changes",
-            filter={"event": event, "schema": schema, "table": table, "filter": filter},
+            filter=binding_filter,
             callback=lambda payload, _: callback(payload),
         )
 
