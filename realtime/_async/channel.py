@@ -217,6 +217,12 @@ class AsyncRealtimeChannel:
                         new_postgres_bindings.append(client_binding)
                     else:
                         asyncio.create_task(self.unsubscribe())
+                        callback and callback(
+                            RealtimeSubscribeStates.CHANNEL_ERROR,
+                            Exception(
+                                "mismatch between server and client bindings for postgres changes"
+                            ),
+                        )
                         return
 
                 self.bindings["postgres_changes"] = new_postgres_bindings
@@ -368,6 +374,7 @@ class AsyncRealtimeChannel:
         callback: Callable[[Dict[str, Any]], None],
         table: str = "*",
         schema: str = "public",
+        filter: Optional[str] = None,
     ) -> AsyncRealtimeChannel:
         """
         Set up a listener for a specific Postgres changes event.
@@ -380,7 +387,7 @@ class AsyncRealtimeChannel:
         """
         return self._on(
             "postgres_changes",
-            filter={"event": event, "schema": schema, "table": table},
+            filter={"event": event, "schema": schema, "table": table, "filter": filter},
             callback=lambda payload, _: callback(payload),
         )
 
