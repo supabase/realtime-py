@@ -2,6 +2,22 @@
 
 
 
+## [2.0.0](https://github.com/supabase/realtime-py/compare/v1.0.6...v2.0.0) (2024-08-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* realtime v2 ([#178](https://github.com/supabase/realtime-py/issues/178))
+
+### Features
+
+* add set_auth method ([#175](https://github.com/supabase/realtime-py/issues/175)) ([5859c72](https://github.com/supabase/realtime-py/commit/5859c729590ffd1673cc626d8276b5366ff11ede))
+
+
+### Bug Fixes
+
+* realtime v2 ([#178](https://github.com/supabase/realtime-py/issues/178)) ([981a5d0](https://github.com/supabase/realtime-py/commit/981a5d0d3c10a60430810a6a0505bf751d931e61))
+
 ## v1.0.6 (2024-06-15)
 
 ### Build
