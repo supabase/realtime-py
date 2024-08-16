@@ -15,7 +15,6 @@ python = "^3.9"
 websockets = ">=11,<13"
 python-dateutil = "^2.8.1"
 typing-extensions = "^4.12.2"
-asyncio = "^3.4.3"
 aiohttp = "^3.10.2"
 
 [tool.poetry.dev-dependencies]
