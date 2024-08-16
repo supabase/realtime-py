@@ -1,8 +1,7 @@
 import asyncio
 from typing import Optional
 
-from realtime._async.channel import RealtimeSubscribeStates
-from realtime._async.client import AsyncRealtimeClient
+from realtime import AsyncRealtimeClient, RealtimeSubscribeStates
 
 
 async def main():

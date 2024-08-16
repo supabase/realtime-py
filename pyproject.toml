@@ -11,7 +11,7 @@ readme = "README.md"
 repository = "https://github.com/supabase-community/realtime-py"
 
 [tool.poetry.dependencies]
-python = "^3.8.18"
+python = "^3.9"
 websockets = ">=11,<13"
 python-dateutil = "^2.8.1"
 typing-extensions = "^4.12.2"

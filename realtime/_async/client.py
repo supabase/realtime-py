@@ -20,11 +20,7 @@ from ..types import (
 )
 from .channel import AsyncRealtimeChannel, RealtimeChannelOptions
 
-# logging.basicConfig(
-#     format="%(asctime)s:%(levelname)s - %(message)s", level=logging.INFO
-# )
-
-# logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def ensure_connection(func: Callback):
@@ -85,7 +81,7 @@ class AsyncRealtimeClient:
         while True:
             try:
                 msg = await self.ws_connection.recv()
-                logging.info(f"receive: {msg}")
+                logger.info(f"receive: {msg}")
 
                 msg = Message(**json.loads(msg))
                 channel = self.channels.get(msg.topic)
@@ -93,18 +89,16 @@ class AsyncRealtimeClient:
                 if channel:
                     channel._trigger(msg.event, msg.payload, msg.ref)
                 else:
-                    logging.info(f"Channel {msg.topic} not found")
+                    logger.info(f"Channel {msg.topic} not found")
 
             except websockets.exceptions.ConnectionClosed:
                 if self.auto_reconnect:
-                    logging.info(
-                        "Connection with server closed, trying to reconnect..."
-                    )
+                    logger.info("Connection with server closed, trying to reconnect...")
                     await self._connect()
                     for topic, channel in self.channels.items():
                         await channel.join()
                 else:
-                    logging.exception("Connection with the server closed.")
+                    logger.exception("Connection with the server closed.")
                     break
 
     async def connect(self) -> None:
@@ -131,20 +125,20 @@ class AsyncRealtimeClient:
             try:
                 self.ws_connection = await websockets.connect(self.url)
                 if self.ws_connection.open:
-                    logging.info("Connection was successful")
+                    logger.info("Connection was successful")
                     return await self._on_connect()
                 else:
                     raise Exception("Failed to open WebSocket connection")
             except Exception as e:
                 retries += 1
                 if retries >= self.max_retries or not self.auto_reconnect:
-                    logging.error(
+                    logger.error(
                         f"Failed to establish WebSocket connection after {retries} attempts: {e}"
                     )
                     raise
                 else:
                     wait_time = backoff * (2 ** (retries - 1))  # Exponential backoff
-                    logging.info(
+                    logger.info(
                         f"Connection attempt {retries} failed. Retrying in {wait_time:.2f} seconds..."
                     )
                     await asyncio.sleep(wait_time)
@@ -195,12 +189,10 @@ class AsyncRealtimeClient:
                 await asyncio.sleep(self.hb_interval)
             except websockets.exceptions.ConnectionClosed:
                 if self.auto_reconnect:
-                    logging.info(
-                        "Connection with server closed, trying to reconnect..."
-                    )
+                    logger.info("Connection with server closed, trying to reconnect...")
                     await self._connect()
                 else:
-                    logging.exception("Connection with the server closed.")
+                    logger.exception("Connection with the server closed.")
                     break
 
     @ensure_connection

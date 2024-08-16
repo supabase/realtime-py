@@ -66,7 +66,7 @@ await client.listen()
 
 ### Notes:
 
-- `REALTIME_URL` is `'ws://localhost:4000/socket'` when developing locally and `'wss://<project_ref>.supabase.co/realtime/v1'` when connecting to your Supabase project.
+- `REALTIME_URL` is `ws://localhost:4000/socket` when developing locally and `wss://<project_ref>.supabase.co/realtime/v1` when connecting to your Supabase project.
 - `API_KEY` is a JWT whose claims must contain `exp` and `role` (existing database role).
 - Channel name can be any `string`.
 
@@ -109,7 +109,7 @@ channel = client.channel(
     }
 )
 
-channel.on_presence_sync(lambda: print("Online users: ", channel.presenceState()))
+channel.on_presence_sync(lambda: print("Online users: ", channel.presence_state()))
 channel.on_presence_join(lambda new_presences: print("New users have joined: ", new_presences))
 channel.on_presence_leave(lambda left_presences: print("Users have left: ", left_presences))
 
@@ -156,7 +156,7 @@ channel.subscribe(
 
 ## Get All Channels
 
-You can see all the channels that your client has instantiatied.
+You can see all the channels that your client has instantiated.
 
 ```python
 # Setup...

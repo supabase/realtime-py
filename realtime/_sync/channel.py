@@ -12,6 +12,7 @@ from realtime.types import (
     ChannelStates,
     RealtimeChannelOptions,
     RealtimePostgresChangesListenEvent,
+    RealtimePresenceState,
     RealtimeSubscribeStates,
 )
 
@@ -402,6 +403,9 @@ class SyncRealtimeChannel:
         :return: None
         """
         self.send_presence("untrack", {})
+
+    def presence_state(self) -> RealtimePresenceState:
+        return self.presence.state
 
     def on_presence_sync(self, callback: Callable[[], None]) -> SyncRealtimeChannel:
         """

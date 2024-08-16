@@ -66,9 +66,8 @@ async def test_broadcast_events(socket: AsyncRealtimeClient):
 async def test_postgres_changes(socket: AsyncRealtimeClient):
     await socket.connect()
 
-    await socket.set_auth(
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzIzNzUzNjI3LCJpYXQiOjE3MjM3NTAwMjcsImlzcyI6Imh0dHA6Ly8xMjcuMC4wLjE6NTQzMjEvYXV0aC92MSIsInN1YiI6ImYwNDBmNmY4LTA2YTUtNDA1My04YzQzLTcyMjBlZWMzZDMyZSIsImVtYWlsIjoidGVzdEBtYWlsLmNvbSIsInBob25lIjoiIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZW1haWwiLCJwcm92aWRlcnMiOlsiZW1haWwiXX0sInVzZXJfbWV0YWRhdGEiOnt9LCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJhbXIiOlt7Im1ldGhvZCI6InBhc3N3b3JkIiwidGltZXN0YW1wIjoxNzIzNzUwMDI3fV0sInNlc3Npb25faWQiOiJkMzA2OTc0Ni1iOTE5LTRkOTgtOWQ2Mi01MmRhYTZmMmIyZTgiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.k-lLY0ogNZKEsvZNXP5xgi4hgBcRh0IbQtkc-Y_QXcs"
-    )
+    # Add your access token here
+    # await socket.set_auth("ACCESS_TOKEN")
 
     channel = socket.channel("test-postgres-changes")
 
@@ -133,9 +132,9 @@ async def main():
     socket = AsyncRealtimeClient(f"{URL}/realtime/v1", JWT, auto_reconnect=True)
     await socket.connect()
 
-    # await test_broadcast_events(socket)
+    await test_broadcast_events(socket)
     await test_postgres_changes(socket)
-    # await test_presence(socket)
+    await test_presence(socket)
 
 
 asyncio.run(main())
