@@ -1,23 +1,60 @@
-from realtime.connection import Socket
+import asyncio
+from typing import Optional
+
+from realtime import AsyncRealtimeClient, RealtimeSubscribeStates
 
 
-def callback1(payload):
-    print("Callback 1: ", payload)
+async def main():
+    REALTIME_URL = "ws://localhost:4000/websocket"
+    API_KEY = "1234567890"
+
+    socket = AsyncRealtimeClient(REALTIME_URL, API_KEY)
+    channel = socket.channel("test-channel")
+
+    def _on_subscribe(status: RealtimeSubscribeStates, err: Optional[Exception]):
+        if status == RealtimeSubscribeStates.SUBSCRIBED:
+            print("Connected!")
+        elif status == RealtimeSubscribeStates.CHANNEL_ERROR:
+            print(f"There was an error subscribing to channel: {err.args}")
+        elif status == RealtimeSubscribeStates.TIMED_OUT:
+            print("Realtime server did not respond in time.")
+        elif status == RealtimeSubscribeStates.CLOSED:
+            print("Realtime channel was unexpectedly closed.")
+
+    await channel.subscribe(_on_subscribe)
 
 
-def callback2(payload):
-    print("Callback 2: ", payload)
+async def test(socket: AsyncRealtimeClient):
+    channel = socket.channel("db-changes")
+
+    channel.on_postgres_changes(
+        "*",
+        schema="public",
+        callback=lambda payload: print("All changes in public schema: ", payload),
+    )
+
+    channel.on_postgres_changes(
+        "INSERT",
+        schema="public",
+        table="messages",
+        callback=lambda payload: print("All inserts in messages table: ", payload),
+    )
+
+    channel.on_postgres_changes(
+        "UPDATE",
+        schema="public",
+        table="users",
+        filter="username=eq.Realtime",
+        callback=lambda payload: print(
+            "All updates on users table when username is Realtime: ", payload
+        ),
+    )
+
+    channel.subscribe(
+        lambda status, err: status == RealtimeSubscribeStates.SUBSCRIBED
+        and print("Ready to receive database changes!")
+    )
 
 
 if __name__ == "__main__":
-    URL = "ws://localhost:4000/socket/websocket"
-    s = Socket(URL)
-    s.connect()
-
-    channel_1 = s.set_channel("realtime:public:todos")
-    channel_1.join().on("UPDATE", callback1)
-
-    channel_2 = s.set_channel("realtime:public:users")
-    channel_2.join().on("*", callback2)
-
-    s.listen()
+    asyncio.run(main())
