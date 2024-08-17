@@ -243,7 +243,6 @@ class AsyncRealtimeClient:
         for topic, channel in self.channels.items():
             print(f"Topic: {topic} | Events: {[e for e, _ in channel.listeners]}]")
 
-    @ensure_connection
     async def set_auth(self, token: Union[str, None]) -> None:
         """
         Set the authentication token for the connection and update all joined channels.
