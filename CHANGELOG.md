@@ -2,6 +2,13 @@
 
 
 
+## [2.0.1](https://github.com/supabase/realtime-py/compare/v2.0.0...v2.0.1) (2024-08-17)
+
+
+### Bug Fixes
+
+* remove ensure connect on set_auth ([#189](https://github.com/supabase/realtime-py/issues/189)) ([31c01ed](https://github.com/supabase/realtime-py/commit/31c01eda8bed92f7ce4089877dd9ab4bf1c28fcf))
+
 ## [2.0.0](https://github.com/supabase/realtime-py/compare/v1.0.6...v2.0.0) (2024-08-16)
 
 
