@@ -2,6 +2,13 @@
 
 
 
+## [2.0.2](https://github.com/supabase/realtime-py/compare/v2.0.1...v2.0.2) (2024-08-20)
+
+
+### Bug Fixes
+
+* set realtime as not implemented in the sync client ([#193](https://github.com/supabase/realtime-py/issues/193)) ([73d6275](https://github.com/supabase/realtime-py/commit/73d6275802f53a98fedfd20e11ce7657445dd83a))
+
 ## [2.0.1](https://github.com/supabase/realtime-py/compare/v2.0.0...v2.0.1) (2024-08-17)
 
 
