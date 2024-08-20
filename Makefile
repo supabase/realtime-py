@@ -14,6 +14,3 @@ run_tests: tests
 
 tests_only:
 	poetry run pytest -vv
-
-build_sync:
-	poetry run unasync realtime tests
