@@ -243,7 +243,7 @@ class AsyncRealtimeClient:
         for topic, channel in self.channels.items():
             print(f"Topic: {topic} | Events: {[e for e, _ in channel.listeners]}]")
 
-    async def set_auth(self, token: Union[str, None]) -> None:
+    def set_auth(self, token: Union[str, None]) -> None:
         """
         Set the authentication token for the connection and update all joined channels.
 
@@ -260,7 +260,9 @@ class AsyncRealtimeClient:
 
         for _, channel in self.channels.items():
             if channel._joined_once and channel.is_joined:
-                await channel.push(ChannelEvents.access_token, {"access_token": token})
+                asyncio.create_task(
+                    channel.push(ChannelEvents.access_token, {"access_token": token})
+                )
 
     def _make_ref(self) -> str:
         self.ref += 1
