@@ -49,7 +49,7 @@ async def access_token() -> str:
 async def test_set_auth(socket: AsyncRealtimeClient):
     await socket.connect()
 
-    await socket.set_auth("jwt")
+    socket.set_auth("jwt")
     assert socket.access_token == "jwt"
 
     await socket.close()
@@ -104,7 +104,7 @@ async def test_postgrest_changes(socket: AsyncRealtimeClient):
     await socket.connect()
     listen_task = asyncio.create_task(socket.listen())
 
-    await socket.set_auth(token)
+    socket.set_auth(token)
 
     channel: AsyncRealtimeChannel = socket.channel("test-postgres-changes")
     received_events = {"all": [], "insert": [], "update": [], "delete": []}
