@@ -5,22 +5,11 @@ from typing import Any, Dict, Optional
 @dataclass
 class Message:
     """
-    Dataclass abstraction for message
+    Represents a message exchanged over the WebSocket.
     """
 
+    topic: str
     event: str
     payload: Dict[str, Any]
-    ref: Any
-    topic: str
+    ref: Optional[str] = None
     join_ref: Optional[str] = None
-
-    def __hash__(self):
-        return hash(
-            (
-                self.event,
-                tuple(list(self.payload.values())),
-                self.ref,
-                self.topic,
-                self.join_ref,
-            )
-        )

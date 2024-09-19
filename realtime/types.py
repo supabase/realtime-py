@@ -1,153 +1,177 @@
-from enum import Enum
-from typing import Any, Callable, Dict, List, Literal, Optional, TypedDict, TypeVar
+from __future__ import annotations
 
-from typing_extensions import ParamSpec
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Callable, Dict, List, Literal, Optional, TypeVar
+
+from typing_extensions import Protocol, TypedDict
 
 # Constants
-DEFAULT_TIMEOUT = 10
-PHOENIX_CHANNEL = "phoenix"
+DEFAULT_TIMEOUT: int = 10  # Default timeout in seconds for operations
+PHOENIX_CHANNEL: str = (
+    "phoenix"  # Reserved channel name for heartbeat and system messages
+)
 
 # Type variables and custom types
-T_ParamSpec = ParamSpec("T_ParamSpec")
-T_Retval = TypeVar("T_Retval")
-Callback = Callable[T_ParamSpec, T_Retval]
+TCallback = TypeVar("TCallback", bound=Callable[..., Any])
+TReturn = TypeVar("TReturn")
+TPayload = TypeVar("TPayload", bound=Dict[str, Any])
+
+
+# Callback Protocols
+class EventCallback(Protocol):
+    """Protocol defining the structure of an event callback."""
+
+    async def __call__(self, payload: Dict[str, Any], ref: Optional[str]) -> None: ...
+
+
+class PresenceOnJoinCallback(Protocol):
+    """Protocol defining the structure for a presence join callback."""
+
+    async def __call__(
+        self, key: str, current_presences: List[Presence], new_presences: List[Presence]
+    ) -> None: ...
+
+
+class PresenceOnLeaveCallback(Protocol):
+    """Protocol defining the structure for a presence leave callback."""
+
+    async def __call__(
+        self,
+        key: str,
+        current_presences: List[Presence],
+        left_presences: List[Presence],
+    ) -> None: ...
+
+
+class SyncCallback(Protocol):
+    """Protocol defining the structure for a presence sync callback."""
+
+    async def __call__(self) -> None: ...
 
 
 # Enums
 class ChannelEvents(str, Enum):
-    """
-    ChannelEvents are a bunch of constant strings that are defined according to
-    what the Phoenix realtime server expects.
-    """
+    """Channel events as expected by the Phoenix server."""
 
-    close = "phx_close"
-    error = "phx_error"
-    join = "phx_join"
-    reply = "phx_reply"
-    leave = "phx_leave"
-    heartbeat = "heartbeat"
-    access_token = "access_token"
-    broadcast = "broadcast"
-    presence = "presence"
+    CLOSE = "phx_close"
+    ERROR = "phx_error"
+    JOIN = "phx_join"
+    REPLY = "phx_reply"
+    LEAVE = "phx_leave"
+    AUTH = "phx_auth"
+    HEARTBEAT = "heartbeat"
+    ACCESS_TOKEN = "access_token"
+    BROADCAST = "broadcast"
+    PRESENCE = "presence"
+    PRESENCE_STATE = "presence_state"
+    PRESENCE_DIFF = "presence_diff"
+    SYSTEM = "system"
 
 
 class ChannelStates(str, Enum):
+    """Possible states of a channel."""
+
     JOINED = "joined"
     CLOSED = "closed"
     ERRORED = "errored"
     JOINING = "joining"
     LEAVING = "leaving"
+    LEFT = "left"
 
 
 class RealtimeSubscribeStates(str, Enum):
+    """States for subscription status."""
+
     SUBSCRIBED = "SUBSCRIBED"
     TIMED_OUT = "TIMED_OUT"
     CLOSED = "CLOSED"
     CHANNEL_ERROR = "CHANNEL_ERROR"
 
 
-class RealtimePresenceListenEvents(str, Enum):
-    SYNC = "SYNC"
-    JOIN = "JOIN"
-    LEAVE = "LEAVE"
+class RealtimePresenceEvents(str, Enum):
+    """Events related to presence."""
+
+    PRESENCE_STATE = "presence_state"
+    PRESENCE_DIFF = "presence_diff"
 
 
 # Literals
 RealtimePostgresChangesListenEvent = Literal["*", "INSERT", "UPDATE", "DELETE"]
 
 
-# Classes
+# Data Classes
+@dataclass
 class Binding:
-    def __init__(
-        self,
-        type: str,
-        filter: Dict[str, Any],
-        callback: Callback,
-        id: Optional[str] = None,
-    ):
-        self.type = type
-        self.filter = filter
-        self.callback = callback
-        self.id = id
+    """Represents an event listener binding on a channel."""
+
+    event_type: str
+    callback: EventCallback
+    filter: Dict[str, Any]
+    binding_id: Optional[str] = None
 
 
-class _Hook:
-    def __init__(self, status: str, callback: Callback):
-        self.status = status
-        self.callback = callback
+@dataclass
+class Hook:
+    """Represents a callback associated with a specific status."""
+
+    status: str
+    callback: EventCallback
 
 
-class Presence(Dict[str, Any]):
-    presence_ref: str
+@dataclass
+class Presence:
+    """Represents a single presence metadata entry."""
+
+    phx_ref: str
+    phx_ref_prev: Optional[str]
+    metadata: Dict[str, Any]
 
 
-class PresenceEvents:
-    def __init__(self, state: str, diff: str):
-        self.state = state
-        self.diff = diff
+@dataclass
+class PresenceState:
+    """Represents the state of presences in the channel."""
+
+    presences: Dict[str, List[Presence]]
 
 
-class PresenceOpts:
-    def __init__(self, events: PresenceEvents):
-        self.events = events
+@dataclass
+class PresenceDiff:
+    """Represents the difference in presence state."""
+
+    joins: Dict[str, List[Presence]]
+    leaves: Dict[str, List[Presence]]
 
 
 # TypedDicts
-class RealtimeChannelBroadcastConfig(TypedDict):
-    ack: bool
-    self: bool
+class RealtimeChannelConfig(TypedDict, total=False):
+    """Configuration options for a channel."""
+
+    broadcast: Dict[str, Any]
+    presence: Dict[str, Any]
+    postgres_changes: List[Dict[str, Any]]
+    access_token: Optional[str]
 
 
-class RealtimeChannelPresenceConfig(TypedDict):
-    key: str
+class PresenceEventsType(TypedDict, total=False):
+    """Events for presence."""
+
+    state: str
+    diff: str
+    auth: str
 
 
-class RealtimeChannelConfig(TypedDict):
-    broadcast: RealtimeChannelBroadcastConfig
-    presence: RealtimeChannelPresenceConfig
-    private: bool
+class PresenceOpts(TypedDict, total=False):
+    """Options for presence."""
+
+    events: PresenceEventsType
+
+
+# Custom Types
+PresenceStateType = Dict[str, List[Presence]]
 
 
 class RealtimeChannelOptions(TypedDict):
+    """Options for initializing a Realtime channel."""
+
     config: RealtimeChannelConfig
-
-
-class PresenceMeta(TypedDict, total=False):
-    phx_ref: str
-    phx_ref_prev: str
-
-
-class RawPresenceStateEntry(TypedDict):
-    metas: List[PresenceMeta]
-
-
-# Custom types
-PresenceOnJoinCallback = Callable[[str, List[Any], List[Any]], None]
-PresenceOnLeaveCallback = Callable[[str, List[Any], List[Any]], None]
-RealtimePresenceState = Dict[str, List[Presence]]
-RawPresenceState = Dict[str, RawPresenceStateEntry]
-
-
-class RawPresenceDiff(TypedDict):
-    joins: RawPresenceState
-    leaves: RawPresenceState
-
-
-class PresenceDiff(TypedDict):
-    joins: RealtimePresenceState
-    leaves: RealtimePresenceState
-
-
-# Specific payload types
-class RealtimePresenceJoinPayload(Dict[str, Any]):
-    event: Literal[RealtimePresenceListenEvents.JOIN]
-    key: str
-    current_presences: List[Presence]
-    new_presences: List[Presence]
-
-
-class RealtimePresenceLeavePayload(Dict[str, Any]):
-    event: Literal[RealtimePresenceListenEvents.LEAVE]
-    key: str
-    current_presences: List[Presence]
-    left_presences: List[Presence]

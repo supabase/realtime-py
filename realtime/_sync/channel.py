@@ -19,7 +19,7 @@ class SyncRealtimeChannel:
         self,
         socket: SyncRealtimeClient,
         topic: str,
-        params: RealtimeChannelOptions = {"config": {}},
+        params: RealtimeChannelOptions,
     ) -> None:
         """
         Initialize the Channel object.
@@ -28,3 +28,5 @@ class SyncRealtimeChannel:
         :param topic: Topic that it subscribes to on the realtime server
         :param params: Optional parameters for connection.
         """
+        raise NotImplementedError("This feature isn't available in the sync client."
+                                  "You can use the realtime feature in the async client only.")

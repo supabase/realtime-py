@@ -1,12 +1,49 @@
+import logging
+
+# Configure the root logger for the module
+logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+from realtime._async.channel import AsyncRealtimeChannel
+from realtime._async.client import AsyncRealtimeClient
+from realtime._async.presence import AsyncRealtimePresence
+from realtime._sync.client import SyncRealtimeChannel, SyncRealtimeClient
+from realtime.exceptions import (
+    AuthorizationError,
+    ConnectionFailedError,
+    InvalidMessageError,
+    NotConnectedError,
+    RealtimeError,
+    ReconnectionFailedError,
+)
+from realtime.types import (
+    ChannelEvents,
+    ChannelStates,
+    Presence,
+    RealtimeChannelOptions,
+    RealtimePostgresChangesListenEvent,
+    RealtimePresenceEvents,
+    RealtimeSubscribeStates,
+)
 from realtime.version import __version__
 
-from ._async.channel import AsyncRealtimeChannel
-from ._async.client import AsyncRealtimeClient
-from ._async.presence import AsyncRealtimePresence
-from ._sync.channel import SyncRealtimeChannel
-from ._sync.client import SyncRealtimeClient
-from ._sync.presence import SyncRealtimePresence
-from .exceptions import *
-from .message import *
-from .transformers import *
-from .types import *
+__all__ = [
+    "AsyncRealtimeClient",
+    "AsyncRealtimeChannel",
+    "AsyncRealtimePresence",
+    "ChannelEvents",
+    "ChannelStates",
+    "RealtimeSubscribeStates",
+    "RealtimePresenceEvents",
+    "RealtimePostgresChangesListenEvent",
+    "RealtimeChannelOptions",
+    "RealtimeError",
+    "NotConnectedError",
+    "AuthorizationError",
+    "ConnectionFailedError",
+    "ReconnectionFailedError",
+    "InvalidMessageError",
+    "SyncRealtimeClient",
+    "SyncRealtimeChannel",
+    "Presence",
+    "__version__",
+]

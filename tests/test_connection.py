@@ -6,37 +6,30 @@ import aiohttp
 import pytest
 from dotenv import load_dotenv
 
-from realtime import AsyncRealtimeChannel, AsyncRealtimeClient, RealtimeSubscribeStates
+from realtime import AsyncRealtimeClient
+from realtime.types import RealtimeSubscribeStates
 
 load_dotenv()
 
-
 URL = os.getenv("SUPABASE_URL") or "http://127.0.0.1:54321"
-ANON_KEY = (
-    os.getenv("SUPABASE_ANON_KEY")
-    or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
-)
+ANON_KEY = os.getenv("SUPABASE_ANON_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ..."
 
 
-@pytest.fixture
-def socket() -> AsyncRealtimeClient:
-    url = f"{URL}/realtime/v1"
-    key = ANON_KEY
-    return AsyncRealtimeClient(url, key)
-
-
-async def access_token() -> str:
+async def get_access_token() -> str:
     url = f"{URL}/auth/v1/signup"
     headers = {"apikey": ANON_KEY, "Content-Type": "application/json"}
+    email = (
+        os.getenv("SUPABASE_TEST_EMAIL")
+        or f"test_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}@example.com"
+    )
     data = {
-        "email": os.getenv("SUPABASE_TEST_EMAIL")
-        or f"test_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}@example.com",
+        "email": email,
         "password": os.getenv("SUPABASE_TEST_PASSWORD") or "test.123",
     }
 
     async with aiohttp.ClientSession() as session:
         async with session.post(url, headers=headers, json=data) as response:
-            if response.status == 200:
+            if response.status in [200, 201]:
                 json_response = await response.json()
                 return json_response.get("access_token")
             else:
@@ -46,42 +39,38 @@ async def access_token() -> str:
 
 
 @pytest.mark.asyncio
-async def test_set_auth(socket: AsyncRealtimeClient):
+async def test_set_auth():
+    socket = AsyncRealtimeClient(f"{URL}/realtime/v1", ANON_KEY)
     await socket.connect()
-
     await socket.set_auth("jwt")
     assert socket.access_token == "jwt"
-
-    await socket.close()
+    await socket.disconnect()
 
 
 @pytest.mark.asyncio
 async def test_broadcast_events(socket: AsyncRealtimeClient):
     await socket.connect()
-    listen_task = asyncio.create_task(socket.listen())
 
-    channel = socket.channel(
-        "test-broadcast", params={"config": {"broadcast": {"self": True}}}
-    )
+    channel = socket.channel("test-broadcast", params={"broadcast": {"self": True}})
     received_events = []
 
     semaphore = asyncio.Semaphore(0)
 
-    def broadcast_callback(payload):
+    async def broadcast_callback(payload, ref):
         print("broadcast: ", payload)
         received_events.append(payload)
         semaphore.release()
 
-    subscribe_event = asyncio.Event()
-    await channel.on_broadcast("test-event", broadcast_callback).subscribe(
-        lambda state, error: (
-            subscribe_event.set()
-            if state == RealtimeSubscribeStates.SUBSCRIBED
-            else None
-        )
-    )
+    subscribed_event = asyncio.Event()
 
-    await asyncio.wait_for(subscribe_event.wait(), 5)
+    async def subscribe_callback(state, error):
+        if state == RealtimeSubscribeStates.SUBSCRIBED:
+            subscribed_event.set()
+
+    channel.on_broadcast("test-event", broadcast_callback)
+    await channel.subscribe(subscribe_callback)
+
+    await asyncio.wait_for(subscribed_event.wait(), 5)
 
     # Send 3 broadcast events
     for i in range(3):
@@ -89,66 +78,58 @@ async def test_broadcast_events(socket: AsyncRealtimeClient):
         await asyncio.wait_for(semaphore.acquire(), 5)
 
     assert len(received_events) == 3
-    assert received_events[0]["payload"]["message"] == "Event 1"
-    assert received_events[1]["payload"]["message"] == "Event 2"
-    assert received_events[2]["payload"]["message"] == "Event 3"
+    assert received_events[0]["message"] == "Event 1"
+    assert received_events[1]["message"] == "Event 2"
+    assert received_events[2]["message"] == "Event 3"
 
-    await socket.close()
-    listen_task.cancel()
+    await socket.disconnect()
 
 
 @pytest.mark.asyncio
-async def test_postgrest_changes(socket: AsyncRealtimeClient):
-    token = await access_token()
+async def test_postgres_changes():
+    token = await get_access_token()
 
+    socket = AsyncRealtimeClient(f"{URL}/realtime/v1", ANON_KEY)
     await socket.connect()
-    listen_task = asyncio.create_task(socket.listen())
-
     await socket.set_auth(token)
 
-    channel: AsyncRealtimeChannel = socket.channel("test-postgres-changes")
-    received_events = {"all": [], "insert": [], "update": [], "delete": []}
+    channel = socket.channel("test-postgres-changes")
 
-    def all_changes_callback(payload):
+    received_events = {"all": [], "INSERT": [], "UPDATE": [], "DELETE": []}
+
+    insert_event = asyncio.Event()
+    update_event = asyncio.Event()
+    delete_event = asyncio.Event()
+    subscribed_event = asyncio.Event()
+
+    async def all_changes_callback(payload, ref):
         print("all_changes_callback: ", payload)
         received_events["all"].append(payload)
 
-    insert_event = asyncio.Event()
-
-    def insert_callback(payload):
+    async def insert_callback(payload, ref):
         print("insert_callback: ", payload)
-        received_events["insert"].append(payload)
+        received_events["INSERT"].append(payload)
         insert_event.set()
 
-    update_event = asyncio.Event()
-
-    def update_callback(payload):
+    async def update_callback(payload, ref):
         print("update_callback: ", payload)
-        received_events["update"].append(payload)
+        received_events["UPDATE"].append(payload)
         update_event.set()
 
-    delete_event = asyncio.Event()
-
-    def delete_callback(payload):
+    async def delete_callback(payload, ref):
         print("delete_callback: ", payload)
-        received_events["delete"].append(payload)
+        received_events["DELETE"].append(payload)
         delete_event.set()
 
-    subscribed_event = asyncio.Event()
-
-    await channel.on_postgres_changes(
-        "*", all_changes_callback, table="todos"
-    ).on_postgres_changes("INSERT", insert_callback, table="todos").on_postgres_changes(
-        "UPDATE", update_callback, table="todos"
-    ).on_postgres_changes(
-        "DELETE", delete_callback, table="todos"
-    ).subscribe(
-        lambda state, error: (
+    async def subscribe_callback(state, error):
+        if state == RealtimeSubscribeStates.SUBSCRIBED:
             subscribed_event.set()
-            if state == RealtimeSubscribeStates.SUBSCRIBED
-            else None
-        )
-    )
+
+    channel.on_postgres_changes("*", all_changes_callback, table="todos")
+    channel.on_postgres_changes("INSERT", insert_callback, table="todos")
+    channel.on_postgres_changes("UPDATE", update_callback, table="todos")
+    channel.on_postgres_changes("DELETE", delete_callback, table="todos")
+    await channel.subscribe(subscribe_callback)
 
     # Wait for the channel to be subscribed
     await asyncio.wait_for(subscribed_event.wait(), 10)
@@ -168,26 +149,25 @@ async def test_postgrest_changes(socket: AsyncRealtimeClient):
 
     assert len(received_events["all"]) == 3
 
-    insert = received_events["all"][0]
-    update = received_events["all"][1]
-    delete = received_events["all"][2]
+    insert_event_data = received_events["all"][0]
+    update_event_data = received_events["all"][1]
+    delete_event_data = received_events["all"][2]
 
-    assert insert["data"]["record"]["id"] == created_todo_id
-    assert insert["data"]["record"]["description"] == "Test todo"
-    assert insert["data"]["record"]["is_completed"] == False
+    assert insert_event_data["data"]["table"] == "todos"
+    assert insert_event_data["data"]["eventType"] == "INSERT"
+    assert insert_event_data["data"]["new"]["id"] == created_todo_id
 
-    assert update["data"]["record"]["id"] == created_todo_id
-    assert update["data"]["record"]["description"] == "Updated todo"
-    assert update["data"]["record"]["is_completed"] == True
+    assert update_event_data["data"]["eventType"] == "UPDATE"
+    assert update_event_data["data"]["new"]["id"] == created_todo_id
 
-    assert delete["data"]["old_record"]["id"] == created_todo_id
+    assert delete_event_data["data"]["eventType"] == "DELETE"
+    assert delete_event_data["data"]["old"]["id"] == created_todo_id
 
-    assert received_events["insert"] == [insert]
-    assert received_events["update"] == [update]
-    assert received_events["delete"] == [delete]
+    assert received_events["INSERT"][0] == insert_event_data
+    assert received_events["UPDATE"][0] == update_event_data
+    assert received_events["DELETE"][0] == delete_event_data
 
-    await socket.close()
-    listen_task.cancel()
+    await socket.disconnect()
 
 
 async def create_todo(access_token: str, todo: dict) -> str:
@@ -206,7 +186,9 @@ async def create_todo(access_token: str, todo: dict) -> str:
                 json_response = await response.json()
                 return json_response.get("id")
             else:
-                raise Exception(f"Failed to create todo. Status: {response.status}")
+                raise Exception(
+                    f"Failed to create todo. Status: {response.status}, {await response.text()}"
+                )
 
 
 async def update_todo(access_token: str, id: str, todo: dict):
@@ -220,7 +202,9 @@ async def update_todo(access_token: str, id: str, todo: dict):
     async with aiohttp.ClientSession() as session:
         async with session.patch(url, headers=headers, json=todo) as response:
             if response.status != 204:
-                raise Exception(f"Failed to update todo. Status: {response.status}")
+                raise Exception(
+                    f"Failed to update todo. Status: {response.status}, {await response.text()}"
+                )
 
 
 async def delete_todo(access_token: str, id: str):
@@ -234,4 +218,6 @@ async def delete_todo(access_token: str, id: str):
     async with aiohttp.ClientSession() as session:
         async with session.delete(url, headers=headers) as response:
             if response.status != 204:
-                raise Exception(f"Failed to delete todo. Status: {response.status}")
+                raise Exception(
+                    f"Failed to delete todo. Status: {response.status}, {await response.text()}"
+                )
