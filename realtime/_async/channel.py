@@ -95,7 +95,7 @@ class AsyncRealtimeChannel:
             logging.info(f"channel {self.topic} closed")
             self.rejoin_timer.reset()
             self.state = ChannelStates.CLOSED
-            self.socket._remove(self)
+            self.socket.remove_channel(self)
 
         def on_error(payload, *args):
             if self.is_leaving or self.is_closed:
@@ -290,11 +290,11 @@ class AsyncRealtimeChannel:
         :return: Channel
         """
         try:
-            await self.socket._send(
+            await self.socket.send(
                 {
                     "topic": self.topic,
                     "event": "phx_join",
-                    "payload": {"config": self.channel_params},
+                    "payload": {"config": self.params},
                     "ref": None,
                 }
             )
