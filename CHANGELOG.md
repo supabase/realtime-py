@@ -2,6 +2,15 @@
 
 
 
+## [2.0.3](https://github.com/supabase/realtime-py/compare/v2.0.2...v2.0.3) (2024-09-26)
+
+
+### Bug Fixes
+
+* **deps:** bump aiohttp from 3.10.5 to 3.10.6 ([#207](https://github.com/supabase/realtime-py/issues/207)) ([e743b85](https://github.com/supabase/realtime-py/commit/e743b854ec45cc7c987d4ce9324a53f59eaa6d8a))
+* **deps:** bump websockets from 12.0 to 13.1 ([#205](https://github.com/supabase/realtime-py/issues/205)) ([2ce6efb](https://github.com/supabase/realtime-py/commit/2ce6efb12e158c6df2bd4cda5d3b2a958d580c56))
+* update broken method calls ([#203](https://github.com/supabase/realtime-py/issues/203)) ([b162e00](https://github.com/supabase/realtime-py/commit/b162e0076df4e7b20f1f669e7e79012e6274df7e))
+
 ## [2.0.2](https://github.com/supabase/realtime-py/compare/v2.0.1...v2.0.2) (2024-08-20)
 
 
