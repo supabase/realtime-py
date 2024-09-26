@@ -2,6 +2,13 @@
 
 
 
+## [2.0.4](https://github.com/supabase/realtime-py/compare/v2.0.3...v2.0.4) (2024-09-26)
+
+
+### Bug Fixes
+
+* add missing arg on on_join_push_timeout ([#208](https://github.com/supabase/realtime-py/issues/208)) ([de77c12](https://github.com/supabase/realtime-py/commit/de77c12f196bfdaac34b7ac58354e3e09525b721))
+
 ## [2.0.3](https://github.com/supabase/realtime-py/compare/v2.0.2...v2.0.3) (2024-09-26)
 
 
