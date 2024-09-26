@@ -235,7 +235,7 @@ class AsyncRealtimeChannel:
                     Exception(json.dumps(payload)),
                 )
 
-            def on_join_push_timeout():
+            def on_join_push_timeout(*args):
                 callback and callback(RealtimeSubscribeStates.TIMED_OUT, None)
 
             self.join_push.receive("ok", on_join_push_ok).receive(
