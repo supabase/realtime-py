@@ -2,6 +2,13 @@
 
 
 
+## [2.0.5](https://github.com/supabase/realtime-py/compare/v2.0.4...v2.0.5) (2024-09-28)
+
+
+### Bug Fixes
+
+* schedule timeout should not be async ([#210](https://github.com/supabase/realtime-py/issues/210)) ([0a3c720](https://github.com/supabase/realtime-py/commit/0a3c7207852010c25f083f1e2ae7b684466a626e))
+
 ## [2.0.4](https://github.com/supabase/realtime-py/compare/v2.0.3...v2.0.4) (2024-09-26)
 
 
