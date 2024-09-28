@@ -527,6 +527,6 @@ class AsyncRealtimeChannel:
         return f"chan_reply_{ref}"
 
     async def _rejoin_until_connected(self):
-        await self.rejoin_timer.schedule_timeout()
+        self.rejoin_timer.schedule_timeout()
         if self.socket.is_connected:
             await self._rejoin()

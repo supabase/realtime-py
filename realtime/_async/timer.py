@@ -14,7 +14,7 @@ class AsyncTimer:
         if self.timer:
             self.timer.cancel()
 
-    async def schedule_timeout(self):
+    def schedule_timeout(self):
         if self.timer:
             self.timer.cancel()
 
