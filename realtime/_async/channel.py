@@ -28,6 +28,8 @@ from .timer import AsyncTimer
 if TYPE_CHECKING:
     from .client import AsyncRealtimeClient
 
+logger = logging.getLogger(__name__)
+
 
 class AsyncRealtimeChannel:
     """
@@ -83,7 +85,7 @@ class AsyncRealtimeChannel:
             if not self.is_joining:
                 return
 
-            logging.error(f"join push timeout for channel {self.topic}")
+            logger.error(f"join push timeout for channel {self.topic}")
             self.state = ChannelStates.ERRORED
             self.rejoin_timer.schedule_timeout()
 
@@ -92,7 +94,7 @@ class AsyncRealtimeChannel:
         )
 
         def on_close(*args):
-            logging.info(f"channel {self.topic} closed")
+            logger.info(f"channel {self.topic} closed")
             self.rejoin_timer.reset()
             self.state = ChannelStates.CLOSED
             self.socket.remove_channel(self)
@@ -101,7 +103,7 @@ class AsyncRealtimeChannel:
             if self.is_leaving or self.is_closed:
                 return
 
-            logging.info(f"channel {self.topic} error: {payload}")
+            logger.info(f"channel {self.topic} error: {payload}")
             self.state = ChannelStates.ERRORED
             self.rejoin_timer.schedule_timeout()
 
@@ -253,7 +255,7 @@ class AsyncRealtimeChannel:
         self.join_push.destroy()
 
         def _close(*args):
-            logging.info(f"channel {self.topic} leave")
+            logger.info(f"channel {self.topic} leave")
             self._trigger(ChannelEvents.close, "leave")
 
         leave_push = AsyncPush(self, ChannelEvents.leave, {})

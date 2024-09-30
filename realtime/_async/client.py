@@ -286,7 +286,7 @@ class AsyncRealtimeClient:
         """
 
         message = json.dumps(message)
-        logging.info(f"send: {message}")
+        logger.info(f"send: {message}")
 
         async def send_message():
             await self.ws_connection.send(message)
