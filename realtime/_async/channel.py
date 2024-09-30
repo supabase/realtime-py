@@ -42,7 +42,7 @@ class AsyncRealtimeChannel:
         self,
         socket: AsyncRealtimeClient,
         topic: str,
-        params: RealtimeChannelOptions = {"config": {}},
+        params: Optional[RealtimeChannelOptions] = None,
     ) -> None:
         """
         Initialize the Channel object.
@@ -52,7 +52,7 @@ class AsyncRealtimeChannel:
         :param params: Optional parameters for connection.
         """
         self.socket = socket
-        self.params = params
+        self.params = params or {}
         self.topic = topic
         self._joined_once = False
         self.bindings: Dict[str, List[Binding]] = {}
@@ -306,7 +306,7 @@ class AsyncRealtimeChannel:
 
     # Event handling methods
     def _on(
-        self, type: str, callback: Callback, filter: Dict[str, Any] = {}
+        self, type: str, callback: Callback, filter: Optional[Dict[str, Any]] = None
     ) -> AsyncRealtimeChannel:
         """
         Set up a listener for a specific event.
@@ -318,7 +318,7 @@ class AsyncRealtimeChannel:
         """
 
         type_lowercase = type.lower()
-        binding = Binding(type=type_lowercase, filter=filter, callback=callback)
+        binding = Binding(type=type_lowercase, filter=filter or {}, callback=callback)
         self.bindings.setdefault(type_lowercase, []).append(binding)
 
         return self

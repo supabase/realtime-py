@@ -39,8 +39,8 @@ class AsyncRealtimeClient:
         self,
         url: str,
         token: str,
-        auto_reconnect: bool = False,
-        params: Dict[str, Any] = {},
+        auto_reconnect: bool = True,
+        params: Optional[Dict[str, Any]] = None,
         hb_interval: int = 30,
         max_retries: int = 5,
         initial_backoff: float = 1.0,
@@ -60,7 +60,7 @@ class AsyncRealtimeClient:
         self.url = f"{re.sub(r'https://', 'wss://', re.sub(r'http://', 'ws://', url, flags=re.IGNORECASE), flags=re.IGNORECASE)}/websocket?apikey={token}"
         self.http_endpoint = http_endpoint_url(url)
         self.is_connected = False
-        self.params = params
+        self.params = params or {}
         self.apikey = token
         self.access_token = token
         self.send_buffer: List[Callable] = []
@@ -197,7 +197,7 @@ class AsyncRealtimeClient:
 
     @ensure_connection
     def channel(
-        self, topic: str, params: RealtimeChannelOptions = {}
+        self, topic: str, params: Optional[RealtimeChannelOptions] = None
     ) -> AsyncRealtimeChannel:
         """
         :param topic: Initializes a channel and creates a two-way association with the socket

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from .channel import RealtimeChannelOptions, SyncRealtimeChannel
 
@@ -10,8 +10,8 @@ class SyncRealtimeClient:
         self,
         url: str,
         token: str,
-        auto_reconnect: bool = False,
-        params: Dict[str, Any] = {},
+        auto_reconnect: bool = True,
+        params: Optional[Dict[str, Any]] = None,
         hb_interval: int = 30,
         max_retries: int = 5,
         initial_backoff: float = 1.0,
@@ -30,7 +30,7 @@ class SyncRealtimeClient:
         """
 
     def channel(
-        self, topic: str, params: RealtimeChannelOptions = {}
+        self, topic: str, params: Optional[RealtimeChannelOptions] = None
     ) -> SyncRealtimeChannel:
         """
         :param topic: Initializes a channel and creates a two-way association with the socket
