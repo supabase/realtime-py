@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 logger.addFilter(TokenMaskingFilter())
 
+
 class AsyncPush:
     def __init__(
         self,

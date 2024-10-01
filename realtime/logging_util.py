@@ -3,6 +3,7 @@ import re
 
 redact = r"(eyJh\w*\.)(\w*)\."
 
+
 class TokenMaskingFilter(logging.Filter):
     """Mask access_tokens in logs"""
 
