@@ -24,6 +24,7 @@ from .channel import AsyncRealtimeChannel, RealtimeChannelOptions
 logger = logging.getLogger(__name__)
 logger.addFilter(TokenMaskingFilter())
 
+
 def ensure_connection(func: Callback):
     @wraps(func)
     def wrapper(*args: T_ParamSpec.args, **kwargs: T_ParamSpec.kwargs) -> T_Retval:
