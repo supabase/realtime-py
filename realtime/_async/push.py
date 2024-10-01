@@ -2,13 +2,14 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+from ..logging_util import TokenMaskingFilter
 from ..types import DEFAULT_TIMEOUT, Callback, _Hook
 
 if TYPE_CHECKING:
     from .channel import AsyncRealtimeChannel
 
 logger = logging.getLogger(__name__)
-
+logger.addFilter(TokenMaskingFilter())
 
 class AsyncPush:
     def __init__(
