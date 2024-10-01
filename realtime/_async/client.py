@@ -8,6 +8,7 @@ from typing import Any, Callable, Dict, List, Optional
 import websockets
 
 from ..exceptions import NotConnectedError
+from ..logging_util import TokenMaskingFilter
 from ..message import Message
 from ..transformers import http_endpoint_url
 from ..types import (
@@ -21,7 +22,7 @@ from ..types import (
 from .channel import AsyncRealtimeChannel, RealtimeChannelOptions
 
 logger = logging.getLogger(__name__)
-
+logger.addFilter(TokenMaskingFilter())
 
 def ensure_connection(func: Callback):
     @wraps(func)
