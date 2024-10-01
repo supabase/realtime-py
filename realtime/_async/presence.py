@@ -2,6 +2,7 @@
  Defines the RealtimePresence class and its dependencies.
 """
 
+import logging
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from ..types import (
@@ -14,6 +15,8 @@ from ..types import (
     RawPresenceState,
     RealtimePresenceState,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class AsyncRealtimePresence:

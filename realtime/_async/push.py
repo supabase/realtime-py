@@ -7,6 +7,8 @@ from ..types import DEFAULT_TIMEOUT, Callback, _Hook
 if TYPE_CHECKING:
     from .channel import AsyncRealtimeChannel
 
+logger = logging.getLogger(__name__)
+
 
 class AsyncPush:
     def __init__(
@@ -53,7 +55,7 @@ class AsyncPush:
                 }
             )
         except Exception as e:
-            logging.error(f"send push failed: {e}")
+            logger.error(f"send push failed: {e}")
 
     def update_payload(self, payload: Dict[str, Any]):
         self.payload = {**self.payload, **payload}
