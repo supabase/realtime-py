@@ -15,12 +15,12 @@ class AsyncPush:
         self,
         channel: "AsyncRealtimeChannel",
         event: str,
-        payload: Dict[str, Any] = {},
+        payload: Optional[Dict[str, Any]] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ):
         self.channel = channel
         self.event = event
-        self.payload = payload
+        self.payload = payload or {}
         self.timeout = timeout
         self.rec_hooks: List[_Hook] = []
         self.ref: Optional[str] = None
