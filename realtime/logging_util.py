@@ -1,7 +1,11 @@
 import logging
 import re
 
-redact = r"(eyJh\w*\.)(\w*)\."
+# redaction regex for detecting JWT tokens
+# <header>.<payload>.<signature>
+# character set [a-zA-Z0-9_-]
+# \w covers [a-zA-Z0-9]
+redact = r"(eyJh[-_\w]*\.)([-_\w]*)\."
 
 
 class TokenMaskingFilter(logging.Filter):
