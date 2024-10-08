@@ -3,7 +3,7 @@ import json
 import logging
 import re
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
 import websockets
 
@@ -243,7 +243,7 @@ class AsyncRealtimeClient:
         for topic, channel in self.channels.items():
             print(f"Topic: {topic} | Events: {[e for e, _ in channel.listeners]}]")
 
-    async def set_auth(self, token: Union[str, None]) -> None:
+    async def set_auth(self, token: Optional[str]) -> None:
         """
         Set the authentication token for the connection and update all joined channels.
 
@@ -251,7 +251,7 @@ class AsyncRealtimeClient:
         to all joined channels. This is useful for refreshing authentication or changing users.
 
         Args:
-            token (Union[str, None]): The new authentication token. Can be None to remove authentication.
+            token (Optional[str]): The new authentication token. Can be None to remove authentication.
 
         Returns:
             None
