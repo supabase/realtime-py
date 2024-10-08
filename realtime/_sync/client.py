@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional
 
 from .channel import RealtimeChannelOptions, SyncRealtimeChannel
 
@@ -56,7 +56,7 @@ class SyncRealtimeClient:
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
-    def set_auth(self, token: Union[str, None]) -> None:
+    def set_auth(self, token: Optional[str]) -> None:
         """
         Set the authentication token for the connection and update all joined channels.
 
@@ -64,7 +64,7 @@ class SyncRealtimeClient:
         to all joined channels. This is useful for refreshing authentication or changing users.
 
         Args:
-            token (Union[str, None]): The new authentication token. Can be None to remove authentication.
+            token (Optional[str]): The new authentication token. Can be None to remove authentication.
 
         Returns:
             None
