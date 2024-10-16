@@ -16,6 +16,7 @@ from realtime.types import (
     RealtimeSubscribeStates,
 )
 
+from ..logging_util import TokenMaskingFilter
 from ..transformers import http_endpoint_url
 from .presence import (
     AsyncRealtimePresence,
@@ -29,6 +30,7 @@ if TYPE_CHECKING:
     from .client import AsyncRealtimeClient
 
 logger = logging.getLogger(__name__)
+logger.addFilter(TokenMaskingFilter())
 
 
 class AsyncRealtimeChannel:
