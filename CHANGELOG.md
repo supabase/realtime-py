@@ -2,6 +2,15 @@
 
 
 
+## [2.0.6](https://github.com/supabase/realtime-py/compare/v2.0.5...v2.0.6) (2024-10-16)
+
+
+### Bug Fixes
+
+* correctly setup logging ([#215](https://github.com/supabase/realtime-py/issues/215)) ([f9eb04c](https://github.com/supabase/realtime-py/commit/f9eb04c5c5d63fcdc98ced26411c81a5a41e763a))
+* **deps:** bump aiohttp from 3.10.6 to 3.10.9 ([#220](https://github.com/supabase/realtime-py/issues/220)) ([1802e30](https://github.com/supabase/realtime-py/commit/1802e304ffe8e79f821a8bf44ee8286d81aea390))
+* Types to use Option[T] ([#223](https://github.com/supabase/realtime-py/issues/223)) ([b5041c3](https://github.com/supabase/realtime-py/commit/b5041c32d880e840ffc550601b2097bdf0820f4a))
+
 ## [2.0.5](https://github.com/supabase/realtime-py/compare/v2.0.4...v2.0.5) (2024-09-28)
 
 
