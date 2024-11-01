@@ -19,6 +19,8 @@ from ..types import (
     T_Retval,
 )
 from .channel import AsyncRealtimeChannel, RealtimeChannelOptions
+from utils import is_ws_url
+
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +59,8 @@ class AsyncRealtimeClient:
         :param max_retries: Maximum number of reconnection attempts. Defaults to 5.
         :param initial_backoff: Initial backoff time (in seconds) for reconnection attempts. Defaults to 1.0.
         """
+        if not is_ws_url(url):
+            ValueError("url must be a valid WebSocket URL or HTTP URL string")
         self.url = f"{re.sub(r'https://', 'wss://', re.sub(r'http://', 'ws://', url, flags=re.IGNORECASE), flags=re.IGNORECASE)}/websocket?apikey={token}"
         self.http_endpoint = http_endpoint_url(url)
         self.is_connected = False
