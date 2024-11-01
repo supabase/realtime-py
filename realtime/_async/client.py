@@ -6,6 +6,7 @@ from functools import wraps
 from typing import Any, Callable, Dict, List, Optional
 
 import websockets
+from utils import is_ws_url
 
 from ..exceptions import NotConnectedError
 from ..message import Message
@@ -19,8 +20,6 @@ from ..types import (
     T_Retval,
 )
 from .channel import AsyncRealtimeChannel, RealtimeChannelOptions
-from utils import is_ws_url
-
 
 logger = logging.getLogger(__name__)
 
