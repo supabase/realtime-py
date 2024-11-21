@@ -52,7 +52,13 @@ class AsyncRealtimeChannel:
         :param params: Optional parameters for connection.
         """
         self.socket = socket
-        self.params = params or {}
+        self.params = params or RealtimeChannelOptions(
+            config={
+                "broadcast": {"ack": False, "self": False},
+                "presence": {"key": ""},
+                "private": False,
+            }
+        )
         self.topic = topic
         self._joined_once = False
         self.bindings: Dict[str, List[Binding]] = {}
@@ -60,12 +66,6 @@ class AsyncRealtimeChannel:
         self.state = ChannelStates.CLOSED
         self._push_buffer: List[AsyncPush] = []
         self.timeout = self.socket.timeout
-        self.params["config"] = {
-            "broadcast": {"ack": False, "self": False},
-            "presence": {"key": ""},
-            "private": False,
-            **params.get("config", {}),
-        }
 
         self.join_push = AsyncPush(self, ChannelEvents.join, self.params)
         self.rejoin_timer = AsyncTimer(
