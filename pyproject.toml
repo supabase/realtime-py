@@ -18,7 +18,7 @@ typing-extensions = "^4.12.2"
 aiohttp = "^3.10.11"
 
 [tool.poetry.dev-dependencies]
-pytest = "^8.3.3"
+pytest = "^8.3.4"
 python-dotenv = "^1.0.1"
 pytest-asyncio = "^0.24.0"
 
