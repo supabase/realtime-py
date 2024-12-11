@@ -49,8 +49,8 @@ async def access_token() -> str:
 async def test_set_auth(socket: AsyncRealtimeClient):
     await socket.connect()
 
-    await socket.set_auth("jwt")
-    assert socket.access_token == "jwt"
+    with pytest.raises(ValueError):
+        await socket.set_auth("jwt")  # Invalid JWT.
 
     await socket.close()
 
