@@ -259,6 +259,7 @@ class AsyncRealtimeClient:
         Returns:
             None
         """
+        # No empty string tokens.
         if isinstance(token, str) and len(token.strip()) == 0:
             raise ValueError("Provide a valid jwt token")
 
@@ -271,6 +272,7 @@ class AsyncRealtimeClient:
                 raise ValueError("InvalidJWTToken")
 
             if parsed:
+                # Handle expired token if any.
                 if "exp" in parsed:
                     now = floor(datetime.now().timestamp())
                     valid = now - parsed["exp"] < 0
