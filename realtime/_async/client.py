@@ -259,26 +259,27 @@ class AsyncRealtimeClient:
         Returns:
             None
         """
-        # No empty string tokens.
         if isinstance(token, str) and len(token.strip()) == 0:
-            raise ValueError("InvalidJWTToken: Provide a valid jwt token")
+            raise ValueError("Provide a valid jwt token")
 
         if token:
-            payload = token.split(".")[1] + "=="
             parsed = None
             try:
+                payload = token.split(".")[1] + "=="
                 parsed = json.loads(b64decode(payload).decode("utf-8"))
             except Exception:
-                raise ValueError("InvalidJWTToken: Provide a valid jwt token")
+                raise ValueError("InvalidJWTToken")
 
-            # Handle expired token if any.
-            if parsed and "exp" in parsed:
-                now = floor(datetime.now().timestamp())
-                valid = now - parsed["exp"] < 0
-                if not valid:
-                    raise ValueError(
-                        f"InvalidJWTToken: Invalid value for JWT claim 'exp' with value { parsed['exp'] }"
-                    )
+            if parsed:
+                if "exp" in parsed:
+                    now = floor(datetime.now().timestamp())
+                    valid = now - parsed["exp"] < 0
+                    if not valid:
+                        raise ValueError(
+                            f"InvalidJWTToken: Invalid value for JWT claim 'exp' with value { parsed['exp'] }"
+                        )
+                else:
+                    raise ValueError("InvalidJWTToken: expected claim 'exp'")
 
         self.access_token = token
 
