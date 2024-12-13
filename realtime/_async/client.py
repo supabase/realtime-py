@@ -187,7 +187,7 @@ class AsyncRealtimeClient:
                 )
                 await self.send(data)
                 # Use max to avoid hb_interval=0 bugs etc
-                await asyncio.sleep(max(self.hb_interval, 5))
+                await asyncio.sleep(max(self.hb_interval, 15))
             except websockets.exceptions.ConnectionClosed:
                 # If ConnectionClosed then is_connected == False
                 self.is_connected = False
@@ -205,7 +205,7 @@ class AsyncRealtimeClient:
                         await channel._rejoin()
                         # Wait before sending another phx_join message.
                         # Use max to avoid hb_interval=0 bugs etc
-                        await asyncio.sleep(max(self.hb_interval, 5))
+                        await asyncio.sleep(max(self.hb_interval, 15))
 
                 else:
                     # If ConnectionClosed and not auto_reconnect then is_connected == False
