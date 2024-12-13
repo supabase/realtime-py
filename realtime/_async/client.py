@@ -206,6 +206,7 @@ class AsyncRealtimeClient:
                         await asyncio.sleep(self.hb_interval)
 
                 else:
+                    # If ConnectionClosed and not auto_reconnect then is_connected == False
                     self.is_connected = False
                     logger.exception("Connection with the server closed.")
                     break
