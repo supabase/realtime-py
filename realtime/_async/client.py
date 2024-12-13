@@ -216,7 +216,6 @@ class AsyncRealtimeClient:
                 # Everything went Ok then is_connected == True
                 self.is_connected = True
 
-
     @ensure_connection
     def channel(
         self, topic: str, params: RealtimeChannelOptions = {}
