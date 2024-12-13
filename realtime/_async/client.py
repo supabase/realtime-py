@@ -186,7 +186,8 @@ class AsyncRealtimeClient:
                     ref=None,
                 )
                 await self.send(data)
-                await asyncio.sleep(self.hb_interval)
+                # Use max to avoid hb_interval=0 bugs etc
+                await asyncio.sleep(max(self.hb_interval, 5))
             except websockets.exceptions.ConnectionClosed:
                 # If ConnectionClosed then is_connected == False
                 self.is_connected = False
@@ -202,14 +203,19 @@ class AsyncRealtimeClient:
                         logger.info(f"Rejoining to: {topic}")
                         channel.socket = self
                         await channel._rejoin()
-                        ## Wait before sending another phx_join message
-                        await asyncio.sleep(self.hb_interval)
+                        # Wait before sending another phx_join message.
+                        # Use max to avoid hb_interval=0 bugs etc
+                        await asyncio.sleep(max(self.hb_interval, 5))
 
                 else:
                     # If ConnectionClosed and not auto_reconnect then is_connected == False
                     self.is_connected = False
                     logger.exception("Connection with the server closed.")
                     break
+            else:
+                # Everything went Ok then is_connected == True
+                self.is_connected = True
+
 
     @ensure_connection
     def channel(
