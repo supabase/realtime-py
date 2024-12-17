@@ -2,6 +2,13 @@
 
 
 
+## [2.0.7](https://github.com/supabase/realtime-py/compare/v2.0.6...v2.0.7) (2024-12-17)
+
+
+### Bug Fixes
+
+* prevent sending expired tokens ([#244](https://github.com/supabase/realtime-py/issues/244)) ([74ad7da](https://github.com/supabase/realtime-py/commit/74ad7da0e7036262ed6d445af9202cb37ea30ccd))
+
 ## [2.0.6](https://github.com/supabase/realtime-py/compare/v2.0.5...v2.0.6) (2024-10-16)
 
 
