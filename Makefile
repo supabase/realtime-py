@@ -13,4 +13,4 @@ tests_pre_commit:
 run_tests: tests
 
 tests_only:
-	poetry run pytest -vv
+	poetry run pytest --cov=./ --cov-report=xml --cov-report=html -vv
