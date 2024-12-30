@@ -2,6 +2,20 @@
 
 
 
+## [2.1.0](https://github.com/supabase/realtime-py/compare/v2.0.6...v2.1.0) (2024-12-30)
+
+
+### Features
+
+* Check if url is a WS URL ([#227](https://github.com/supabase/realtime-py/issues/227)) ([f82597e](https://github.com/supabase/realtime-py/commit/f82597e4be1e567df4f28ffc81186a82ad3218ea))
+
+
+### Bug Fixes
+
+* default mutable arguments ([#216](https://github.com/supabase/realtime-py/issues/216)) ([093f84d](https://github.com/supabase/realtime-py/commit/093f84d5f230667337b2ef22c1e8474ea7ab19b8))
+* Fix heartbeat ([#248](https://github.com/supabase/realtime-py/issues/248)) ([9477bd0](https://github.com/supabase/realtime-py/commit/9477bd0c736661e1628a37973a5a04eb6062917a))
+* prevent sending expired tokens ([#244](https://github.com/supabase/realtime-py/issues/244)) ([74ad7da](https://github.com/supabase/realtime-py/commit/74ad7da0e7036262ed6d445af9202cb37ea30ccd))
+
 ## [2.0.6](https://github.com/supabase/realtime-py/compare/v2.0.5...v2.0.6) (2024-10-16)
 
 
