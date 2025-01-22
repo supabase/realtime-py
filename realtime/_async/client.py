@@ -102,7 +102,7 @@ class AsyncRealtimeClient:
                     logger.info("Connection with server closed, trying to reconnect...")
                     await self.connect()
                     for topic, channel in self.channels.items():
-                        await channel.join()
+                        await channel._rejoin()
                 else:
                     logger.exception("Connection with the server closed.")
                     break
