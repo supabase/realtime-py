@@ -4,7 +4,7 @@ version = "2.1.0" # {x-release-please-version}
 description = ""
 authors = [
     "Joel Lee <joel@joellee.org>",
-    "Andrew Smith <a.smith@silentworks.co.uk>"
+    "Andrew Smith <a.smith@silentworks.co.uk>",
 ]
 license = "MIT"
 readme = "README.md"
@@ -33,3 +33,7 @@ pytest-cov = "^5.0.0"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"

@@ -34,21 +34,8 @@ jobs:
         with:
           version: latest
 
-      - name: Setup Local Supabase
-        run: |
-          supabase start --workdir tests
-          supabase db reset --workdir tests
-          supabase status --workdir tests -o env > tests/.env \
-            --override-name auth.anon_key=SUPABASE_ANON_KEY \
-            --override-name api.url=SUPABASE_URL
-
-      - name: Wait for Supabase to be ready
-        run: |
-          echo "Waiting for 5 seconds to ensure Supabase is fully initialized..."
-          sleep 5
-
       - name: Run Tests
-        run: make run_tests || make run_tests
+        run: make run_tests
 
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@v2
