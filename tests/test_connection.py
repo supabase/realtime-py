@@ -45,10 +45,6 @@ async def access_token() -> str:
                 )
 
 
-def test_force_failure():
-    assert False
-
-
 @pytest.mark.asyncio
 async def test_set_auth(socket: AsyncRealtimeClient):
     await socket.connect()
