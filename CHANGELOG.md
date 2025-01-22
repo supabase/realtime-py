@@ -2,6 +2,18 @@
 
 
 
+## [2.2.0](https://github.com/supabase/realtime-py/compare/v2.1.0...v2.2.0) (2025-01-22)
+
+
+### Features
+
+* add support for  `system` event ([#264](https://github.com/supabase/realtime-py/issues/264)) ([0396c7b](https://github.com/supabase/realtime-py/commit/0396c7b759842ce8f029e606ab59b6eb91bc4145))
+
+
+### Bug Fixes
+
+* send correct payload to channel on reconnect ([#262](https://github.com/supabase/realtime-py/issues/262)) ([66db32e](https://github.com/supabase/realtime-py/commit/66db32e571df505561b97e1ddcedfaca516c648c))
+
 ## [2.1.0](https://github.com/supabase/realtime-py/compare/v2.0.6...v2.1.0) (2024-12-30)
 
 
