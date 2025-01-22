@@ -41,7 +41,6 @@ async def realtime(payload):
     print("async realtime ", payload)
 
 
-
 async def test_broadcast_events(socket: AsyncRealtimeClient):
     await socket.connect()
 
@@ -88,9 +87,7 @@ async def test_postgres_changes(socket: AsyncRealtimeClient):
         print(f"ON_SUBSCRIBE: {status} (Error: {err})")
 
     await channel.on_postgres_changes(
-        "*",
-        table="todos",
-        callback=postgres_changes_callback
+        "*", table="todos", callback=postgres_changes_callback
     ).on_postgres_changes(
         "INSERT",
         table="todos",
@@ -113,27 +110,29 @@ async def test_postgres_changes(socket: AsyncRealtimeClient):
     # Wait a short time to ensure we are properly listening
     await asyncio.sleep(1)
 
-    headers = {
-        "Prefer": "return=representation"
-    }
+    headers = {"Prefer": "return=representation"}
 
     # does not match filter and will therefore only be received by the * listen, but not the INSERT listen
-    requests.post(f"{URL}/rest/v1/todos", headers=headers, json={
-        "description": "does not match insert filter"
-    })
+    requests.post(
+        f"{URL}/rest/v1/todos",
+        headers=headers,
+        json={"description": "does not match insert filter"},
+    )
     await asyncio.sleep(1)
 
-    res = requests.post(f"{URL}/rest/v1/todos", headers=headers, json={
-        "description": "test"
-    })
+    res = requests.post(
+        f"{URL}/rest/v1/todos", headers=headers, json={"description": "test"}
+    )
     element = res.json()[0]
     todo_id = element["id"]
     assert element["description"] == "test"
     await asyncio.sleep(1)
 
-    requests.patch(f"{URL}/rest/v1/todos?id=eq.{todo_id}", headers=headers, json={
-        "description": "updated test"
-    })
+    requests.patch(
+        f"{URL}/rest/v1/todos?id=eq.{todo_id}",
+        headers=headers,
+        json={"description": "updated test"},
+    )
 
     requests.delete(f"{URL}/rest/v1/todos?id=eq.{todo_id}", headers=headers)
 
