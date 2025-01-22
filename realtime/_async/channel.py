@@ -388,6 +388,17 @@ class AsyncRealtimeChannel:
             callback=lambda payload, _: callback(payload),
         )
 
+    def on_system(
+        self, callback: Callable[[Dict[str, Any], None]]
+    ) -> AsyncRealtimeChannel:
+        """
+        Set up a listener for system events.
+
+        :param callback: The callback function to execute when a system event is received.
+        :return: The Channel instance for method chaining.
+        """
+        return self._on("system", callback=lambda payload, _: callback(payload))
+
     # Presence methods
     async def track(self, user_status: Dict[str, Any]) -> None:
         """
