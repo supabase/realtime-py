@@ -135,6 +135,7 @@ async def test_postgrest_changes(socket: AsyncRealtimeClient):
         delete_event.set()
 
     subscribed_event = asyncio.Event()
+    system_event = asyncio.Event()
 
     await channel.on_postgres_changes(
         "*", all_changes_callback, table="todos"
@@ -142,6 +143,8 @@ async def test_postgrest_changes(socket: AsyncRealtimeClient):
         "UPDATE", update_callback, table="todos"
     ).on_postgres_changes(
         "DELETE", delete_callback, table="todos"
+    ).on_system(
+        lambda _: system_event.set()
     ).subscribe(
         lambda state, error: (
             subscribed_event.set()
@@ -149,6 +152,8 @@ async def test_postgrest_changes(socket: AsyncRealtimeClient):
             else None
         )
     )
+
+    await asyncio.wait_for(system_event.wait(), 10)
 
     # Wait for the channel to be subscribed
     await asyncio.wait_for(subscribed_event.wait(), 10)

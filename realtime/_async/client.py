@@ -167,7 +167,6 @@ class AsyncRealtimeClient:
                 await callback()
             self.send_buffer = []
 
-    @ensure_connection
     async def close(self) -> None:
         """
         Close the WebSocket connection.
