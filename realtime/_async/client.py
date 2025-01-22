@@ -101,10 +101,8 @@ class AsyncRealtimeClient:
                 if self.auto_reconnect:
                     logger.info("Connection with server closed, trying to reconnect...")
                     await self.connect()
-                    if self.access_token:
-                        await self.set_auth(self.access_token)
                     for topic, channel in self.channels.items():
-                        await channel.join()
+                        await channel._rejoin()
                 else:
                     logger.exception("Connection with the server closed.")
                     break
