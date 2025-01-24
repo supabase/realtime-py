@@ -9,7 +9,7 @@ readme = "README.md"
 python = "^3.11"
 realtime = {path = "..", develop = true}
 python-dotenv = "^1.0.1"
-requests = "*"
+requests = "^2.32.3"
 
 [build-system]
 requires = ["poetry-core"]
