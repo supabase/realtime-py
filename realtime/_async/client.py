@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict, List, Optional
 import websockets
 
 from ..exceptions import NotConnectedError
+from ..logging_util import TokenMaskingFilter
 from ..message import Message
 from ..transformers import http_endpoint_url
 from ..types import (
@@ -25,6 +26,7 @@ from ..utils import is_ws_url
 from .channel import AsyncRealtimeChannel, RealtimeChannelOptions
 
 logger = logging.getLogger(__name__)
+logger.addFilter(TokenMaskingFilter())
 
 
 def ensure_connection(func: Callback):
@@ -129,7 +131,7 @@ class AsyncRealtimeClient:
 
         while retries < self.max_retries:
             try:
-                self.ws_connection = await websockets.connect(self.url)
+                self.ws_connection = await websockets.connect(self.url, logger=logger)
                 if self.ws_connection.open:
                     logger.info("Connection was successful")
                     return await self._on_connect()
