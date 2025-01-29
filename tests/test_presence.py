@@ -10,13 +10,17 @@ from realtime import AsyncRealtimeChannel, AsyncRealtimeClient, AsyncRealtimePre
 
 load_dotenv()
 
+URL = os.getenv("SUPABASE_URL") or "http://127.0.0.1:54321"
+ANON_KEY = (
+    os.getenv("SUPABASE_ANON_KEY")
+    or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+)
+
 
 @pytest.fixture
 def socket() -> AsyncRealtimeClient:
-    url = os.getenv("SUPABASE_URL")
-    url = f"{url}/realtime/v1"
-    key = os.getenv("SUPABASE_ANON_KEY")
-    return AsyncRealtimeClient(url, key)
+    url = f"{URL}/realtime/v1"
+    return AsyncRealtimeClient(url, ANON_KEY)
 
 
 @pytest.mark.asyncio
