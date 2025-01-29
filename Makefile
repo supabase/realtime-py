@@ -11,7 +11,7 @@ tests_pre_commit:
 	poetry run pre-commit run --all-files
 
 run_infra:
-	npx supabase start --workdir infra -x studio,inbucket,edge-runtime,logflare,vector,pgbouncer,pg_prove
+	npx supabase start --workdir infra -x studio,inbucket,edge-runtime,logflare,vector,supavisor,imgproxy,storage-api
 
 stop_infra:
 	npx supabase --workdir infra stop
