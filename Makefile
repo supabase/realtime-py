@@ -10,14 +10,18 @@ tests: install tests_only tests_pre_commit
 tests_pre_commit:
 	poetry run pre-commit run --all-files
 
+run_infra:
+	npx supabase start --workdir infra -x studio,inbucket,edge-runtime,logflare,vector,pgbouncer,pg_prove
+
+stop_infra:
+	npx supabase --workdir infra stop
+
 run_tests: tests
 
-setup_test_infra:
-	supabase start --workdir tests
-	supabase db reset --workdir tests
-	supabase status --workdir tests -o env > tests/.env \
-		--override-name auth.anon_key=SUPABASE_ANON_KEY \
-		--override-name api.url=SUPABASE_URL
+local_tests: run_infra sleep tests
 
-tests_only: setup_test_infra
+tests_only:
 	poetry run pytest --cov=./ --cov-report=xml --cov-report=html -vv
+
+sleep:
+	sleep 2

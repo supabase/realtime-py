@@ -36,6 +36,9 @@ jobs:
         with:
           version: latest
 
+      - name: Start Supabase local development setup
+        run: supabase start --workdir tests -x studio,inbucket,edge-runtime,logflare,vector,pgbouncer,pg_prove
+
       - name: Run Tests
         run: make run_tests
 
