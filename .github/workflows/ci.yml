@@ -42,6 +42,20 @@ jobs:
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          flag-name: run-${{ join(matrix.*, '-') }}
+          parallel: true
+  
+  finish_tests:
+    needs: test
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true
+          carryforward: "run-3.9,run-3.11,run-3.12"
 
   release-please:
     needs: test
