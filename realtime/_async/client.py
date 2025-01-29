@@ -130,7 +130,7 @@ class AsyncRealtimeClient:
         while retries < self.max_retries:
             try:
                 self.ws_connection = await websockets.connect(self.url)
-                if self.ws_connection.open:
+                if self.ws_connection.state is websockets.State.OPEN:
                     logger.info("Connection was successful")
                     return await self._on_connect()
                 else:
