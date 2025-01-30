@@ -85,11 +85,10 @@ jobs:
       id-token: write # IMPORTANT: this permission is mandatory for trusted publishing
       contents: write # needed for github actions bot to write to repo
     steps:
-      
       - name: Set up Python 3.11
-      uses: actions/setup-python@v5
-      with:
-        python-version: 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
         
       - name: Set up Poetry
         run: pipx install poetry==1.8.5 --python python3.11
