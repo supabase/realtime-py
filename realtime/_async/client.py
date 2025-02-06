@@ -78,6 +78,8 @@ class AsyncRealtimeClient:
         self.max_retries = max_retries
         self.initial_backoff = initial_backoff
         self.timeout = DEFAULT_TIMEOUT
+        self._listen_task: Optional[asyncio.Task] = None
+        self._heartbeat_task: Optional[asyncio.Task] = None
 
     async def _listen(self) -> None:
         """
@@ -154,11 +156,15 @@ class AsyncRealtimeClient:
             f"Failed to establish WebSocket connection after {self.max_retries} attempts"
         )
 
-    async def listen(self):
-        await asyncio.gather(self._listen(), self._heartbeat())
+    # async def listen(self):
+    #     await asyncio.gather(self._listen(), self._heartbeat())
 
     async def _on_connect(self):
         self.is_connected = True
+
+        self._listen_task = asyncio.create_task(self._listen())
+        self._heartbeat_task = asyncio.create_task(self._heartbeat())
+
         await self._flush_send_buffer()
 
     async def _flush_send_buffer(self):
@@ -180,6 +186,8 @@ class AsyncRealtimeClient:
 
         await self.ws_connection.close()
         self.is_connected = False
+        self._listen_task.cancel()
+        self._heartbeat_task.cancel()
 
     async def _heartbeat(self) -> None:
         while self.is_connected:

@@ -58,7 +58,6 @@ async def test_set_auth(socket: AsyncRealtimeClient):
 @pytest.mark.asyncio
 async def test_broadcast_events(socket: AsyncRealtimeClient):
     await socket.connect()
-    listen_task = asyncio.create_task(socket.listen())
 
     channel = socket.channel(
         "test-broadcast", params={"config": {"broadcast": {"self": True}}}
@@ -94,7 +93,6 @@ async def test_broadcast_events(socket: AsyncRealtimeClient):
     assert received_events[2]["payload"]["message"] == "Event 3"
 
     await socket.close()
-    listen_task.cancel()
 
 
 @pytest.mark.asyncio
@@ -102,7 +100,6 @@ async def test_postgrest_changes(socket: AsyncRealtimeClient):
     token = await access_token()
 
     await socket.connect()
-    listen_task = asyncio.create_task(socket.listen())
 
     await socket.set_auth(token)
 
@@ -192,7 +189,6 @@ async def test_postgrest_changes(socket: AsyncRealtimeClient):
     assert received_events["delete"] == [delete]
 
     await socket.close()
-    listen_task.cancel()
 
 
 async def create_todo(access_token: str, todo: dict) -> str:
