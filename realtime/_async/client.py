@@ -10,32 +10,27 @@ from typing import Any, Callable, Dict, List, Optional
 
 import websockets
 
-from ..exceptions import NotConnectedError
 from ..message import Message
 from ..transformers import http_endpoint_url
 from ..types import (
     DEFAULT_TIMEOUT,
     PHOENIX_CHANNEL,
-    Callback,
     ChannelEvents,
-    T_ParamSpec,
-    T_Retval,
 )
 from ..utils import is_ws_url
 from .channel import AsyncRealtimeChannel, RealtimeChannelOptions
 
-logger = logging.getLogger(__name__)
 
-
-def ensure_connection(func: Callback):
+def deprecated(func: Callable) -> Callable:
     @wraps(func)
-    def wrapper(*args: T_ParamSpec.args, **kwargs: T_ParamSpec.kwargs) -> T_Retval:
-        if not args[0].is_connected:
-            raise NotConnectedError(func.__name__)
-
+    def wrapper(*args, **kwargs):
+        logger.warning(f"Warning: {func.__name__} is deprecated.")
         return func(*args, **kwargs)
 
     return wrapper
+
+
+logger = logging.getLogger(__name__)
 
 
 class AsyncRealtimeClient:
@@ -103,7 +98,7 @@ class AsyncRealtimeClient:
                 if self.auto_reconnect:
                     logger.info("Connection with server closed, trying to reconnect...")
                     await self.connect()
-                    for topic, channel in self.channels.items():
+                    for channel in self.channels.values():
                         await channel._rejoin()
                 else:
                     logger.exception("Connection with the server closed.")
@@ -156,8 +151,9 @@ class AsyncRealtimeClient:
             f"Failed to establish WebSocket connection after {self.max_retries} attempts"
         )
 
-    # async def listen(self):
-    #     await asyncio.gather(self._listen(), self._heartbeat())
+    @deprecated
+    async def listen(self):
+        pass
 
     async def _on_connect(self):
         self.is_connected = True
@@ -229,7 +225,6 @@ class AsyncRealtimeClient:
                 # Everything went Ok then is_connected == True
                 self.is_connected = True
 
-    @ensure_connection
     def channel(
         self, topic: str, params: Optional[RealtimeChannelOptions] = None
     ) -> AsyncRealtimeChannel:
