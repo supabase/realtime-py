@@ -21,7 +21,7 @@ run_tests: tests
 local_tests: run_infra sleep tests
 
 tests_only:
-	poetry run pytest --cov=./ --cov-report=xml --cov-report=html -vv
+	poetry run pytest --cov=realtime --cov-report=xml --cov-report=html -vv
 
 sleep:
 	sleep 2
