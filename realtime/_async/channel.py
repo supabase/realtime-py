@@ -52,13 +52,14 @@ class AsyncRealtimeChannel:
         :param params: Optional parameters for connection.
         """
         self.socket = socket
-        self.params = params or RealtimeChannelOptions(
-            config={
+        self.params = params or {}
+        if self.params.get("config") is None:
+            self.params["config"] = {
                 "broadcast": {"ack": False, "self": False},
                 "presence": {"key": ""},
                 "private": False,
             }
-        )
+
         self.topic = topic
         self._joined_once = False
         self.bindings: Dict[str, List[Binding]] = {}
@@ -97,7 +98,7 @@ class AsyncRealtimeChannel:
             logger.info(f"channel {self.topic} closed")
             self.rejoin_timer.reset()
             self.state = ChannelStates.CLOSED
-            self.socket.remove_channel(self)
+            self.socket._remove_channel(self)
 
         def on_error(payload, *args):
             if self.is_leaving or self.is_closed:
@@ -154,6 +155,7 @@ class AsyncRealtimeChannel:
         """
         if not self.socket.is_connected:
             await self.socket.connect()
+
         if self._joined_once:
             raise Exception(
                 "Tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance"

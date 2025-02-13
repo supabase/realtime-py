@@ -34,7 +34,7 @@ jobs:
           version: latest
 
       - name: Start Supabase local development setup
-        run: supabase start --workdir infra -x studio,inbucket,edge-runtime,logflare,vector,supavisor,imgproxy,storage-api
+        run: make run_infra
 
       - name: Run Tests
         run: make run_tests

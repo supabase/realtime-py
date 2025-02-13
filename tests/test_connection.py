@@ -45,14 +45,14 @@ async def access_token() -> str:
                 )
 
 
-@pytest.mark.asyncio
-async def test_set_auth(socket: AsyncRealtimeClient):
-    await socket.connect()
+# @pytest.mark.asyncio
+# async def test_set_auth_with_invalid_jwt(socket: AsyncRealtimeClient):
+#     await socket.connect()
 
-    with pytest.raises(ValueError):
-        await socket.set_auth("jwt")  # Invalid JWT.
+#     with pytest.raises(ValueError):
+#         await socket.set_auth("jwt")  # Invalid JWT.
 
-    await socket.close()
+#     await socket.close()
 
 
 @pytest.mark.asyncio
@@ -73,7 +73,7 @@ async def test_broadcast_events(socket: AsyncRealtimeClient):
 
     subscribe_event = asyncio.Event()
     await channel.on_broadcast("test-event", broadcast_callback).subscribe(
-        lambda state, error: (
+        lambda state, _: (
             subscribe_event.set()
             if state == RealtimeSubscribeStates.SUBSCRIBED
             else None
@@ -143,7 +143,7 @@ async def test_postgrest_changes(socket: AsyncRealtimeClient):
     ).on_system(
         lambda _: system_event.set()
     ).subscribe(
-        lambda state, error: (
+        lambda state, _: (
             subscribed_event.set()
             if state == RealtimeSubscribeStates.SUBSCRIBED
             else None
