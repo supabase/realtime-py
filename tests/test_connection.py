@@ -46,7 +46,7 @@ async def access_token() -> str:
 
 
 @pytest.mark.asyncio
-async def test_set_auth(socket: AsyncRealtimeClient):
+async def test_set_auth_with_invalid_jwt(socket: AsyncRealtimeClient):
     await socket.connect()
 
     with pytest.raises(ValueError):
@@ -58,7 +58,6 @@ async def test_set_auth(socket: AsyncRealtimeClient):
 @pytest.mark.asyncio
 async def test_broadcast_events(socket: AsyncRealtimeClient):
     await socket.connect()
-    listen_task = asyncio.create_task(socket.listen())
 
     channel = socket.channel(
         "test-broadcast", params={"config": {"broadcast": {"self": True}}}
@@ -74,7 +73,7 @@ async def test_broadcast_events(socket: AsyncRealtimeClient):
 
     subscribe_event = asyncio.Event()
     await channel.on_broadcast("test-event", broadcast_callback).subscribe(
-        lambda state, error: (
+        lambda state, _: (
             subscribe_event.set()
             if state == RealtimeSubscribeStates.SUBSCRIBED
             else None
@@ -94,7 +93,6 @@ async def test_broadcast_events(socket: AsyncRealtimeClient):
     assert received_events[2]["payload"]["message"] == "Event 3"
 
     await socket.close()
-    listen_task.cancel()
 
 
 @pytest.mark.asyncio
@@ -102,7 +100,6 @@ async def test_postgrest_changes(socket: AsyncRealtimeClient):
     token = await access_token()
 
     await socket.connect()
-    listen_task = asyncio.create_task(socket.listen())
 
     await socket.set_auth(token)
 
@@ -146,7 +143,7 @@ async def test_postgrest_changes(socket: AsyncRealtimeClient):
     ).on_system(
         lambda _: system_event.set()
     ).subscribe(
-        lambda state, error: (
+        lambda state, _: (
             subscribed_event.set()
             if state == RealtimeSubscribeStates.SUBSCRIBED
             else None
@@ -192,7 +189,6 @@ async def test_postgrest_changes(socket: AsyncRealtimeClient):
     assert received_events["delete"] == [delete]
 
     await socket.close()
-    listen_task.cancel()
 
 
 async def create_todo(access_token: str, todo: dict) -> str:

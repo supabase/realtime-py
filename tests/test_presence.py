@@ -27,8 +27,6 @@ def socket() -> AsyncRealtimeClient:
 async def test_presence(socket: AsyncRealtimeClient):
     await socket.connect()
 
-    listen_task = asyncio.create_task(socket.listen())
-
     channel: AsyncRealtimeChannel = socket.channel("room")
 
     join_events: List[Tuple[str, List[Dict], List[Dict]]] = []
@@ -106,7 +104,6 @@ async def test_presence(socket: AsyncRealtimeClient):
     assert leave_events[0] != leave_events[1]
 
     await socket.close()
-    listen_task.cancel()
 
 
 def test_transform_state_raw_presence_state():

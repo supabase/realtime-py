@@ -59,9 +59,6 @@ def _on_subscribe(status: RealtimeSubscribeStates, err: Optional[Exception]):
         print('Realtime channel was unexpectedly closed.')
 
 await channel.subscribe(_on_subscribe)
-
-# Listen for all incoming events, often the last thing you want to do.
-await client.listen()
 ```
 
 ### Notes:

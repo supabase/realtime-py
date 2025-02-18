@@ -33,9 +33,9 @@ logger = logging.getLogger(__name__)
 
 class AsyncRealtimeChannel:
     """
-    `Channel` is an abstraction for a topic listener for an existing socket connection.
-    Each Channel has its own topic and a list of event-callbacks that responds to messages.
-    Should only be instantiated through `connection.RealtimeClient().channel(topic)`.
+    Channel is an abstraction for a topic subscription on an existing socket connection.
+    Each Channel has its own topic and a list of event-callbacks that respond to messages.
+    Should only be instantiated through `AsyncRealtimeClient.channel(topic)`.
     """
 
     def __init__(
@@ -52,13 +52,14 @@ class AsyncRealtimeChannel:
         :param params: Optional parameters for connection.
         """
         self.socket = socket
-        self.params = params or RealtimeChannelOptions(
-            config={
+        self.params = params or {}
+        if self.params.get("config") is None:
+            self.params["config"] = {
                 "broadcast": {"ack": False, "self": False},
                 "presence": {"key": ""},
                 "private": False,
             }
-        )
+
         self.topic = topic
         self._joined_once = False
         self.bindings: Dict[str, List[Binding]] = {}
@@ -97,7 +98,7 @@ class AsyncRealtimeChannel:
             logger.info(f"channel {self.topic} closed")
             self.rejoin_timer.reset()
             self.state = ChannelStates.CLOSED
-            self.socket.remove_channel(self)
+            self.socket._remove_channel(self)
 
         def on_error(payload, *args):
             if self.is_leaving or self.is_closed:
@@ -148,12 +149,16 @@ class AsyncRealtimeChannel:
         ] = None,
     ) -> AsyncRealtimeChannel:
         """
-        Subscribe to the channel.
+        Subscribe to the channel. Can only be called once per channel instance.
 
-        :return: The Channel instance for method chaining.
+        :param callback: Optional callback function that receives subscription state updates
+                        and any errors that occur during subscription
+        :return: The Channel instance for method chaining
+        :raises: Exception if called multiple times on the same channel instance
         """
         if not self.socket.is_connected:
             await self.socket.connect()
+
         if self._joined_once:
             raise Exception(
                 "Tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance"
@@ -249,6 +254,10 @@ class AsyncRealtimeChannel:
         return self
 
     async def unsubscribe(self):
+        """
+        Unsubscribe from the channel and leave the topic.
+        Sets channel state to LEAVING and cleans up timers and pushes.
+        """
         self.state = ChannelStates.LEAVING
 
         self.rejoin_timer.reset()
@@ -269,6 +278,15 @@ class AsyncRealtimeChannel:
     async def push(
         self, event: str, payload: Dict[str, Any], timeout: Optional[int] = None
     ) -> AsyncPush:
+        """
+        Push a message to the channel.
+
+        :param event: The event name to push
+        :param payload: The payload to send
+        :param timeout: Optional timeout in milliseconds
+        :return: AsyncPush instance representing the push operation
+        :raises: Exception if called before subscribing to the channel
+        """
         if not self._joined_once:
             raise Exception(
                 f"tried to push '{event}' to '{self.topic}' before joining. Use channel.subscribe() before pushing events"
@@ -350,9 +368,9 @@ class AsyncRealtimeChannel:
         """
         Set up a listener for a specific broadcast event.
 
-        :param event: The name of the broadcast event to listen for.
-        :param callback: The callback function to execute when the event is received.
-        :return: The Channel instance for method chaining.
+        :param event: The name of the broadcast event to listen for
+        :param callback: Function called with the payload when a matching broadcast is received
+        :return: The Channel instance for method chaining
         """
         return self._on(
             "broadcast",
@@ -369,13 +387,14 @@ class AsyncRealtimeChannel:
         filter: Optional[str] = None,
     ) -> AsyncRealtimeChannel:
         """
-        Set up a listener for a specific Postgres changes event.
+        Set up a listener for Postgres database changes.
 
-        :param event: The name of the Postgres changes event to listen for.
-        :param table: The table name for which changes should be monitored.
-        :param callback: The callback function to execute when the event is received.
-        :param schema: The database schema where the table exists. Default is 'public'.
-        :return: The Channel instance for method chaining.
+        :param event: The type of database event to listen for (INSERT, UPDATE, DELETE, or *)
+        :param callback: Function called with the payload when a matching change is detected
+        :param table: The table name to monitor. Defaults to "*" for all tables
+        :param schema: The database schema to monitor. Defaults to "public"
+        :param filter: Optional filter string to apply
+        :return: The Channel instance for method chaining
         """
 
         binding_filter = {"event": event, "schema": schema, "table": table}
@@ -402,22 +421,24 @@ class AsyncRealtimeChannel:
     # Presence methods
     async def track(self, user_status: Dict[str, Any]) -> None:
         """
-        Track a user's presence.
+        Track presence status for the current user.
 
-        :param user_status: User's presence status.
-        :return: None
+        :param user_status: Dictionary containing the user's presence information
         """
         await self.send_presence("track", user_status)
 
     async def untrack(self) -> None:
         """
-        Untrack a user's presence.
-
-        :return: None
+        Stop tracking presence for the current user.
         """
         await self.send_presence("untrack", {})
 
     def presence_state(self) -> RealtimePresenceState:
+        """
+        Get the current state of presence on this channel.
+
+        :return: Dictionary mapping presence keys to lists of presence payloads
+        """
         return self.presence.state
 
     def on_presence_sync(self, callback: Callable[[], None]) -> AsyncRealtimeChannel:
@@ -457,11 +478,10 @@ class AsyncRealtimeChannel:
     # Broadcast methods
     async def send_broadcast(self, event: str, data: Any) -> None:
         """
-        Sends a broadcast message to the current channel.
+        Send a broadcast message through this channel.
 
-        :param event: The name of the broadcast event.
-        :param data: The data to be sent with the message.
-        :return: An asyncio.Future object representing the send operation.
+        :param event: The name of the broadcast event
+        :param data: The payload to broadcast
         """
         await self.push(
             ChannelEvents.broadcast,
