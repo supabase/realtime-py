@@ -52,14 +52,14 @@ class AsyncRealtimeClient:
         Initialize a RealtimeClient instance for WebSocket communication.
 
         :param url: WebSocket URL of the Realtime server. Starts with `ws://` or `wss://`.
-                    Also accepts default Supabase URL: `http://` or `https://`.
+                   Also accepts default Supabase URL: `http://` or `https://`.
         :param token: Authentication token for the WebSocket connection.
-        :param auto_reconnect: If True, automatically attempt to reconnect on disconnection. Defaults to False.
-        :param params: Optional parameters for the connection. Defaults to an empty dictionary.
+        :param auto_reconnect: If True, automatically attempt to reconnect on disconnection. Defaults to True.
+        :param params: Optional parameters for the connection. Defaults to None.
         :param hb_interval: Interval (in seconds) for sending heartbeat messages to keep the connection alive. Defaults to 30.
         :param max_retries: Maximum number of reconnection attempts. Defaults to 5.
         :param initial_backoff: Initial backoff time (in seconds) for reconnection attempts. Defaults to 1.0.
-        :param websocket_factory: Optional factory function to create websocket connections (useful for testing).
+        :param timeout: Connection timeout in seconds. Defaults to DEFAULT_TIMEOUT.
         """
         if not is_ws_url(url):
             ValueError("url must be a valid WebSocket URL or HTTP URL string")
@@ -249,8 +249,11 @@ class AsyncRealtimeClient:
         self, topic: str, params: Optional[RealtimeChannelOptions] = None
     ) -> AsyncRealtimeChannel:
         """
-        :param topic: Initializes a channel and creates a two-way association with the socket
-        :return: Channel
+        Initialize a channel and create a two-way association with the socket.
+
+        :param topic: The topic to subscribe to
+        :param params: Optional channel parameters
+        :return: AsyncRealtimeChannel instance
         """
         topic = f"realtime:{topic}"
         chan = AsyncRealtimeChannel(self, topic, params)
