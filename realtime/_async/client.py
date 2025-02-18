@@ -15,6 +15,7 @@ from websockets.asyncio.client import ClientConnection, connect
 from ..message import Message
 from ..transformers import http_endpoint_url
 from ..types import (
+    DEFAULT_HEARTBEAT_INTERVAL,
     DEFAULT_TIMEOUT,
     PHOENIX_CHANNEL,
     VSN,
@@ -43,7 +44,7 @@ class AsyncRealtimeClient:
         token: Optional[str] = None,
         auto_reconnect: bool = True,
         params: Optional[Dict[str, Any]] = None,
-        hb_interval: int = 30,
+        hb_interval: int = DEFAULT_HEARTBEAT_INTERVAL,
         max_retries: int = 5,
         initial_backoff: float = 1.0,
         timeout: int = DEFAULT_TIMEOUT,
@@ -56,7 +57,7 @@ class AsyncRealtimeClient:
         :param token: Authentication token for the WebSocket connection.
         :param auto_reconnect: If True, automatically attempt to reconnect on disconnection. Defaults to True.
         :param params: Optional parameters for the connection. Defaults to None.
-        :param hb_interval: Interval (in seconds) for sending heartbeat messages to keep the connection alive. Defaults to 30.
+        :param hb_interval: Interval (in seconds) for sending heartbeat messages to keep the connection alive. Defaults to 25.
         :param max_retries: Maximum number of reconnection attempts. Defaults to 5.
         :param initial_backoff: Initial backoff time (in seconds) for reconnection attempts. Defaults to 1.0.
         :param timeout: Connection timeout in seconds. Defaults to DEFAULT_TIMEOUT.
