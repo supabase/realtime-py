@@ -7,6 +7,7 @@ import pytest
 from dotenv import load_dotenv
 
 from realtime import AsyncRealtimeChannel, AsyncRealtimeClient, RealtimeSubscribeStates
+from realtime.types import DEFAULT_HEARTBEAT_INTERVAL, DEFAULT_TIMEOUT
 
 load_dotenv()
 
@@ -43,6 +44,21 @@ async def access_token() -> str:
                 raise Exception(
                     f"Failed to get access token. Status: {response.status}"
                 )
+
+
+def test_init_client():
+    client = AsyncRealtimeClient(URL, ANON_KEY)
+
+    assert client is not None
+    assert client.url.startswith("ws://") or client.url.startswith("wss://")
+    assert "/websocket" in client.url
+    assert client.url.split("apikey=")[1] == ANON_KEY
+    assert client.auto_reconnect is True
+    assert client.params == {}
+    assert client.hb_interval == DEFAULT_HEARTBEAT_INTERVAL
+    assert client.max_retries == 5
+    assert client.initial_backoff == 1.0
+    assert client.timeout == DEFAULT_TIMEOUT
 
 
 @pytest.mark.asyncio

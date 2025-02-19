@@ -7,6 +7,7 @@ from typing_extensions import ParamSpec
 DEFAULT_TIMEOUT = 10
 PHOENIX_CHANNEL = "phoenix"
 VSN = "1.0.0"
+DEFAULT_HEARTBEAT_INTERVAL = 25
 
 # Type variables and custom types
 T_ParamSpec = ParamSpec("T_ParamSpec")
