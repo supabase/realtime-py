@@ -54,7 +54,7 @@ def test_init_client():
     assert "/websocket" in client.url
     assert client.url.split("apikey=")[1] == ANON_KEY
     assert client.auto_reconnect is True
-    assert client.params is None
+    assert client.params == {}
     assert client.hb_interval == DEFAULT_HEARTBEAT_INTERVAL
     assert client.max_retries == 5
     assert client.initial_backoff == 1.0
