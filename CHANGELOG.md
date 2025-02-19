@@ -2,6 +2,18 @@
 
 
 
+## [2.4.0](https://github.com/supabase/realtime-py/compare/v2.3.0...v2.4.0) (2025-02-19)
+
+
+### Features
+
+* remove the need of calling listen method ([#274](https://github.com/supabase/realtime-py/issues/274)) ([0a96f70](https://github.com/supabase/realtime-py/commit/0a96f709db5f2c6dc04b246bc637368b0df11674))
+
+
+### Bug Fixes
+
+* Set default heartbeat interval to 25s ([#276](https://github.com/supabase/realtime-py/issues/276)) ([09c6269](https://github.com/supabase/realtime-py/commit/09c6269f7bab8654865a942244951cedccd78bbb))
+
 ## [2.3.0](https://github.com/supabase/realtime-py/compare/v2.2.0...v2.3.0) (2025-01-29)
 
 
