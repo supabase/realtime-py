@@ -2,6 +2,13 @@
 
 
 
+## [2.4.1](https://github.com/supabase/realtime-py/compare/v2.4.0...v2.4.1) (2025-02-26)
+
+
+### Bug Fixes
+
+* revert client to handle bc changes ([#281](https://github.com/supabase/realtime-py/issues/281)) ([54fb4a1](https://github.com/supabase/realtime-py/commit/54fb4a19503a10282aa086dd49738e00d36c4d60))
+
 ## [2.4.0](https://github.com/supabase/realtime-py/compare/v2.3.0...v2.4.0) (2025-02-19)
 
 
