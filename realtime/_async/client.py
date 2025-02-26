@@ -10,7 +10,8 @@ from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import urlencode, urlparse, urlunparse
 
 import websockets
-from websockets.asyncio.client import ClientConnection, connect
+from websockets import connect
+from websockets.client import ClientProtocol
 
 from ..message import Message
 from ..transformers import http_endpoint_url
@@ -73,7 +74,7 @@ class AsyncRealtimeClient:
         self.access_token = token
         self.send_buffer: List[Callable] = []
         self.hb_interval = hb_interval
-        self.ws_connection: Optional[ClientConnection] = None
+        self.ws_connection: Optional[ClientProtocol] = None
         self.ref = 0
         self.auto_reconnect = auto_reconnect
         self.channels: Dict[str, AsyncRealtimeChannel] = {}
