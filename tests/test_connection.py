@@ -297,6 +297,7 @@ async def test_multiple_connect_attempts(socket: AsyncRealtimeClient):
     assert any(
         msg in error_msg.lower()
         for msg in [
+            "temporary failure in name resolution",
             "nodename nor servname provided",
             "name or service not known",
             "connection refused",
