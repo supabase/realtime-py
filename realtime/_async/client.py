@@ -185,9 +185,16 @@ class AsyncRealtimeClient:
         pass
 
     async def _on_connect(self) -> None:
+        if self._listen_task:
+            self._listen_task.cancel()
+            self._listen_task = None
+
+        if self._heartbeat_task:
+            self._heartbeat_task.cancel()
+            self._heartbeat_task = None
+
         self._listen_task = asyncio.create_task(self._listen())
         self._heartbeat_task = asyncio.create_task(self._heartbeat())
-
         await self._flush_send_buffer()
 
     async def _flush_send_buffer(self):
