@@ -252,3 +252,62 @@ async def delete_todo(access_token: str, id: str):
         async with session.delete(url, headers=headers) as response:
             if response.status != 204:
                 raise Exception(f"Failed to delete todo. Status: {response.status}")
+
+
+@pytest.mark.asyncio
+async def test_multiple_connect_attempts(socket: AsyncRealtimeClient):
+    # First connection should succeed
+    await socket.connect()
+    assert socket.is_connected
+    initial_ws = socket.ws_connection
+
+    # Second connection attempt should be a no-op since we're already connected
+    await socket.connect()
+    assert socket.is_connected
+    assert socket.ws_connection == initial_ws  # Should be the same connection object
+
+    await socket.close()
+    assert not socket.is_connected
+
+    # Test connection failure and retry behavior
+    # Temporarily modify the URL to force a connection failure
+    original_url = socket.url
+    socket.url = "ws://invalid-url-that-will-fail:12345/websocket"
+    socket.max_retries = 2  # Reduce retries for faster test
+    socket.initial_backoff = 0.1  # Reduce backoff for faster test
+
+    start_time = datetime.datetime.now()
+
+    with pytest.raises(Exception) as exc_info:
+        await socket.connect()
+
+    end_time = datetime.datetime.now()
+    duration = (end_time - start_time).total_seconds()
+
+    # Should have tried to connect max_retries times with exponential backoff
+    # First attempt: immediate
+    # Second attempt: after 0.1s
+    # Total time should be at least the sum of backoff times but not much more
+    assert duration >= 0.1, "Should have waited for backoff between retries"
+    assert duration < 1.0, "Should not have waited longer than necessary"
+
+    # The error message can vary depending on the system and Python version
+    # Common messages include DNS resolution errors or connection refused
+    error_msg = str(exc_info.value)
+    assert any(
+        msg in error_msg.lower()
+        for msg in [
+            "temporary failure in name resolution",
+            "nodename nor servname provided",
+            "name or service not known",
+            "connection refused",
+            "failed to establish",
+        ]
+    ), f"Unexpected error message: {error_msg}"
+
+    # Restore original URL and verify we can connect again
+    socket.url = original_url
+    await socket.connect()
+    assert socket.is_connected
+
+    await socket.close()
