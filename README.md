@@ -34,7 +34,7 @@ This client enables you to use the following Supabase Realtime's features:
 ## Installing the Package
 
 ```bash
-pip3 install realtime==2.0.0
+pip3 install realtime
 ```
 
 ## Creating a Channel
@@ -42,23 +42,28 @@ pip3 install realtime==2.0.0
 ```python
 import asyncio
 from typing import Optional
-from realtime.client import RealtimeClient
-from realtime.channel import RealtimeSubscribeStates
 
-client = RealtimeClient(REALTIME_URL, API_KEY)
-channel = client.channel('test-channel')
+from realtime import AsyncRealtimeClient, RealtimeSubscribeStates
 
-def _on_subscribe(status: RealtimeSubscribeStates, err: Optional[Exception]):
-    if status == RealtimeSubscribeStates.SUBSCRIBED:
-        print('Connected!')
-    elif status == RealtimeSubscribeStates.CHANNEL_ERROR:
-        print(f'There was an error subscribing to channel: {err.message}')
-    elif status == RealtimeSubscribeStates.TIMED_OUT:
-        print('Realtime server did not respond in time.')
-    elif status == RealtimeSubscribeStates.CLOSED:
-        print('Realtime channel was unexpectedly closed.')
 
-await channel.subscribe(_on_subscribe)
+async def main():
+    REALTIME_URL = "ws://localhost:4000/websocket"
+    API_KEY = "1234567890"
+
+    socket = AsyncRealtimeClient(REALTIME_URL, API_KEY)
+    channel = socket.channel("test-channel")
+
+    def _on_subscribe(status: RealtimeSubscribeStates, err: Optional[Exception]):
+        if status == RealtimeSubscribeStates.SUBSCRIBED:
+            print("Connected!")
+        elif status == RealtimeSubscribeStates.CHANNEL_ERROR:
+            print(f"There was an error subscribing to channel: {err.args}")
+        elif status == RealtimeSubscribeStates.TIMED_OUT:
+            print("Realtime server did not respond in time.")
+        elif status == RealtimeSubscribeStates.CLOSED:
+            print("Realtime channel was unexpectedly closed.")
+
+    await channel.subscribe(_on_subscribe)
 ```
 
 ### Notes:
