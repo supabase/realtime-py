@@ -2,6 +2,13 @@
 
 
 
+## [2.4.2](https://github.com/supabase/realtime-py/compare/v2.4.1...v2.4.2) (2025-03-25)
+
+
+### Bug Fixes
+
+* cleanup current heartbeat and listen tasks before creating a new one ([#290](https://github.com/supabase/realtime-py/issues/290)) ([70778e5](https://github.com/supabase/realtime-py/commit/70778e5a3df77859eec65d0bc1f6a14526764b56))
+
 ## [2.4.1](https://github.com/supabase/realtime-py/compare/v2.4.0...v2.4.1) (2025-02-26)
 
 
