@@ -1,5 +1,7 @@
 import asyncio
+
 import pytest
+
 from realtime._async.timer import AsyncTimer
 
 
