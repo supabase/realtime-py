@@ -74,7 +74,7 @@ class AsyncRealtimeClient:
         self.access_token = token
         self.send_buffer: List[Callable] = []
         self.hb_interval = hb_interval
-        self.ws_connection: Optional[ClientProtocol] = None
+        self._ws_connection: Optional[ClientProtocol] = None
         self.ref = 0
         self.auto_reconnect = auto_reconnect
         self.channels: Dict[str, AsyncRealtimeChannel] = {}
@@ -86,7 +86,7 @@ class AsyncRealtimeClient:
 
     @property
     def is_connected(self) -> bool:
-        return self.ws_connection is not None
+        return self._ws_connection is not None
 
     async def _listen(self) -> None:
         """
@@ -94,11 +94,11 @@ class AsyncRealtimeClient:
         :return: None
         """
 
-        if not self.ws_connection:
+        if not self._ws_connection:
             raise Exception("WebSocket connection not established")
 
         try:
-            async for msg in self.ws_connection:
+            async for msg in self._ws_connection:
                 logger.info(f"receive: {msg}")
 
                 msg = Message(**json.loads(msg))
@@ -106,19 +106,11 @@ class AsyncRealtimeClient:
 
                 if channel:
                     channel._trigger(msg.event, msg.payload, msg.ref)
-        except websockets.exceptions.ConnectionClosedError as e:
-            logger.error(
-                f"WebSocket connection closed with code: {e.code}, reason: {e.reason}"
-            )
-            if self.auto_reconnect:
-                logger.info("Initiating auto-reconnect sequence...")
-
-                await self._reconnect()
-            else:
-                logger.error("Auto-reconnect disabled, terminating connection")
+        except Exception as e:
+            await self._on_connect_error(e)
 
     async def _reconnect(self) -> None:
-        self.ws_connection = None
+        self._ws_connection = None
         await self.connect()
 
         if self.is_connected:
@@ -156,7 +148,7 @@ class AsyncRealtimeClient:
         while retries < self.max_retries:
             try:
                 ws = await connect(self.url)
-                self.ws_connection = ws
+                self._ws_connection = ws
                 logger.info("WebSocket connection established successfully")
                 return await self._on_connect()
             except Exception as e:
@@ -197,6 +189,20 @@ class AsyncRealtimeClient:
         self._heartbeat_task = asyncio.create_task(self._heartbeat())
         await self._flush_send_buffer()
 
+    async def _on_connect_error(self, e: Exception) -> None:
+        if isinstance(e, websockets.exceptions.ConnectionClosedError):
+            logger.error(
+                f"WebSocket connection closed with code: {e.code}, reason: {e.reason}"
+            )
+
+            if self.auto_reconnect:
+                logger.info("Initiating auto-reconnect sequence...")
+                await self._reconnect()
+            else:
+                logger.error("Auto-reconnect disabled, terminating connection")
+        else:
+            logger.error(f"Error on connect: {e}")
+
     async def _flush_send_buffer(self):
         if self.is_connected and len(self.send_buffer) > 0:
             for callback in self.send_buffer:
@@ -214,10 +220,10 @@ class AsyncRealtimeClient:
             NotConnectedError: If the connection is not established when this method is called.
         """
 
-        if self.ws_connection:
-            await self.ws_connection.close()
+        if self._ws_connection:
+            await self._ws_connection.close()
 
-        self.ws_connection = None
+        self._ws_connection = None
 
         if self._listen_task:
             self._listen_task.cancel()
@@ -228,7 +234,7 @@ class AsyncRealtimeClient:
             self._heartbeat_task = None
 
     async def _heartbeat(self) -> None:
-        if not self.ws_connection:
+        if not self._ws_connection:
             raise Exception("WebSocket connection not established")
 
         while self.is_connected:
@@ -242,17 +248,8 @@ class AsyncRealtimeClient:
                 await self.send(data)
                 await asyncio.sleep(max(self.hb_interval, 15))
 
-            except websockets.exceptions.ConnectionClosed as e:
-                logger.error(
-                    f"Connection closed during heartbeat. Code: {e.code}, reason: {e.reason}"
-                )
-
-                if self.auto_reconnect:
-                    logger.info("Heartbeat failed - initiating reconnection sequence")
-                    await self._reconnect()
-                else:
-                    logger.error("Heartbeat failed - auto-reconnect disabled")
-                    break
+            except Exception as e:
+                await self._on_connect_error(e)
 
     def channel(
         self, topic: str, params: Optional[RealtimeChannelOptions] = None
@@ -373,7 +370,15 @@ class AsyncRealtimeClient:
         logger.info(f"send: {message}")
 
         async def send_message():
-            await self.ws_connection.send(message)
+            if not self._ws_connection:
+                raise Exception(
+                    "WebSocket connection not established, a connection is expected to be established before sending a message"
+                )
+
+            try:
+                await self._ws_connection.send(message)
+            except Exception as e:
+                await self._on_connect_error(e)
 
         if self.is_connected:
             await send_message()

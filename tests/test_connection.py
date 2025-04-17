@@ -259,12 +259,12 @@ async def test_multiple_connect_attempts(socket: AsyncRealtimeClient):
     # First connection should succeed
     await socket.connect()
     assert socket.is_connected
-    initial_ws = socket.ws_connection
+    initial_ws = socket._ws_connection
 
     # Second connection attempt should be a no-op since we're already connected
     await socket.connect()
     assert socket.is_connected
-    assert socket.ws_connection == initial_ws  # Should be the same connection object
+    assert socket._ws_connection == initial_ws  # Should be the same connection object
 
     await socket.close()
     assert not socket.is_connected
@@ -309,5 +309,47 @@ async def test_multiple_connect_attempts(socket: AsyncRealtimeClient):
     socket.url = original_url
     await socket.connect()
     assert socket.is_connected
+
+    await socket.close()
+
+
+@pytest.mark.asyncio
+async def test_send_message_reconnection(socket: AsyncRealtimeClient):
+    # First establish a connection
+    await socket.connect()
+    assert socket.is_connected
+
+    # Create a channel and subscribe to it
+    channel = socket.channel("test-channel")
+    subscribe_event = asyncio.Event()
+    await channel.subscribe(
+        lambda state, _: (
+            subscribe_event.set()
+            if state == RealtimeSubscribeStates.SUBSCRIBED
+            else None
+        )
+    )
+    await asyncio.wait_for(subscribe_event.wait(), 5)
+
+    # Simulate a connection failure by closing the WebSocket
+    if socket._ws_connection:
+        await socket._ws_connection.close()
+
+    # Try to send a message - this should trigger reconnection
+    message = {
+        "topic": "test-channel",
+        "event": "test-event",
+        "payload": {"test": "data"},
+    }
+    await socket.send(message)
+
+    # Wait for reconnection to complete
+    await asyncio.sleep(1)  # Give some time for reconnection
+
+    # Verify we're connected again
+    assert socket.is_connected
+
+    # Try sending another message to verify the connection is working
+    await socket.send(message)
 
     await socket.close()
