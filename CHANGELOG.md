@@ -2,6 +2,13 @@
 
 
 
+## [2.4.3](https://github.com/supabase/realtime-py/compare/v2.4.2...v2.4.3) (2025-04-28)
+
+
+### Bug Fixes
+
+* reconnect when send message fails ([#295](https://github.com/supabase/realtime-py/issues/295)) ([8941d17](https://github.com/supabase/realtime-py/commit/8941d171ce15756acc47a5b8eabc58c19d918e4c))
+
 ## [2.4.2](https://github.com/supabase/realtime-py/compare/v2.4.1...v2.4.2) (2025-03-25)
 
 
