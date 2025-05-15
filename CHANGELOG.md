@@ -2,6 +2,13 @@
 
 
 
+## [2.5.0](https://github.com/supabase/realtime-py/compare/v2.4.3...v2.5.0) (2025-05-15)
+
+
+### Features
+
+* **websockets:** bump to version 15 ([#304](https://github.com/supabase/realtime-py/issues/304)) ([64bbc27](https://github.com/supabase/realtime-py/commit/64bbc27178a685dfe86f3f80bbc2016d2b5327b9))
+
 ## [2.4.3](https://github.com/supabase/realtime-py/compare/v2.4.2...v2.4.3) (2025-04-28)
 
 
