@@ -2,6 +2,14 @@
 
 
 
+## [2.5.1](https://github.com/supabase/realtime-py/compare/v2.5.0...v2.5.1) (2025-06-19)
+
+
+### Bug Fixes
+
+* **deps:** bump aiohttp from 3.11.18 to 3.12.13 ([#318](https://github.com/supabase/realtime-py/issues/318)) ([0db041f](https://github.com/supabase/realtime-py/commit/0db041f7b043b05552f14a1dcd47638364628909))
+* **deps:** bump typing-extensions from 4.13.2 to 4.14.0 ([#316](https://github.com/supabase/realtime-py/issues/316)) ([fe5d0c2](https://github.com/supabase/realtime-py/commit/fe5d0c2f5f7e67b7da2ce2e78cc5b7884ff49f76))
+
 ## [2.5.0](https://github.com/supabase/realtime-py/compare/v2.4.3...v2.5.0) (2025-05-15)
 
 
