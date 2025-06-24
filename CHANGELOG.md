@@ -2,6 +2,13 @@
 
 
 
+## [2.5.2](https://github.com/supabase/realtime-py/compare/v2.5.1...v2.5.2) (2025-06-24)
+
+
+### Bug Fixes
+
+* remove jwt validation to allow new api keys ([#322](https://github.com/supabase/realtime-py/issues/322)) ([78705e2](https://github.com/supabase/realtime-py/commit/78705e28c6841cddf78424385c88f18298e9bdec))
+
 ## [2.5.1](https://github.com/supabase/realtime-py/compare/v2.5.0...v2.5.1) (2025-06-19)
 
 
