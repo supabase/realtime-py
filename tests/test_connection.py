@@ -31,7 +31,7 @@ async def access_token() -> str:
     headers = {"apikey": ANON_KEY, "Content-Type": "application/json"}
     data = {
         "email": os.getenv("SUPABASE_TEST_EMAIL")
-        or f"test_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}@example.com",
+        or f"test_{datetime.datetime.now().strftime('%Y%m%d%H%M%S.%f')}@example.com",
         "password": os.getenv("SUPABASE_TEST_PASSWORD") or "test.123",
     }
 
@@ -197,6 +197,82 @@ async def test_postgrest_changes(socket: AsyncRealtimeClient):
     await socket.close()
 
 
+@pytest.mark.asyncio
+async def test_postgrest_changes_on_different_tables(socket: AsyncRealtimeClient):
+    token = await access_token()
+
+    await socket.connect()
+
+    await socket.set_auth(token)
+
+    channel: AsyncRealtimeChannel = socket.channel("test-postgres-changes")
+    received_events = {"all": [], "insert": []}
+
+    def all_changes_callback(payload):
+        print("all_changes_callback: ", payload)
+        received_events["all"].append(payload)
+
+    insert_event = asyncio.Event()
+
+    def insert_callback(payload):
+        print("insert_callback: ", payload)
+        received_events["insert"].append(payload)
+        insert_event.set()
+
+    subscribed_event = asyncio.Event()
+    system_event = asyncio.Event()
+
+    await channel.on_postgres_changes(
+        "*", all_changes_callback, table="todos"
+    ).on_postgres_changes("INSERT", insert_callback, table="todos").on_postgres_changes(
+        "INSERT", insert_callback, table="messages"
+    ).on_system(
+        lambda _: system_event.set()
+    ).subscribe(
+        lambda state, _: (
+            subscribed_event.set()
+            if state == RealtimeSubscribeStates.SUBSCRIBED
+            else None
+        )
+    )
+
+    await asyncio.wait_for(system_event.wait(), 10)
+
+    # Wait for the channel to be subscribed
+    await asyncio.wait_for(subscribed_event.wait(), 10)
+
+    created_todo_id = await create_todo(
+        token, {"description": "Test todo", "is_completed": False}
+    )
+    await asyncio.wait_for(insert_event.wait(), 10)
+    insert_event.clear()
+
+    created_message_id = await create_message(
+        token, {"title": "Test message", "message": "This is a test message"}
+    )
+
+    await asyncio.wait_for(insert_event.wait(), 10)
+
+    assert len(received_events["all"]) == 1
+    assert len(received_events["insert"]) == 2
+
+    insert = received_events["all"][0]
+    message_insert = received_events["insert"][1]
+
+    assert insert["data"]["record"]["id"] == created_todo_id
+    assert insert["data"]["record"]["description"] == "Test todo"
+    assert insert["data"]["record"]["is_completed"] == False
+
+    assert received_events["insert"] == [insert, message_insert]
+
+    assert message_insert["data"]["record"]["id"] == created_message_id
+    assert message_insert["data"]["record"]["title"] == "Test message"
+    assert message_insert["data"]["record"]["message"] == "This is a test message"
+
+    assert received_events["insert"] == [insert, message_insert]
+    await socket.close()
+
+
 async def create_todo(access_token: str, todo: dict) -> str:
     url = f"{URL}/rest/v1/todos?select=id"
     headers = {
@@ -228,6 +304,25 @@ async def update_todo(access_token: str, id: str, todo: dict):
         async with session.patch(url, headers=headers, json=todo) as response:
             if response.status != 204:
                 raise Exception(f"Failed to update todo. Status: {response.status}")
+
+
+async def create_message(access_token: str, message: dict) -> str:
+    url = f"{URL}/rest/v1/messages?select=id"
+    headers = {
+        "apikey": ANON_KEY,
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Accept": "application/vnd.pgrst.object+json",
+        "Prefer": "return=representation",
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, headers=headers, json=message) as response:
+            if response.status == 201:
+                json_response = await response.json()
+                return json_response.get("id")
+            else:
+                raise Exception(f"Failed to create message. Status: {response.status}")
 
 
 async def delete_todo(access_token: str, id: str):
