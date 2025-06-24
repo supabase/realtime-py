@@ -62,16 +62,6 @@ def test_init_client():
 
 
 @pytest.mark.asyncio
-async def test_set_auth_with_invalid_jwt(socket: AsyncRealtimeClient):
-    await socket.connect()
-
-    with pytest.raises(ValueError):
-        await socket.set_auth("jwt")  # Invalid JWT.
-
-    await socket.close()
-
-
-@pytest.mark.asyncio
 async def test_broadcast_events(socket: AsyncRealtimeClient):
     await socket.connect()
 

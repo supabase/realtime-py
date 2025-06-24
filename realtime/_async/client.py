@@ -2,10 +2,7 @@ import asyncio
 import json
 import logging
 import re
-from base64 import b64decode
-from datetime import datetime
 from functools import wraps
-from math import floor
 from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import urlencode, urlparse, urlunparse
 
@@ -316,30 +313,6 @@ class AsyncRealtimeClient:
         Returns:
             None
         """
-        # No empty string tokens.
-        if isinstance(token, str) and len(token.strip()) == 0:
-            raise ValueError("Provide a valid jwt token")
-
-        if token:
-            parsed = None
-            try:
-                payload = token.split(".")[1] + "=="
-                parsed = json.loads(b64decode(payload).decode("utf-8"))
-            except Exception:
-                raise ValueError("InvalidJWTToken")
-
-            if parsed:
-                # Handle expired token if any.
-                if "exp" in parsed:
-                    now = floor(datetime.now().timestamp())
-                    valid = now - parsed["exp"] < 0
-                    if not valid:
-                        raise ValueError(
-                            f"InvalidJWTToken: Invalid value for JWT claim 'exp' with value { parsed['exp'] }"
-                        )
-                else:
-                    raise ValueError("InvalidJWTToken: expected claim 'exp'")
-
         self.access_token = token
 
         for _, channel in self.channels.items():
