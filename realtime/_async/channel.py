@@ -382,8 +382,8 @@ class AsyncRealtimeChannel:
         self,
         event: RealtimePostgresChangesListenEvent,
         callback: Callable[[Dict[str, Any]], None],
-        table: str = "*",
-        schema: str = "public",
+        table: Optional[str] = None,
+        schema: Optional[str] = None,
         filter: Optional[str] = None,
     ) -> AsyncRealtimeChannel:
         """
@@ -397,7 +397,10 @@ class AsyncRealtimeChannel:
         :return: The Channel instance for method chaining
         """
 
-        binding_filter = {"event": event, "schema": schema, "table": table}
+        binding_filter = {"event": event, "table": table}
+        if schema:
+            binding_filter["schema"] = schema
+
         if filter:
             binding_filter["filter"] = filter
 
@@ -529,7 +532,6 @@ class AsyncRealtimeChannel:
             bindings = self.bindings.get(type_lowercase, [])
             for binding in bindings:
                 if type_lowercase in ["broadcast", "postgres_changes", "presence"]:
-                    bind_id = binding.id
                     bind_event = (
                         binding.filter.get("event", "").lower()
                         if binding.filter.get("event")
@@ -537,20 +539,24 @@ class AsyncRealtimeChannel:
                     )
                     payload_event = (
                         payload.get("event", "").lower()
-                        if payload.get("event")
+                        if payload and payload.get("event")
                         else None
                     )
-                    data_type = (
-                        payload.get("data", {}).get("type", "").lower()
-                        if payload.get("data", {}).get("type")
-                        else None
-                    )
-                    if (
-                        bind_id
-                        and bind_id in payload.get("ids", [])
-                        and (bind_event == data_type or bind_event == "*")
-                    ):
-                        binding.callback(payload, ref)
+
+                    if hasattr(binding, "id") and binding.id is not None:
+                        bind_id = binding.id
+                        data_type = (
+                            payload.get("data", {}).get("type", "").lower()
+                            if payload and payload.get("data", {}).get("type")
+                            else None
+                        )
+
+                        if (
+                            bind_id
+                            and bind_id in payload.get("ids", [])
+                            and (bind_event == data_type or bind_event == "*")
+                        ):
+                            binding.callback(payload, ref)
                     elif bind_event in [payload_event, "*"]:
                         binding.callback(payload, ref)
                 elif binding.type == type_lowercase:
