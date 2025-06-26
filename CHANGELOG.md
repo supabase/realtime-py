@@ -2,6 +2,13 @@
 
 
 
+## [2.5.3](https://github.com/supabase/realtime-py/compare/v2.5.2...v2.5.3) (2025-06-26)
+
+
+### Bug Fixes
+
+* postgres_changes triggering multiple times ([#325](https://github.com/supabase/realtime-py/issues/325)) ([eb130ab](https://github.com/supabase/realtime-py/commit/eb130ab4361ab5cfd76500243a0bf034e67b5371))
+
 ## [2.5.2](https://github.com/supabase/realtime-py/compare/v2.5.1...v2.5.2) (2025-06-24)
 
 
