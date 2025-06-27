@@ -18,7 +18,7 @@ typing-extensions = "^4.14.0"
 [tool.poetry.group.dev.dependencies]
 aiohttp = "^3.12.13"
 pytest = "^8.4.1"
-pytest-cov = "^5.0.0"
+pytest-cov = "^6.2.1"
 python-dotenv = "^1.1.1"
 pytest-asyncio = "^1.0.0"
 black = ">=23.11,<26.0"
