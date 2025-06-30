@@ -90,7 +90,7 @@ async def test_broadcast_events(socket: AsyncRealtimeClient):
 
     # Send 3 broadcast events
     for i in range(3):
-        await channel.send_broadcast("test-event", {"message": f"Event {i+1}"})
+        await channel.send_broadcast("test-event", {"message": f"Event {i + 1}"})
         await asyncio.wait_for(semaphore.acquire(), 5)
 
     assert len(received_events) == 3
@@ -140,19 +140,18 @@ async def test_postgrest_changes(socket: AsyncRealtimeClient):
     subscribed_event = asyncio.Event()
     system_event = asyncio.Event()
 
-    await channel.on_postgres_changes(
-        "*", all_changes_callback, table="todos"
-    ).on_postgres_changes("INSERT", insert_callback, table="todos").on_postgres_changes(
-        "UPDATE", update_callback, table="todos"
-    ).on_postgres_changes(
-        "DELETE", delete_callback, table="todos"
-    ).on_system(
-        lambda _: system_event.set()
-    ).subscribe(
-        lambda state, _: (
-            subscribed_event.set()
-            if state == RealtimeSubscribeStates.SUBSCRIBED
-            else None
+    await (
+        channel.on_postgres_changes("*", all_changes_callback, table="todos")
+        .on_postgres_changes("INSERT", insert_callback, table="todos")
+        .on_postgres_changes("UPDATE", update_callback, table="todos")
+        .on_postgres_changes("DELETE", delete_callback, table="todos")
+        .on_system(lambda _: system_event.set())
+        .subscribe(
+            lambda state, _: (
+                subscribed_event.set()
+                if state == RealtimeSubscribeStates.SUBSCRIBED
+                else None
+            )
         )
     )
 
@@ -222,17 +221,17 @@ async def test_postgrest_changes_on_different_tables(socket: AsyncRealtimeClient
     subscribed_event = asyncio.Event()
     system_event = asyncio.Event()
 
-    await channel.on_postgres_changes(
-        "*", all_changes_callback, table="todos"
-    ).on_postgres_changes("INSERT", insert_callback, table="todos").on_postgres_changes(
-        "INSERT", insert_callback, table="messages"
-    ).on_system(
-        lambda _: system_event.set()
-    ).subscribe(
-        lambda state, _: (
-            subscribed_event.set()
-            if state == RealtimeSubscribeStates.SUBSCRIBED
-            else None
+    await (
+        channel.on_postgres_changes("*", all_changes_callback, table="todos")
+        .on_postgres_changes("INSERT", insert_callback, table="todos")
+        .on_postgres_changes("INSERT", insert_callback, table="messages")
+        .on_system(lambda _: system_event.set())
+        .subscribe(
+            lambda state, _: (
+                subscribed_event.set()
+                if state == RealtimeSubscribeStates.SUBSCRIBED
+                else None
+            )
         )
     )
 
