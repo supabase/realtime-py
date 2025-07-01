@@ -10,6 +10,7 @@ import websockets
 from websockets import connect
 from websockets.client import ClientProtocol
 
+from ..exceptions import NotConnectedError
 from ..message import Message
 from ..transformers import http_endpoint_url
 from ..types import (
@@ -21,7 +22,6 @@ from ..types import (
 )
 from ..utils import is_ws_url
 from .channel import AsyncRealtimeChannel, RealtimeChannelOptions
-from ..exceptions import NotConnectedError
 
 
 def deprecated(func: Callable) -> Callable:
