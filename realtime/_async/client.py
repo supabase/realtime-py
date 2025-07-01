@@ -245,6 +245,8 @@ class AsyncRealtimeClient:
 
             except websockets.exceptions.ConnectionClosedError as e:
                 await self._on_connect_error(e)
+            except websockets.exceptions.ConnectionClosedOK as e:
+                pass
 
     def channel(
         self, topic: str, params: Optional[RealtimeChannelOptions] = None
@@ -348,6 +350,8 @@ class AsyncRealtimeClient:
                 await self._ws_connection.send(message)
             except websockets.exceptions.ConnectionClosedError as e:
                 await self._on_connect_error(e)
+            except websockets.exceptions.ConnectionClosedOK:
+                pass
 
         if self.is_connected:
             await send_message()
