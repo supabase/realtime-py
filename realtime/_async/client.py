@@ -187,7 +187,9 @@ class AsyncRealtimeClient:
         self._heartbeat_task = asyncio.create_task(self._heartbeat())
         await self._flush_send_buffer()
 
-    async def _on_connect_error(self, e: websockets.exceptions.ConnectionClosedError) -> None:
+    async def _on_connect_error(
+        self, e: websockets.exceptions.ConnectionClosedError
+    ) -> None:
         logger.error(
             f"WebSocket connection closed with code: {e.code}, reason: {e.reason}"
         )
