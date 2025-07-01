@@ -43,9 +43,12 @@ async def test_presence(socket: AsyncRealtimeClient):
     def on_leave(key: str, current_presences: List[Dict], left_presences: List[Dict]):
         leave_events.append((key, current_presences, left_presences))
 
-    await channel.on_presence_sync(on_sync).on_presence_join(on_join).on_presence_leave(
-        on_leave
-    ).subscribe()
+    await (
+        channel.on_presence_sync(on_sync)
+        .on_presence_join(on_join)
+        .on_presence_leave(on_leave)
+        .subscribe()
+    )
 
     # Wait for the first sync event, which should be immediate
     await asyncio.wait_for(sync_event.wait(), 5)

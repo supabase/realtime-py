@@ -1,5 +1,5 @@
 """
- Defines the RealtimePresence class and its dependencies.
+Defines the RealtimePresence class and its dependencies.
 """
 
 from typing import Optional

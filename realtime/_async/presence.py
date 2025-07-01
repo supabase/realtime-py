@@ -1,5 +1,5 @@
 """
- Defines the RealtimePresence class and its dependencies.
+Defines the RealtimePresence class and its dependencies.
 """
 
 import logging
@@ -187,7 +187,7 @@ class AsyncRealtimePresence:
 
     @staticmethod
     def _transform_state(
-        state: Union[RawPresenceState, RealtimePresenceState]
+        state: Union[RawPresenceState, RealtimePresenceState],
     ) -> RealtimePresenceState:
         """
         Transform the raw presence state into a standardized RealtimePresenceState format.
