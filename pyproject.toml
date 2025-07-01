@@ -1,19 +1,19 @@
-[tool.poetry]
+[project]
 name = "realtime"
 version = "2.5.3" # {x-release-please-version}
 description = ""
 authors = [
-    "Joel Lee <joel@joellee.org>",
-    "Andrew Smith <a.smith@silentworks.co.uk>",
+    { name = "Joel Lee", email="joel@joellee.org"},
+    { name = "Andrew Smith", email="a.smith@silentworks.co.uk"},
 ]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/supabase/realtime-py"
-
-[tool.poetry.dependencies]
-python = "^3.9"
-websockets = ">=11,<16"
-typing-extensions = "^4.14.0"
+requires-python = "^3.9"
+dependencies = [
+  "websockets >=11,<16",
+  "typing-extensions >=4.14.0",
+]
 
 [tool.poetry.group.dev.dependencies]
 aiohttp = "^3.12.13"
