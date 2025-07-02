@@ -2,6 +2,13 @@
 
 
 
+## [2.5.4](https://github.com/supabase/realtime-py/compare/v2.5.3...v2.5.4) (2025-07-02)
+
+
+### Bug Fixes
+
+* Do not supress callback exceptions ([#332](https://github.com/supabase/realtime-py/issues/332)) ([f978d39](https://github.com/supabase/realtime-py/commit/f978d39181d6b5a94f2aad311b7ea8220ea8673f))
+
 ## [2.5.3](https://github.com/supabase/realtime-py/compare/v2.5.2...v2.5.3) (2025-06-26)
 
 
