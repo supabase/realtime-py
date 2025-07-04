@@ -28,8 +28,7 @@
       ]))
       pkgs.supabase-cli
     ];
-  in {
-    devShells = for-all-systems (pkgs: let
+    dependencies-for = pkgs: let
       # override to add top-level packages in nixpkgs as
       # python3.pkgs packages, so that the renderers can find them
       python = pkgs.python3.override {
@@ -43,12 +42,18 @@
         groups = [ "dev" ];
       };
       dependencies = builtins.groupBy (pkg: if python.pkgs.hasPythonModule pkg then "python" else "toplevel") (all-dependencies python);
-      pythonEnv = python.buildEnv.override {
-        extraLibs = dependencies.python;
+    in {
+      python-env = python.buildEnv.override {
+        extraLibs = dependencies.python or [];
       };
+      toplevel = dependencies.toplevel or [];
+    };
+  in {
+    devShells = for-all-systems (pkgs: let
+      inherit (dependencies-for pkgs) python-env toplevel;
     in {
       default = pkgs.mkShell {
-        packages = [ pythonEnv ] ++ (dev-tools pkgs) ++ dependencies.toplevel or [];
+        packages = [ python-env ] ++ (dev-tools pkgs) ++ toplevel;
       };
     });
   };
