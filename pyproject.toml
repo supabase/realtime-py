@@ -24,6 +24,24 @@ pytest-asyncio = "^1.0.0"
 pre-commit = "^4.2.0"
 ruff = "^0.12.1"
 
+# maintain two copies of the groups while poetry
+# doesn't implement pep 735 support.
+# https://peps.python.org/pep-0735/
+# https://github.com/python-poetry/poetry/issues/9751
+[dependency-groups]
+tests = [
+  "aiohttp >= 3.12.13",
+  "pytest >= 8.4.1",
+  "pytest-cov >= 6.2.1",
+  "python-dotenv >= 1.1.1",
+  "pytest-asyncio >= 1.0.0",
+]
+lints = [
+  "pre-commit >= 4.2.0",
+  "ruff >= 0.12.1",
+]
+dev = [{ include-group = "lints" }, {include-group = "tests" }]
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
