@@ -22,7 +22,7 @@ pytest-cov = "^6.2.1"
 python-dotenv = "^1.1.1"
 pytest-asyncio = "^1.0.0"
 pre-commit = "^4.2.0"
-ruff = "^0.12.1"
+ruff = "^0.12.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
