@@ -44,7 +44,7 @@ jobs:
           parallel: true
 
   ensure_nix_builds:
-    name: Test flake works
+    name: Test / OS ubuntu-latest / nix develop
     runs-on: ubuntu-latest
     steps:
       - name: Install nix
