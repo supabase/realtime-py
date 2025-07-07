@@ -55,7 +55,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Start Supabase local development setup
         run: nix develop --command supabase start --workdir infra -x studio,mailpit,edge-runtime,logflare,vector,supavisor,imgproxy,storage-api
-      - name: Run nix develop
+      - name: Run python tests through nix
         run: nix develop --command python -m pytest
 
   finish_tests:
