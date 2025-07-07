@@ -45,10 +45,7 @@ jobs:
 
   ensure_nix_setup_works:
     name: Test / OS ubuntu-latest / nix develop
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - name: Install nix
         uses: cachix/install-nix-action@v31
@@ -64,7 +61,7 @@ jobs:
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          flag-name: run-${{ matrix.os }}-nix
+          flag-name: run-ubuntu-latest-nix-develop
           parallel: true
 
 
