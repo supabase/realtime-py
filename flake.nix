@@ -21,7 +21,6 @@
       projectRoot = ./.;
     };
     dev-tools = pkgs: [
-      pkgs.basedpyright
       pkgs.supabase-cli
     ];
     dependencies-for = pkgs: let
@@ -31,6 +30,7 @@
         packageOverrides = self: super: {
           ruff = self.toPythonModule pkgs.ruff;
           pre-commit = self.toPythonModule pkgs.pre-commit;
+          basedpyright = self.toPythonModule pkgs.basedpyright;
         };
       };
       all-dependencies = project.renderers.withPackages {

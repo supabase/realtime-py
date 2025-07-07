@@ -39,6 +39,7 @@ tests = [
 lints = [
   "pre-commit >= 4.2.0",
   "ruff >= 0.12.1",
+  "basedpyright >= 1.29.5",
 ]
 dev = [{ include-group = "lints" }, {include-group = "tests" }]
 
