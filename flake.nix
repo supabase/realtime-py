@@ -21,11 +21,7 @@
       projectRoot = ./.;
     };
     dev-tools = pkgs: [
-      (pkgs.python3.withPackages (py-pkgs: [
-        py-pkgs.python-lsp-server
-        py-pkgs.python-lsp-ruff
-        py-pkgs.pylsp-mypy
-      ]))
+      pkgs.basedpyright
       pkgs.supabase-cli
     ];
     dependencies-for = pkgs: let
