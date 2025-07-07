@@ -56,7 +56,14 @@ jobs:
       - name: Start Supabase local development setup
         run: nix develop --command supabase start --workdir infra -x studio,mailpit,edge-runtime,logflare,vector,supavisor,imgproxy,storage-api
       - name: Run python tests through nix
-        run: nix develop --command python -m pytest
+        run: nix develop --command python -m pytest --cov=realtime --cov-report=xml --cov-report=html -vv
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          flag-name: run-ubuntu-latest-nix
+          parallel: true
+
 
   finish_tests:
     needs: test
