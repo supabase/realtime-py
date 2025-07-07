@@ -43,7 +43,7 @@ jobs:
           flag-name: run-${{ join(matrix.*, '-') }}
           parallel: true
 
-  ensure_nix_builds:
+  ensure_nix_setup_works:
     name: Test / OS ubuntu-latest / nix develop
     runs-on: ubuntu-latest
     steps:
@@ -53,8 +53,10 @@ jobs:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Clone Repository
         uses: actions/checkout@v4
+      - name: Start Supabase local development setup
+        run: make run_infra
       - name: Run nix develop
-        run: nix develop --command echo 'Works'
+        run: nix develop --command python -m pytest
 
   finish_tests:
     needs: test
