@@ -43,6 +43,28 @@ jobs:
           flag-name: run-${{ join(matrix.*, '-') }}
           parallel: true
 
+  ensure_nix_setup_works:
+    name: Test / OS ubuntu-latest / nix develop
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Clone Repository
+        uses: actions/checkout@v4
+      - name: Start Supabase local development setup
+        run: nix develop --command supabase start --workdir infra -x studio,mailpit,edge-runtime,logflare,vector,supavisor,imgproxy,storage-api
+      - name: Run python tests through nix
+        run: nix develop --command python -m pytest --cov=realtime --cov-report=xml --cov-report=html -vv
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          flag-name: run-ubuntu-latest-nix-develop
+          parallel: true
+
+
   finish_tests:
     needs: test
     name: Upload tests coveralls results
