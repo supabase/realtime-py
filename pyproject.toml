@@ -23,6 +23,9 @@ python-dotenv = "^1.1.1"
 pytest-asyncio = "^1.0.0"
 pre-commit = "^4.2.0"
 ruff = "^0.12.2"
+python-lsp-server = ">=1.12.2,<2.0.0"
+pylsp-mypy = ">=0.7.0,<0.8.0"
+python-lsp-ruff = ">=2.2.2,<3.0.0"
 
 # maintain two copies of the groups while poetry
 # doesn't implement pep 735 support.
@@ -39,7 +42,9 @@ tests = [
 lints = [
   "pre-commit >= 4.2.0",
   "ruff >= 0.12.1",
-  "basedpyright >= 1.29.5",
+  "python-lsp-server (>=1.12.2,<2.0.0)",
+  "pylsp-mypy (>=0.7.0,<0.8.0)",
+  "python-lsp-ruff (>=2.2.2,<3.0.0)",
 ]
 dev = [{ include-group = "lints" }, {include-group = "tests" }]
 
