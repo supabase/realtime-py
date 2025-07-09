@@ -15,7 +15,7 @@ class AuthorizationError(Exception):
     Raised when there is an authorization failure for private channels
     """
 
-    def __init__(self, message: str = None):
+    def __init__(self, message: str | None = None):
         self.message: str = message or "Authorization failed for private channel"
 
     def __str__(self):

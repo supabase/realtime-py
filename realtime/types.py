@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Callable, Dict, List, Literal, Optional, TypedDict, TypeVar
 
 from typing_extensions import ParamSpec
@@ -16,7 +16,7 @@ Callback = Callable[T_ParamSpec, T_Retval]
 
 
 # Enums
-class ChannelEvents(str, Enum):
+class ChannelEvents(StrEnum):
     """
     ChannelEvents are a bunch of constant strings that are defined according to
     what the Phoenix realtime server expects.
@@ -24,7 +24,7 @@ class ChannelEvents(str, Enum):
 
     close = "phx_close"
     error = "phx_error"
-    join = "phx_join"
+    join = "phx_join" # type: ignore
     reply = "phx_reply"
     leave = "phx_leave"
     heartbeat = "heartbeat"
@@ -33,7 +33,7 @@ class ChannelEvents(str, Enum):
     presence = "presence"
 
 
-class ChannelStates(str, Enum):
+class ChannelStates(StrEnum):
     JOINED = "joined"
     CLOSED = "closed"
     ERRORED = "errored"
@@ -41,14 +41,14 @@ class ChannelStates(str, Enum):
     LEAVING = "leaving"
 
 
-class RealtimeSubscribeStates(str, Enum):
+class RealtimeSubscribeStates(StrEnum):
     SUBSCRIBED = "SUBSCRIBED"
     TIMED_OUT = "TIMED_OUT"
     CLOSED = "CLOSED"
     CHANNEL_ERROR = "CHANNEL_ERROR"
 
 
-class RealtimePresenceListenEvents(str, Enum):
+class RealtimePresenceListenEvents(StrEnum):
     SYNC = "SYNC"
     JOIN = "JOIN"
     LEAVE = "LEAVE"
@@ -64,7 +64,7 @@ class Binding:
         self,
         type: str,
         filter: Dict[str, Any],
-        callback: Callback,
+        callback: Callback[[Dict[str, Any], str | None], None],
         id: Optional[str] = None,
     ):
         self.type = type
@@ -74,12 +74,12 @@ class Binding:
 
 
 class _Hook:
-    def __init__(self, status: str, callback: Callback):
+    def __init__(self, status: str, callback: Callback[[Dict[str, Any]], None]):
         self.status = status
         self.callback = callback
 
 
-class Presence(Dict[str, Any]):
+class Presence(TypedDict, total=False):
     presence_ref: str
 
 
@@ -116,7 +116,7 @@ class RealtimeChannelOptions(TypedDict):
 
 class PresenceMeta(TypedDict, total=False):
     phx_ref: str
-    phx_ref_prev: str
+    phx_ref_prev: str | None
 
 
 class RawPresenceStateEntry(TypedDict):
