@@ -317,7 +317,7 @@ class AsyncRealtimeClient:
         self.ref += 1
         return f"{self.ref}"
 
-    async def send(self, message: Message) -> None:
+    async def send(self, message: Message | dict[str, Any]) -> None:
         """
         Send a message through the WebSocket connection.
 
@@ -332,8 +332,12 @@ class AsyncRealtimeClient:
         Returns:
             None
         """
-
-        message_str = message.model_dump_json()
+        if isinstance(message, Message):
+            msg = message
+        else:
+            logger.warning("Warning: calling AsyncRealtimeClient.send with a dictionary is deprecated. Please call it with a Message object instead. This will be a hard error in the future.", type(message))
+            msg = Message.validate_python(message)
+        message_str = msg.model_dump_json()
         logger.info(f"send: {message_str}")
 
         async def send_message():

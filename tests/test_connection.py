@@ -7,6 +7,7 @@ import pytest
 from dotenv import load_dotenv
 
 from realtime import AsyncRealtimeChannel, AsyncRealtimeClient, RealtimeSubscribeStates
+from realtime.message import Message
 from realtime.types import DEFAULT_HEARTBEAT_INTERVAL, DEFAULT_TIMEOUT
 
 load_dotenv()
@@ -425,7 +426,7 @@ async def test_send_message_reconnection(socket: AsyncRealtimeClient):
         "event": "test-event",
         "payload": {"test": "data"},
     }
-    await socket.send(message)
+    await socket.send(Message.validate_python(message))
 
     # Wait for reconnection to complete
     await asyncio.sleep(1)  # Give some time for reconnection
