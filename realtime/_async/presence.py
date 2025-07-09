@@ -222,7 +222,8 @@ class AsyncRealtimePresence:
                 new_state[key] = []
 
                 for presence in presences["metas"]:
-                    del presence["phx_ref_prev"]
+                    if "phx_ref_prev" in presence: 
+                        del presence["phx_ref_prev"]
                     new_presence: Presence = {}
                     new_presence["presence_ref"] = presence["phx_ref"]
                     new_presence.update(presence)
