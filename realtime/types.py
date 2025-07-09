@@ -1,4 +1,4 @@
-from enum import StrEnum
+from enum import Enum
 from typing import Any, Callable, Dict, List, Literal, Optional, TypedDict, TypeVar
 
 from typing_extensions import ParamSpec
@@ -16,7 +16,7 @@ Callback = Callable[T_ParamSpec, T_Retval]
 
 
 # Enums
-class ChannelEvents(StrEnum):
+class ChannelEvents(str, Enum):
     """
     ChannelEvents are a bunch of constant strings that are defined according to
     what the Phoenix realtime server expects.
@@ -33,7 +33,7 @@ class ChannelEvents(StrEnum):
     presence = "presence"
 
 
-class ChannelStates(StrEnum):
+class ChannelStates(str, Enum):
     JOINED = "joined"
     CLOSED = "closed"
     ERRORED = "errored"
@@ -41,14 +41,14 @@ class ChannelStates(StrEnum):
     LEAVING = "leaving"
 
 
-class RealtimeSubscribeStates(StrEnum):
+class RealtimeSubscribeStates(str, Enum):
     SUBSCRIBED = "SUBSCRIBED"
     TIMED_OUT = "TIMED_OUT"
     CLOSED = "CLOSED"
     CHANNEL_ERROR = "CHANNEL_ERROR"
 
 
-class RealtimePresenceListenEvents(StrEnum):
+class RealtimePresenceListenEvents(str, Enum):
     SYNC = "SYNC"
     JOIN = "JOIN"
     LEAVE = "LEAVE"
