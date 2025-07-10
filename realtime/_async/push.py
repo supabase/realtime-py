@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional
@@ -14,7 +16,7 @@ logger = logging.getLogger(__name__)
 class AsyncPush:
     def __init__(
         self,
-        channel: "AsyncRealtimeChannel",
+        channel: AsyncRealtimeChannel,
         event: str,
         payload: Optional[Mapping[str, Any]] = None,
         timeout: int = DEFAULT_TIMEOUT,
@@ -59,7 +61,7 @@ class AsyncPush:
 
     def receive(
         self, status: str, callback: Callback[[Dict[str, Any]], None]
-    ) -> "AsyncPush":
+    ) -> AsyncPush:
         if self.received_resp and self.received_resp.get("status") == status:
             callback(self.received_resp)
 
