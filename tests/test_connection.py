@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import os
+import logging
 
 import aiohttp
 import pytest
@@ -421,12 +422,12 @@ async def test_send_message_reconnection(socket: AsyncRealtimeClient):
         await socket._ws_connection.close()
 
     # Try to send a message - this should trigger reconnection
-    message = {
-        "topic": "test-channel",
-        "event": "test-event",
-        "payload": {"test": "data"},
-    }
-    await socket.send(Message.validate_python(message))
+    message = Message(
+        topic="test-channel",
+        event="test-event",
+        payload={"test": "data"},
+    )
+    await socket.send(message)
 
     # Wait for reconnection to complete
     await asyncio.sleep(1)  # Give some time for reconnection

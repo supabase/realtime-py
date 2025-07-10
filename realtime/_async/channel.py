@@ -111,8 +111,9 @@ class AsyncRealtimeChannel:
         self._on("close", on_close)
         self._on("error", on_error)
 
-        def on_reply(payload, ref):
-            self._trigger(self._reply_event_name(ref), payload)
+        def on_reply(payload: Dict[str, Any], ref: str | None):
+            if ref:
+                self._trigger(self._reply_event_name(ref), payload)
 
         self._on(ChannelEvents.reply, on_reply)
 
@@ -169,19 +170,21 @@ class AsyncRealtimeChannel:
             presence = config.get("presence", {})
             private = config.get("private", False)
 
-            config_payload = {
-                "broadcast": broadcast,
-                "presence": presence,
-                "private": private,
-                "postgres_changes": list(
-                    map(lambda x: x.filter, self.bindings.get("postgres_changes", []))
-                ),
+            config_payload: dict[str, Any] = {
+                "config": {
+                    "broadcast": broadcast,
+                    "presence": presence,
+                    "private": private,
+                    "postgres_changes": list(
+                        map(lambda x: x.filter, self.bindings.get("postgres_changes", []))
+                    ),
+                }
             }
-
+                
             if self.socket.access_token:
                 config_payload["access_token"] = self.socket.access_token
 
-            self.join_push.update_payload({"config": config_payload})
+            self.join_push.update_payload(config_payload)
             self._joined_once = True
 
             def on_join_push_ok(payload: Dict[str, Any]):
@@ -316,7 +319,7 @@ class AsyncRealtimeChannel:
 
     # Event handling methods
     def _on(
-        self, type: str, callback: Callback[[dict[str, Any], Any], None], filter: Optional[Dict[str, Any]] = None
+        self, type: str, callback: Callback[[dict[str, Any], str | None], None], filter: Optional[Dict[str, Any]] = None
     ) -> AsyncRealtimeChannel:
         """
         Set up a listener for a specific event.
@@ -501,6 +504,7 @@ class AsyncRealtimeChannel:
         await self.push(ChannelEvents.presence, {"event": event, "payload": data})
 
     def _trigger(self, type: str, payload: dict[str, Any], ref: Optional[str] = None):
+
         type_lowercase = type.lower()
         events = [
             ChannelEvents.close,

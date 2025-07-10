@@ -10,6 +10,6 @@ class Message(BaseModel):
 
     event: str
     payload: Mapping[str, Any]
-    ref: Any
     topic: str
-    join_ref: Optional[str] = None
+    ref: str | None = None
+    join_ref: str | None = None

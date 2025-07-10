@@ -45,19 +45,16 @@ class AsyncPush:
         self.start_timeout()
         self.sent = True
 
-        try:
-            message = Message(topic=self.channel.topic, event=self.event, ref=self.ref, \
-                              payload=self.payload, join_ref=self.channel.join_push.ref)
-            await self.channel.socket.send(message)
-        except Exception as e:
-            logger.error(f"send push failed: {e}")
+        message = Message(topic=self.channel.topic, event=self.event, ref=self.ref, \
+                          payload=self.payload, join_ref=self.channel.join_push.ref)
+        await self.channel.socket.send(message)
 
     def update_payload(self, payload: Dict[str, Any]):
         self.payload = {**self.payload, **payload}
 
-    def receive(self, status: str, callback: Callback) -> "AsyncPush":
-        if response := self._has_received(status):
-            callback(response)
+    def receive(self, status: str, callback: Callback[[dict[str, Any]], None]) -> "AsyncPush":
+        if self.received_resp and self.received_resp.get('status') == status:
+            callback(self.received_resp)
 
         self.rec_hooks.append(_Hook(status, callback))
         return self
@@ -74,7 +71,7 @@ class AsyncPush:
             self._cancel_ref_event()
             self._cancel_timeout()
             self.received_resp = payload
-            self._match_receive(**self.received_resp)
+            self._match_receive(**payload)
 
         self.channel._on(self.ref_event, on_reply)
 
@@ -114,5 +111,7 @@ class AsyncPush:
             if hook.status == status:
                 hook.callback(response)
 
-    def _has_received(self, status: str):
-        return self.received_resp and self.received_resp.get("status") == status
+    def _has_received(self, status: str) -> bool:
+        if self.received_resp and self.received_resp.get("status") == status:
+            return True
+        return False
