@@ -26,11 +26,11 @@ class AsyncRealtimePresence:
         self.state: RealtimePresenceState = {}
         self.pending_diffs: List[RawPresenceDiff] = []
         self.join_ref: Optional[str] = None
-        self.on_join_callback: PresenceOnJoinCallback | None = None
-        self.on_leave_callback: PresenceOnLeaveCallback | None = None
-        self.on_sync_callback: Callable[[], None] | None = None
-        self.on_auth_success_callback: Callable[[], None] | None = None
-        self.on_auth_failure_callback: Callable[[], None] | None = None
+        self.on_join_callback: Optional[PresenceOnJoinCallback] = None
+        self.on_leave_callback: Optional[PresenceOnLeaveCallback] = None
+        self.on_sync_callback: Optional[Callable[[], None]] = None
+        self.on_auth_success_callback: Optional[Callable[[], None]] = None
+        self.on_auth_failure_callback: Optional[Callable[[], None]] = None
         # Initialize with default events if not provided
         events = (
             opts.events

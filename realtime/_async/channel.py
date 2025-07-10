@@ -111,7 +111,7 @@ class AsyncRealtimeChannel:
         self._on("close", on_close)
         self._on("error", on_error)
 
-        def on_reply(payload: Dict[str, Any], ref: str | None):
+        def on_reply(payload: Dict[str, Any], ref: Optional[str]):
             if ref:
                 self._trigger(self._reply_event_name(ref), payload)
 
@@ -170,7 +170,7 @@ class AsyncRealtimeChannel:
             presence = config.get("presence", {})
             private = config.get("private", False)
 
-            config_payload: dict[str, Any] = {
+            config_payload: Dict[str, Any] = {
                 "config": {
                     "broadcast": broadcast,
                     "presence": presence,
@@ -319,7 +319,7 @@ class AsyncRealtimeChannel:
 
     # Event handling methods
     def _on(
-        self, type: str, callback: Callback[[dict[str, Any], str | None], None], filter: Optional[Dict[str, Any]] = None
+        self, type: str, callback: Callback[[Dict[str, Any], Optional[str]], None], filter: Optional[Dict[str, Any]] = None
     ) -> AsyncRealtimeChannel:
         """
         Set up a listener for a specific event.
@@ -503,7 +503,7 @@ class AsyncRealtimeChannel:
     async def send_presence(self, event: str, data: Any) -> None:
         await self.push(ChannelEvents.presence, {"event": event, "payload": data})
 
-    def _trigger(self, type: str, payload: dict[str, Any], ref: Optional[str] = None):
+    def _trigger(self, type: str, payload: Dict[str, Any], ref: Optional[str] = None):
 
         type_lowercase = type.lower()
         events = [

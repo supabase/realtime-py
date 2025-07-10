@@ -64,7 +64,7 @@ class Binding:
         self,
         type: str,
         filter: Dict[str, Any],
-        callback: Callback[[Dict[str, Any], str | None], None],
+        callback: Callback[[Dict[str, Any], Optional[str]], None],
         id: Optional[str] = None,
     ):
         self.type = type
@@ -116,7 +116,7 @@ class RealtimeChannelOptions(TypedDict):
 
 class PresenceMeta(TypedDict, total=False):
     phx_ref: str
-    phx_ref_prev: str | None
+    phx_ref_prev: Optional[str]
 
 
 class RawPresenceStateEntry(TypedDict):

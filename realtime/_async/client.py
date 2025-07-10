@@ -3,7 +3,7 @@ import json
 import logging
 import re
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 from urllib.parse import urlencode, urlparse, urlunparse
 
 import websockets
@@ -317,7 +317,7 @@ class AsyncRealtimeClient:
         self.ref += 1
         return f"{self.ref}"
 
-    async def send(self, message: Message | dict[str, Any]) -> None:
+    async def send(self, message: Union[Message, Dict[str, Any]]) -> None:
         """
         Send a message through the WebSocket connection.
 

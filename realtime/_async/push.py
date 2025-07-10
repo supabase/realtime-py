@@ -67,7 +67,7 @@ class AsyncPush:
         current_event = self.channel._reply_event_name(self.ref)
         self.ref_event = current_event
 
-        def on_reply(payload: Dict[str, Any], _ref: str | None):
+        def on_reply(payload: Dict[str, Any], _ref: Optional[str]):
             self._cancel_ref_event()
             self._cancel_timeout()
             self.received_resp = payload
