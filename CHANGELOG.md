@@ -2,6 +2,18 @@
 
 
 
+## [2.6.0](https://github.com/supabase/realtime-py/compare/v2.5.3...v2.6.0) (2025-07-10)
+
+
+### Features
+
+* improve typing definitions, introduce mypy in CI ([#338](https://github.com/supabase/realtime-py/issues/338)) ([513ae3a](https://github.com/supabase/realtime-py/commit/513ae3aac8d0077c2a357ef4383209749c2d9312))
+
+
+### Bug Fixes
+
+* Do not supress callback exceptions ([#332](https://github.com/supabase/realtime-py/issues/332)) ([f978d39](https://github.com/supabase/realtime-py/commit/f978d39181d6b5a94f2aad311b7ea8220ea8673f))
+
 ## [2.5.3](https://github.com/supabase/realtime-py/compare/v2.5.2...v2.5.3) (2025-06-26)
 
 
