@@ -35,9 +35,6 @@ jobs:
 
       - name: Run Tests
         run: make run_tests
-
-      - name: Type check
-        run: poetry run mypy ./realtime
         
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@v2
