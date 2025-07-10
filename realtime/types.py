@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Callable, Dict, List, Literal, Optional, TypedDict, TypeVar
 
-from typing_extensions import ParamSpec
+from typing_extensions import ParamSpec, TypeAlias
 
 # Constants
 DEFAULT_TIMEOUT = 10
@@ -14,7 +14,7 @@ DEFAULT_HEARTBEAT_INTERVAL = 25
 # Type variables and custom types
 T_ParamSpec = ParamSpec("T_ParamSpec")
 T_Retval = TypeVar("T_Retval")
-Callback = Callable[T_ParamSpec, T_Retval]
+Callback: TypeAlias = Callable[T_ParamSpec, T_Retval]
 
 
 # Enums
@@ -26,7 +26,7 @@ class ChannelEvents(str, Enum):
 
     close = "phx_close"
     error = "phx_error"
-    join = "phx_join"  # type: ignore
+    join = "phx_join" # type: ignore
     reply = "phx_reply"
     leave = "phx_leave"
     heartbeat = "heartbeat"
