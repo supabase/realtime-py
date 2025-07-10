@@ -1,7 +1,7 @@
 import asyncio
 import datetime
-import os
 import logging
+import os
 
 import aiohttp
 import pytest
