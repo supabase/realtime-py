@@ -26,7 +26,7 @@ class ChannelEvents(str, Enum):
 
     close = "phx_close"
     error = "phx_error"
-    join = "phx_join" # type: ignore
+    join = "phx_join"  # type: ignore
     reply = "phx_reply"
     leave = "phx_leave"
     heartbeat = "heartbeat"
