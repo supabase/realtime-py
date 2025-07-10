@@ -58,7 +58,7 @@ class AsyncPush:
         self.payload = {**self.payload, **payload}
 
     def receive(
-        self, status: str, callback: Callback[[dict[str, Any]], None]
+        self, status: str, callback: Callback[[Dict[str, Any]], None]
     ) -> "AsyncPush":
         if self.received_resp and self.received_resp.get("status") == status:
             callback(self.received_resp)
