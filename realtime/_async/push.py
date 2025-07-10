@@ -45,15 +45,22 @@ class AsyncPush:
         self.start_timeout()
         self.sent = True
 
-        message = Message(topic=self.channel.topic, event=self.event, ref=self.ref, \
-                          payload=self.payload, join_ref=self.channel.join_push.ref)
+        message = Message(
+            topic=self.channel.topic,
+            event=self.event,
+            ref=self.ref,
+            payload=self.payload,
+            join_ref=self.channel.join_push.ref,
+        )
         await self.channel.socket.send(message)
 
     def update_payload(self, payload: Dict[str, Any]):
         self.payload = {**self.payload, **payload}
 
-    def receive(self, status: str, callback: Callback[[dict[str, Any]], None]) -> "AsyncPush":
-        if self.received_resp and self.received_resp.get('status') == status:
+    def receive(
+        self, status: str, callback: Callback[[dict[str, Any]], None]
+    ) -> "AsyncPush":
+        if self.received_resp and self.received_resp.get("status") == status:
             callback(self.received_resp)
 
         self.rec_hooks.append(_Hook(status, callback))

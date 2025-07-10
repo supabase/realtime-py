@@ -101,9 +101,11 @@ class AsyncRealtimeClient:
 
                 message = Message.model_validate_json(msg)
                 channel = self.channels.get(message.topic)
-                
+
                 if channel:
-                    channel._trigger(message.event, dict(**message.payload), message.ref)
+                    channel._trigger(
+                        message.event, dict(**message.payload), message.ref
+                    )
         except websockets.exceptions.ConnectionClosedError as e:
             await self._on_connect_error(e)
 
@@ -335,7 +337,9 @@ class AsyncRealtimeClient:
         if isinstance(message, Message):
             msg = message
         else:
-            logger.warning("Warning: calling AsyncRealtimeClient.send with a dictionary is deprecated. Please call it with a Message object instead. This will be a hard error in the future.", type(message))
+            logger.warning(
+                "Warning: calling AsyncRealtimeClient.send with a dictionary is deprecated. Please call it with a Message object instead. This will be a hard error in the future."
+            )
             msg = Message(**message)
         message_str = msg.model_dump_json()
         logger.info(f"send: {message_str}")

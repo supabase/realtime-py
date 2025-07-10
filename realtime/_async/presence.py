@@ -121,9 +121,7 @@ class AsyncRealtimePresence:
             else:
                 joins[key] = value
 
-        return self._sync_diff(
-            state, {"joins": joins, "leaves": leaves}
-        )
+        return self._sync_diff(state, {"joins": joins, "leaves": leaves})
 
     def _sync_diff(
         self,
@@ -222,9 +220,9 @@ class AsyncRealtimePresence:
                 new_state[key] = []
 
                 for presence in presences["metas"]:
-                    if "phx_ref_prev" in presence: 
+                    if "phx_ref_prev" in presence:
                         del presence["phx_ref_prev"]
-                    new_presence: Presence = { "presence_ref": presence.pop("phx_ref")}
+                    new_presence: Presence = {"presence_ref": presence.pop("phx_ref")}
                     new_presence.update(presence)
                     new_state[key].append(new_presence)
 

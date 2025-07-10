@@ -53,17 +53,21 @@ class AsyncRealtimeChannel:
         :param params: Optional parameters for connection.
         """
         self.socket = socket
-        self.params: RealtimeChannelOptions = params if params else {
-            "config": {
-                "broadcast": {"ack": False, "self": False},
-                "presence": {"key": ""},
-                "private": False,
+        self.params: RealtimeChannelOptions = (
+            params
+            if params
+            else {
+                "config": {
+                    "broadcast": {"ack": False, "self": False},
+                    "presence": {"key": ""},
+                    "private": False,
+                }
             }
-        }
+        )
 
         self.topic = topic
         self._joined_once = False
-        self.bindings: dict[str, list[Binding]] = {} 
+        self.bindings: dict[str, list[Binding]] = {}
         self.presence = AsyncRealtimePresence(self)
         self.state = ChannelStates.CLOSED
         self._push_buffer: list[AsyncPush] = []
@@ -91,8 +95,9 @@ class AsyncRealtimeChannel:
             self.state = ChannelStates.ERRORED
             self.rejoin_timer.schedule_timeout()
 
-        self.join_push.receive("ok", on_join_push_ok) \
-                      .receive("timeout", on_join_push_timeout)
+        self.join_push.receive("ok", on_join_push_ok).receive(
+            "timeout", on_join_push_timeout
+        )
 
         def on_close(*args):
             logger.info(f"channel {self.topic} closed")
@@ -176,11 +181,14 @@ class AsyncRealtimeChannel:
                     "presence": presence,
                     "private": private,
                     "postgres_changes": list(
-                        map(lambda x: x.filter, self.bindings.get("postgres_changes", []))
+                        map(
+                            lambda x: x.filter,
+                            self.bindings.get("postgres_changes", []),
+                        )
                     ),
                 }
             }
-                
+
             if self.socket.access_token:
                 config_payload["access_token"] = self.socket.access_token
 
@@ -310,7 +318,12 @@ class AsyncRealtimeChannel:
         :return: Channel
         """
         try:
-            message = Message(topic=self.topic, event=ChannelEvents.join, payload={"config": self.params}, ref=None)
+            message = Message(
+                topic=self.topic,
+                event=ChannelEvents.join,
+                payload={"config": self.params},
+                ref=None,
+            )
             await self.socket.send(message)
             return self
         except Exception as e:
@@ -319,7 +332,10 @@ class AsyncRealtimeChannel:
 
     # Event handling methods
     def _on(
-        self, type: str, callback: Callback[[Dict[str, Any], Optional[str]], None], filter: Optional[Dict[str, Any]] = None
+        self,
+        type: str,
+        callback: Callback[[Dict[str, Any], Optional[str]], None],
+        filter: Optional[Dict[str, Any]] = None,
     ) -> AsyncRealtimeChannel:
         """
         Set up a listener for a specific event.
@@ -504,7 +520,6 @@ class AsyncRealtimeChannel:
         await self.push(ChannelEvents.presence, {"event": event, "payload": data})
 
     def _trigger(self, type: str, payload: Dict[str, Any], ref: Optional[str] = None):
-
         type_lowercase = type.lower()
         events = [
             ChannelEvents.close,
