@@ -6,6 +6,7 @@ import logging
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from ..types import (
+    Presence,
     PresenceDiff,
     PresenceEvents,
     PresenceOnJoinCallback,
@@ -25,13 +26,11 @@ class AsyncRealtimePresence:
         self.state: RealtimePresenceState = {}
         self.pending_diffs: List[RawPresenceDiff] = []
         self.join_ref: Optional[str] = None
-        self.caller = {
-            "onJoin": lambda *args: None,
-            "onLeave": lambda *args: None,
-            "onSync": lambda: None,
-            "onAuthSuccess": lambda: None,
-            "onAuthFailure": lambda: None,
-        }
+        self.on_join_callback: Optional[PresenceOnJoinCallback] = None
+        self.on_leave_callback: Optional[PresenceOnLeaveCallback] = None
+        self.on_sync_callback: Optional[Callable[[], None]] = None
+        self.on_auth_success_callback: Optional[Callable[[], None]] = None
+        self.on_auth_failure_callback: Optional[Callable[[], None]] = None
         # Initialize with default events if not provided
         events = (
             opts.events
@@ -44,56 +43,50 @@ class AsyncRealtimePresence:
         self.channel._on("phx_auth", callback=self._on_auth_event)
 
     def on_join(self, callback: PresenceOnJoinCallback):
-        self.caller["onJoin"] = callback
+        self.on_join_callback = callback
 
     def on_leave(self, callback: PresenceOnLeaveCallback):
-        self.caller["onLeave"] = callback
+        self.on_leave_callback = callback
 
     def on_sync(self, callback: Callable[[], None]):
-        self.caller["onSync"] = callback
+        self.on_sync_callback = callback
 
     def on_auth_success(self, callback: Callable[[], None]):
-        self.caller["onAuthSuccess"] = callback
+        self.on_auth_success_callback = callback
 
     def on_auth_failure(self, callback: Callable[[], None]):
-        self.caller["onAuthFailure"] = callback
+        self.on_auth_failure_callback = callback
 
     def _on_state_event(self, payload: RawPresenceState, *args):
-        onJoin = self.caller["onJoin"]
-        onLeave = self.caller["onLeave"]
-        onSync = self.caller["onSync"]
-
         self.join_ref = self.channel.join_ref
-        self.state = self._sync_state(self.state, payload, onJoin, onLeave)
+        self.state = self._sync_state(self.state, payload)
 
         for diff in self.pending_diffs:
-            self.state = self._sync_diff(self.state, diff, onJoin, onLeave)
+            self.state = self._sync_diff(self.state, diff)
         self.pending_diffs = []
-        onSync()
+        if self.on_sync_callback:
+            self.on_sync_callback()
 
-    def _on_diff_event(self, payload: Dict[str, Any], *args):
-        onJoin = self.caller["onJoin"]
-        onLeave = self.caller["onLeave"]
-        onSync = self.caller["onSync"]
-
+    def _on_diff_event(self, payload: RawPresenceDiff, *args):
         if self.in_pending_sync_state():
             self.pending_diffs.append(payload)
         else:
-            self.state = self._sync_diff(self.state, payload, onJoin, onLeave)
-            onSync()
+            self.state = self._sync_diff(self.state, payload)
+            if self.on_sync_callback:
+                self.on_sync_callback()
 
     def _on_auth_event(self, payload: Dict[str, Any], *args):
         if payload.get("status") == "ok":
-            self.caller["onAuthSuccess"]()
+            if self.on_auth_success_callback:
+                self.on_auth_success_callback()
         else:
-            self.caller["onAuthFailure"]()
+            if self.on_auth_failure_callback:
+                self.on_auth_failure_callback()
 
     def _sync_state(
         self,
         current_state: RealtimePresenceState,
         new_state: Union[RawPresenceState, RealtimePresenceState],
-        onJoin: PresenceOnJoinCallback,
-        onLeave: PresenceOnLeaveCallback,
     ) -> RealtimePresenceState:
         state = {key: list(value) for key, value in current_state.items()}
         transformed_state = AsyncRealtimePresence._transform_state(new_state)
@@ -128,16 +121,12 @@ class AsyncRealtimePresence:
             else:
                 joins[key] = value
 
-        return self._sync_diff(
-            state, {"joins": joins, "leaves": leaves}, onJoin, onLeave
-        )
+        return self._sync_diff(state, {"joins": joins, "leaves": leaves})
 
     def _sync_diff(
         self,
         state: RealtimePresenceState,
         diff: Union[RawPresenceDiff, PresenceDiff],
-        onJoin: PresenceOnJoinCallback,
-        onLeave: PresenceOnLeaveCallback,
     ) -> RealtimePresenceState:
         joins = AsyncRealtimePresence._transform_state(diff.get("joins", {}))
         leaves = AsyncRealtimePresence._transform_state(diff.get("leaves", {}))
@@ -148,7 +137,7 @@ class AsyncRealtimePresence:
 
             if len(current_presences) > 0:
                 joined_presence_refs = {
-                    presence.get("presence_ref") for presence in state.get(key)
+                    presence.get("presence_ref") for presence in new_presences
                 }
                 cur_presences = list(
                     presence
@@ -157,7 +146,8 @@ class AsyncRealtimePresence:
                 )
                 state[key] = cur_presences + state[key]
 
-            onJoin(key, current_presences, new_presences)
+            if self.on_join_callback:
+                self.on_join_callback(key, current_presences, new_presences)
 
         for key, left_presences in leaves.items():
             current_presences = state.get(key, [])
@@ -175,7 +165,8 @@ class AsyncRealtimePresence:
             ]
             state[key] = current_presences
 
-            onLeave(key, current_presences, left_presences)
+            if self.on_leave_callback:
+                self.on_leave_callback(key, current_presences, left_presences)
 
             if len(current_presences) == 0:
                 del state[key]
@@ -229,9 +220,11 @@ class AsyncRealtimePresence:
                 new_state[key] = []
 
                 for presence in presences["metas"]:
-                    presence["presence_ref"] = presence.pop("phx_ref", None)
-                    presence.pop("phx_ref_prev", None)
-                    new_state[key].append(presence)
+                    if "phx_ref_prev" in presence:
+                        del presence["phx_ref_prev"]
+                    new_presence: Presence = {"presence_ref": presence.pop("phx_ref")}
+                    new_presence.update(presence)
+                    new_state[key].append(new_presence)
 
             else:
                 new_state[key] = presences

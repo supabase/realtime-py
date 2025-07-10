@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from enum import Enum
 from typing import Any, Callable, Dict, List, Literal, Optional, TypedDict, TypeVar
 
-from typing_extensions import ParamSpec
+from typing_extensions import ParamSpec, TypeAlias
 
 # Constants
 DEFAULT_TIMEOUT = 10
@@ -12,7 +14,7 @@ DEFAULT_HEARTBEAT_INTERVAL = 25
 # Type variables and custom types
 T_ParamSpec = ParamSpec("T_ParamSpec")
 T_Retval = TypeVar("T_Retval")
-Callback = Callable[T_ParamSpec, T_Retval]
+Callback: TypeAlias = Callable[T_ParamSpec, T_Retval]
 
 
 # Enums
@@ -24,7 +26,7 @@ class ChannelEvents(str, Enum):
 
     close = "phx_close"
     error = "phx_error"
-    join = "phx_join"
+    join = "phx_join"  # type: ignore
     reply = "phx_reply"
     leave = "phx_leave"
     heartbeat = "heartbeat"
@@ -64,7 +66,7 @@ class Binding:
         self,
         type: str,
         filter: Dict[str, Any],
-        callback: Callback,
+        callback: Callback[[Dict[str, Any], Optional[str]], None],
         id: Optional[str] = None,
     ):
         self.type = type
@@ -74,12 +76,12 @@ class Binding:
 
 
 class _Hook:
-    def __init__(self, status: str, callback: Callback):
+    def __init__(self, status: str, callback: Callback[[Dict[str, Any]], None]):
         self.status = status
         self.callback = callback
 
 
-class Presence(Dict[str, Any]):
+class Presence(TypedDict, total=False):
     presence_ref: str
 
 
@@ -116,7 +118,7 @@ class RealtimeChannelOptions(TypedDict):
 
 class PresenceMeta(TypedDict, total=False):
     phx_ref: str
-    phx_ref_prev: str
+    phx_ref_prev: Optional[str]
 
 
 class RawPresenceStateEntry(TypedDict):

@@ -1,3 +1,6 @@
+from typing import Optional
+
+
 class NotConnectedError(Exception):
     """
     Raised when operations requiring a connection are executed when socket is not connected
@@ -15,7 +18,7 @@ class AuthorizationError(Exception):
     Raised when there is an authorization failure for private channels
     """
 
-    def __init__(self, message: str = None):
+    def __init__(self, message: Optional[str] = None):
         self.message: str = message or "Authorization failed for private channel"
 
     def __str__(self):

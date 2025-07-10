@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Mapping, Optional
 
 from realtime.types import (
     Binding,
@@ -16,6 +16,7 @@ from realtime.types import (
     RealtimeSubscribeStates,
 )
 
+from ..message import Message
 from ..transformers import http_endpoint_url
 from .presence import (
     AsyncRealtimePresence,
@@ -52,23 +53,27 @@ class AsyncRealtimeChannel:
         :param params: Optional parameters for connection.
         """
         self.socket = socket
-        self.params = params or {}
-        if self.params.get("config") is None:
-            self.params["config"] = {
-                "broadcast": {"ack": False, "self": False},
-                "presence": {"key": ""},
-                "private": False,
+        self.params: RealtimeChannelOptions = (
+            params
+            if params
+            else {
+                "config": {
+                    "broadcast": {"ack": False, "self": False},
+                    "presence": {"key": ""},
+                    "private": False,
+                }
             }
+        )
 
         self.topic = topic
         self._joined_once = False
-        self.bindings: Dict[str, List[Binding]] = {}
+        self.bindings: dict[str, list[Binding]] = {}
         self.presence = AsyncRealtimePresence(self)
         self.state = ChannelStates.CLOSED
-        self._push_buffer: List[AsyncPush] = []
+        self._push_buffer: list[AsyncPush] = []
         self.timeout = self.socket.timeout
 
-        self.join_push = AsyncPush(self, ChannelEvents.join, self.params)
+        self.join_push: AsyncPush = AsyncPush(self, ChannelEvents.join, self.params)
         self.rejoin_timer = AsyncTimer(
             self._rejoin_until_connected, lambda tries: 2**tries
         )
@@ -111,8 +116,9 @@ class AsyncRealtimeChannel:
         self._on("close", on_close)
         self._on("error", on_error)
 
-        def on_reply(payload, ref):
-            self._trigger(self._reply_event_name(ref), payload)
+        def on_reply(payload: Dict[str, Any], ref: Optional[str]):
+            if ref:
+                self._trigger(self._reply_event_name(ref), payload)
 
         self._on(ChannelEvents.reply, on_reply)
 
@@ -169,22 +175,24 @@ class AsyncRealtimeChannel:
             presence = config.get("presence", {})
             private = config.get("private", False)
 
-            access_token_payload = {}
-            config = {
-                "broadcast": broadcast,
-                "presence": presence,
-                "private": private,
-                "postgres_changes": list(
-                    map(lambda x: x.filter, self.bindings.get("postgres_changes", []))
-                ),
+            config_payload: Dict[str, Any] = {
+                "config": {
+                    "broadcast": broadcast,
+                    "presence": presence,
+                    "private": private,
+                    "postgres_changes": list(
+                        map(
+                            lambda x: x.filter,
+                            self.bindings.get("postgres_changes", []),
+                        )
+                    ),
+                }
             }
 
             if self.socket.access_token:
-                access_token_payload["access_token"] = self.socket.access_token
+                config_payload["access_token"] = self.socket.access_token
 
-            self.join_push.update_payload(
-                {**{"config": config}, **access_token_payload}
-            )
+            self.join_push.update_payload(config_payload)
             self._joined_once = True
 
             def on_join_push_ok(payload: Dict[str, Any]):
@@ -253,7 +261,7 @@ class AsyncRealtimeChannel:
 
         return self
 
-    async def unsubscribe(self):
+    async def unsubscribe(self) -> None:
         """
         Unsubscribe from the channel and leave the topic.
         Sets channel state to LEAVING and cleans up timers and pushes.
@@ -263,9 +271,9 @@ class AsyncRealtimeChannel:
         self.rejoin_timer.reset()
         self.join_push.destroy()
 
-        def _close(*args):
+        def _close(*args) -> None:
             logger.info(f"channel {self.topic} leave")
-            self._trigger(ChannelEvents.close, "leave")
+            self._trigger(ChannelEvents.close, {})
 
         leave_push = AsyncPush(self, ChannelEvents.leave, {})
         leave_push.receive("ok", _close).receive("timeout", _close)
@@ -310,21 +318,24 @@ class AsyncRealtimeChannel:
         :return: Channel
         """
         try:
-            await self.socket.send(
-                {
-                    "topic": self.topic,
-                    "event": "phx_join",
-                    "payload": {"config": self.params},
-                    "ref": None,
-                }
+            message = Message(
+                topic=self.topic,
+                event=ChannelEvents.join,
+                payload={"config": self.params},
+                ref=None,
             )
+            await self.socket.send(message)
+            return self
         except Exception as e:
             print(e)
             return self
 
     # Event handling methods
     def _on(
-        self, type: str, callback: Callback, filter: Optional[Dict[str, Any]] = None
+        self,
+        type: str,
+        callback: Callback[[Dict[str, Any], Optional[str]], None],
+        filter: Optional[Dict[str, Any]] = None,
     ) -> AsyncRealtimeChannel:
         """
         Set up a listener for a specific event.
@@ -411,7 +422,7 @@ class AsyncRealtimeChannel:
         )
 
     def on_system(
-        self, callback: Callable[[Dict[str, Any], None]]
+        self, callback: Callable[[Dict[str, Any]], None]
     ) -> AsyncRealtimeChannel:
         """
         Set up a listener for system events.
@@ -508,7 +519,7 @@ class AsyncRealtimeChannel:
     async def send_presence(self, event: str, data: Any) -> None:
         await self.push(ChannelEvents.presence, {"event": event, "payload": data})
 
-    def _trigger(self, type: str, payload: Optional[Any], ref: Optional[str] = None):
+    def _trigger(self, type: str, payload: Dict[str, Any], ref: Optional[str] = None):
         type_lowercase = type.lower()
         events = [
             ChannelEvents.close,
@@ -562,7 +573,7 @@ class AsyncRealtimeChannel:
                 elif binding.type == type_lowercase:
                     binding.callback(payload, ref)
 
-    def _reply_event_name(self, ref: str):
+    def _reply_event_name(self, ref: str) -> str:
         return f"chan_reply_{ref}"
 
     async def _rejoin_until_connected(self):

@@ -53,6 +53,8 @@ jobs:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Clone Repository
         uses: actions/checkout@v4
+      - name: Type check
+        run: nix develop --command mypy ./realtime
       - name: Start Supabase local development setup
         run: nix develop --command supabase start --workdir infra -x studio,mailpit,edge-runtime,logflare,vector,supavisor,imgproxy,storage-api
       - name: Run python tests through nix

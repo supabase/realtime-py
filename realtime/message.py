@@ -1,26 +1,15 @@
-from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Mapping, Optional
+
+from pydantic import BaseModel
 
 
-@dataclass
-class Message:
+class Message(BaseModel):
     """
     Dataclass abstraction for message
     """
 
     event: str
-    payload: Dict[str, Any]
-    ref: Any
+    payload: Mapping[str, Any]
     topic: str
+    ref: Optional[str] = None
     join_ref: Optional[str] = None
-
-    def __hash__(self):
-        return hash(
-            (
-                self.event,
-                tuple(list(self.payload.values())),
-                self.ref,
-                self.topic,
-                self.join_ref,
-            )
-        )

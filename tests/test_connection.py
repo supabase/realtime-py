@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import logging
 import os
 
 import aiohttp
@@ -7,6 +8,7 @@ import pytest
 from dotenv import load_dotenv
 
 from realtime import AsyncRealtimeChannel, AsyncRealtimeClient, RealtimeSubscribeStates
+from realtime.message import Message
 from realtime.types import DEFAULT_HEARTBEAT_INTERVAL, DEFAULT_TIMEOUT
 
 load_dotenv()
@@ -420,11 +422,11 @@ async def test_send_message_reconnection(socket: AsyncRealtimeClient):
         await socket._ws_connection.close()
 
     # Try to send a message - this should trigger reconnection
-    message = {
-        "topic": "test-channel",
-        "event": "test-event",
-        "payload": {"test": "data"},
-    }
+    message = Message(
+        topic="test-channel",
+        event="test-event",
+        payload={"test": "data"},
+    )
     await socket.send(message)
 
     # Wait for reconnection to complete

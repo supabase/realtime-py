@@ -5,10 +5,13 @@ install_poetry:
 	curl -sSL https://install.python-poetry.org | python -
 	poetry install
 
-tests: install tests_only tests_pre_commit
+tests: install run_mypy tests_only tests_pre_commit
 
 tests_pre_commit:
 	poetry run pre-commit run --all-files
+
+run_mypy:
+	poetry run mypy ./realtime
 
 run_infra:
 	npx supabase start --workdir infra -x studio,mailpit,edge-runtime,logflare,vector,supavisor,imgproxy,storage-api

@@ -13,6 +13,7 @@ requires-python = ">=3.9"
 dependencies = [
   "websockets >=11,<16",
   "typing-extensions >=4.14.0",
+  "pydantic (>=2.11.7,<3.0.0)",
 ]
 
 [tool.poetry.group.dev.dependencies]
@@ -77,3 +78,13 @@ keep-runtime-typing = true
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.9"
+check_untyped_defs = true
+allow_redefinition = true
+
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
