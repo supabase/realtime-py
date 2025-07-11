@@ -33,6 +33,10 @@ class ChannelEvents(str, Enum):
     access_token = "access_token"
     broadcast = "broadcast"
     presence = "presence"
+    presence_state = "presence_state"
+    presence_diff = "presence_diff"
+    system = "system"
+    postgres_changes = "postgres_changes"
 
 
 class ChannelStates(str, Enum):
