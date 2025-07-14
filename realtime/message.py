@@ -5,10 +5,22 @@ from typing_extensions import TypeAlias
 
 from .types import (
     ChannelEvents,
-    PresenceDiff,
+    RawPresenceDiff,
     RealtimeChannelOptions,
     RealtimePostgresChangesListenEvent,
 )
+
+
+class Message(BaseModel):
+    """
+    Dataclass abstraction for message
+    """
+
+    event: str
+    payload: Mapping[str, Any]
+    topic: str
+    ref: Optional[str] = None
+    join_ref: Optional[str] = None
 
 
 class ConnectionMessage(BaseModel):
@@ -21,13 +33,13 @@ class ConnectionMessage(BaseModel):
 class PostgresRowChange(BaseModel):
     id: int
     event: RealtimePostgresChangesListenEvent
-    _schema: str = Field(alias="schema")
     table: str
-    filter: str
+    schema_: Optional[str] = Field(alias="schema", default=None)
+    filter: Optional[str] = None
 
 
 class ConnectionReplyPostgresChanges(BaseModel):
-    postgres_changes: List[PostgresRowChange]
+    postgres_changes: Optional[List[PostgresRowChange]] = None
 
 
 class ConnectionReplyPayload(BaseModel):
@@ -39,7 +51,7 @@ class ConnectionReplyMessage(BaseModel):
     event: Literal[ChannelEvents.reply]
     topic: str
     payload: ConnectionReplyPayload
-    ref: str
+    ref: Optional[str] = None
 
 
 class SystemPayload(BaseModel):
@@ -77,14 +89,20 @@ class AccessTokenMessage(BaseModel):
     payload: AccessTokenPayload
 
 
+class PostgresChangesColumn(BaseModel):
+    name: str
+    type: str
+
+
 class PostgresChangesData(BaseModel):
-    _schema: str = Field(alias="schema")
+    schema_: str = Field(alias="schema")
     table: str
     commit_timestamp: str
-    eventType: RealtimePostgresChangesListenEvent
+    type: RealtimePostgresChangesListenEvent
     errors: Optional[str]
-    new: dict[str, Union[bool, int, str, None]]
-    old: dict[str, Union[int, str]]
+    columns: List[PostgresChangesColumn]
+    record: Optional[dict[str, Any]] = None
+    old_record: Optional[dict[str, Any]] = None  # todo: improve this
 
 
 class PostgresChangesPayload(BaseModel):
@@ -123,18 +141,20 @@ class PresenceStateMessage(BaseModel):
 class PresenceDiffMessage(BaseModel):
     event: Literal[ChannelEvents.presence_diff]
     topic: str
-    payload: PresenceDiff
+    payload: RawPresenceDiff
     ref: Literal[None]
 
 
 ServerMessage: TypeAlias = Union[
+    SystemMessage,
     ConnectionReplyMessage,
     HeartbeatMessage,
     BroadcastMessage,
     PresenceStateMessage,
     PresenceDiffMessage,
+    PostgresChangesMessage,
 ]
-ServerMessageAdapter = TypeAdapter(ServerMessage)
+ServerMessageAdapter: TypeAdapter[ServerMessage] = TypeAdapter(ServerMessage)
 ClientMessage: TypeAlias = Union[
     ConnectionMessage, HeartbeatMessage, BroadcastMessage, PresenceMessage
 ]

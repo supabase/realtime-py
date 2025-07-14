@@ -3,6 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Callable, Dict, List, Literal, Optional, TypedDict, TypeVar
 
+from pydantic import BaseModel
 from typing_extensions import ParamSpec, TypeAlias
 
 # Constants
@@ -120,12 +121,12 @@ class RealtimeChannelOptions(TypedDict):
     config: RealtimeChannelConfig
 
 
-class PresenceMeta(TypedDict, total=False):
+class PresenceMeta(BaseModel, extra="allow"):
     phx_ref: str
-    phx_ref_prev: Optional[str]
+    phx_ref_prev: Optional[str] = None
 
 
-class RawPresenceStateEntry(TypedDict):
+class RawPresenceStateEntry(BaseModel):
     metas: List[PresenceMeta]
 
 
@@ -136,12 +137,12 @@ RealtimePresenceState = Dict[str, List[Presence]]
 RawPresenceState = Dict[str, RawPresenceStateEntry]
 
 
-class RawPresenceDiff(TypedDict):
+class RawPresenceDiff(BaseModel):
     joins: RawPresenceState
     leaves: RawPresenceState
 
 
-class PresenceDiff(TypedDict):
+class PresenceDiff(BaseModel):
     joins: RealtimePresenceState
     leaves: RealtimePresenceState
 

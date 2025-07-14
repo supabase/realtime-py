@@ -11,7 +11,7 @@ from websockets import connect
 from websockets.asyncio.client import ClientConnection
 
 from ..exceptions import NotConnectedError
-from ..message import Message
+from ..message import Message, ServerMessageAdapter
 from ..transformers import http_endpoint_url
 from ..types import (
     DEFAULT_HEARTBEAT_INTERVAL,
@@ -99,6 +99,9 @@ class AsyncRealtimeClient:
             async for msg in self._ws_connection:
                 logger.info(f"receive: {msg!r}")
 
+                print(msg)
+                server_msg = ServerMessageAdapter.validate_json(msg)
+                print(server_msg)
                 message = Message.model_validate_json(msg)
                 channel = self.channels.get(message.topic)
 
