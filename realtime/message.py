@@ -1,11 +1,15 @@
 from typing import Any, List, Literal, Mapping, Optional, Union
 
 from pydantic import BaseModel, Field, TypeAdapter
-from typing_extensions import TypeAlias
+from typing_extensions import TypeAlias, TypedDict
 
 from .types import (
+    BroadcastPayload,
     ChannelEvents,
+    PostgresChangesData,
+    PostgresChangesPayload,
     RawPresenceDiff,
+    RawPresenceState,
     RealtimeChannelOptions,
     RealtimePostgresChangesListenEvent,
 )
@@ -23,7 +27,7 @@ class Message(BaseModel):
     join_ref: Optional[str] = None
 
 
-class ConnectionMessage(BaseModel):
+class JoinMessage(BaseModel):
     event: Literal[ChannelEvents.join]
     topic: str
     ref: str
@@ -32,39 +36,51 @@ class ConnectionMessage(BaseModel):
 
 class PostgresRowChange(BaseModel):
     id: int
-    event: RealtimePostgresChangesListenEvent
+    events: RealtimePostgresChangesListenEvent
     table: str
     schema_: Optional[str] = Field(alias="schema", default=None)
     filter: Optional[str] = None
 
 
-class ConnectionReplyPostgresChanges(BaseModel):
+class ReplyPostgresChanges(BaseModel):
     postgres_changes: Optional[List[PostgresRowChange]] = None
 
 
-class ConnectionReplyPayload(BaseModel):
-    response: ConnectionReplyPostgresChanges
-    status: Literal["ok", "error"]
+class SuccessReplyMessage(BaseModel):
+    status: Literal["ok"]
+    response: ReplyPostgresChanges
 
 
-class ConnectionReplyMessage(BaseModel):
+class ErrorReplyMessage(BaseModel):
+    status: Literal["error"]
+    response: dict[str, Any]  # TODO: what goes in here?
+
+
+class ReplyMessage(BaseModel):
     event: Literal[ChannelEvents.reply]
     topic: str
-    payload: ConnectionReplyPayload
-    ref: Optional[str] = None
+    payload: Union[SuccessReplyMessage, ErrorReplyMessage]
+    ref: Optional[str]
 
 
-class SystemPayload(BaseModel):
+class SuccessSystemPayload(BaseModel):
     channel: str
-    extension: Literal["postgres_changes"]
-    message: Literal["Subscribed to PostgreSQL", "Subscribing to PostgreSQL failed"]
-    status: Literal["ok", "error"]
+    extension: str
+    message: str
+    status: Literal["ok"]
+
+
+class ErrorSystemPayload(BaseModel):
+    channel: str
+    extension: str
+    message: str
+    status: Literal["error"]
 
 
 class SystemMessage(BaseModel):
     event: Literal[ChannelEvents.system]
     topic: str
-    payload: SystemPayload
+    payload: Union[SuccessSystemPayload, ErrorSystemPayload]
     ref: Literal[None]
 
 
@@ -87,27 +103,7 @@ class AccessTokenMessage(BaseModel):
     event: Literal[ChannelEvents.access_token]
     topic: str
     payload: AccessTokenPayload
-
-
-class PostgresChangesColumn(BaseModel):
-    name: str
-    type: str
-
-
-class PostgresChangesData(BaseModel):
-    schema_: str = Field(alias="schema")
-    table: str
-    commit_timestamp: str
-    type: RealtimePostgresChangesListenEvent
-    errors: Optional[str]
-    columns: List[PostgresChangesColumn]
-    record: Optional[dict[str, Any]] = None
-    old_record: Optional[dict[str, Any]] = None  # todo: improve this
-
-
-class PostgresChangesPayload(BaseModel):
-    data: PostgresChangesData
-    ids: List[int]
+    ref: Literal[None]
 
 
 class PostgresChangesMessage(BaseModel):
@@ -120,7 +116,7 @@ class PostgresChangesMessage(BaseModel):
 class BroadcastMessage(BaseModel):
     event: Literal[ChannelEvents.broadcast]
     topic: str
-    payload: dict[str, Any]
+    payload: BroadcastPayload
     ref: Literal[None]
 
 
@@ -134,7 +130,7 @@ class PresenceMessage(BaseModel):
 class PresenceStateMessage(BaseModel):
     event: Literal[ChannelEvents.presence_state]
     topic: str
-    payload: dict[str, Any]
+    payload: RawPresenceState
     ref: Literal[None]
 
 
@@ -145,16 +141,36 @@ class PresenceDiffMessage(BaseModel):
     ref: Literal[None]
 
 
+class ChannelErrorMessage(BaseModel):
+    event: Literal[ChannelEvents.error]
+    topic: str
+    payload: dict[str, Any]
+    ref: Optional[str]
+
+
+class ChannelCloseMessage(BaseModel):
+    event: Literal[ChannelEvents.close]
+    topic: str
+    payload: dict[str, Any]
+    ref: Optional[str]
+
+
 ServerMessage: TypeAlias = Union[
     SystemMessage,
-    ConnectionReplyMessage,
+    ReplyMessage,
     HeartbeatMessage,
     BroadcastMessage,
     PresenceStateMessage,
     PresenceDiffMessage,
     PostgresChangesMessage,
+    ChannelErrorMessage,
+    ChannelCloseMessage,
 ]
 ServerMessageAdapter: TypeAdapter[ServerMessage] = TypeAdapter(ServerMessage)
 ClientMessage: TypeAlias = Union[
-    ConnectionMessage, HeartbeatMessage, BroadcastMessage, PresenceMessage
+    JoinMessage,
+    HeartbeatMessage,
+    BroadcastMessage,
+    PresenceMessage,
+    AccessTokenMessage,
 ]
