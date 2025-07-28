@@ -1,7 +1,18 @@
-from enum import Enum
-from typing import Any, Callable, Dict, List, Literal, Optional, TypedDict, TypeVar
+from __future__ import annotations
 
-from typing_extensions import ParamSpec
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Callable, Dict, List, Literal, Optional, TypeVar
+
+from pydantic import BaseModel, ConfigDict, Field, with_config
+from typing_extensions import (
+    Generic,
+    NotRequired,
+    ParamSpec,
+    Required,
+    TypeAlias,
+    TypedDict,
+)
 
 # Constants
 DEFAULT_TIMEOUT = 10
@@ -12,7 +23,7 @@ DEFAULT_HEARTBEAT_INTERVAL = 25
 # Type variables and custom types
 T_ParamSpec = ParamSpec("T_ParamSpec")
 T_Retval = TypeVar("T_Retval")
-Callback = Callable[T_ParamSpec, T_Retval]
+Callback: TypeAlias = Callable[T_ParamSpec, T_Retval]
 
 
 # Enums
@@ -24,13 +35,17 @@ class ChannelEvents(str, Enum):
 
     close = "phx_close"
     error = "phx_error"
-    join = "phx_join"
+    join = "phx_join"  # type: ignore
     reply = "phx_reply"
     leave = "phx_leave"
     heartbeat = "heartbeat"
     access_token = "access_token"
     broadcast = "broadcast"
     presence = "presence"
+    presence_state = "presence_state"
+    presence_diff = "presence_diff"
+    system = "system"
+    postgres_changes = "postgres_changes"
 
 
 class ChannelStates(str, Enum):
@@ -54,32 +69,94 @@ class RealtimePresenceListenEvents(str, Enum):
     LEAVE = "LEAVE"
 
 
+class RealtimeAcknowledgementStatus(str, Enum):
+    Ok = "ok"
+    Error = "error"
+    Timeout = "timeout"
+
+
 # Literals
-RealtimePostgresChangesListenEvent = Literal["*", "INSERT", "UPDATE", "DELETE"]
+class RealtimePostgresChangesListenEvent(str, Enum):
+    All = "*"
+    Insert = "INSERT"
+    Update = "UPDATE"
+    Delete = "DELETE"
 
 
-# Classes
-class Binding:
-    def __init__(
-        self,
-        type: str,
-        filter: Dict[str, Any],
-        callback: Callback,
-        id: Optional[str] = None,
-    ):
-        self.type = type
-        self.filter = filter
-        self.callback = callback
-        self.id = id
+Payload = TypeVar("Payload")
+
+
+class PostgresChangesColumn(TypedDict):
+    name: str
+    type: str
+
+
+class PostgresChangesData(TypedDict):
+    schema: str
+    table: str
+    commit_timestamp: str
+    type: RealtimePostgresChangesListenEvent
+    errors: Optional[str]
+    columns: List[PostgresChangesColumn]
+    record: NotRequired[Optional[dict[str, Any]]]
+    old_record: NotRequired[dict[str, Any]]  # todo: improve this
+
+
+class PostgresChangesPayload(TypedDict):
+    data: PostgresChangesData
+    ids: List[int]
+
+
+class BroadcastPayload(TypedDict):
+    event: str
+    payload: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class BroadcastCallback:
+    callback: Callable[[BroadcastPayload], None]
+    event: str
+
+    def __call__(self, payload: BroadcastPayload) -> None:
+        if self.event == payload["event"]:
+            return self.callback(payload)
+
+
+@dataclass
+class PostgresChangesCallback:
+    callback: Callable[[PostgresChangesPayload], None]
+    event: RealtimePostgresChangesListenEvent
+    table: Optional[str]
+    schema: Optional[str]
+    filter: Optional[str]
+    id: Optional[int] = None
+
+    def __call__(self, payload: PostgresChangesPayload) -> None:
+        event_matches = (
+            self.event == payload["data"]["type"]
+            or self.event == RealtimePostgresChangesListenEvent.All
+        )
+        if self.id and self.id in payload["ids"] and event_matches:
+            return self.callback(payload)
+
+    @property
+    def binding_filter(self) -> dict[str, Optional[str]]:
+        binding = {"events": self.event, "table": self.table}
+        if self.schema:
+            binding["schema"] = self.schema
+        if self.filter:
+            binding["filter"] = self.filter
+        return binding
 
 
 class _Hook:
-    def __init__(self, status: str, callback: Callback):
+    def __init__(self, status: str, callback: Callback[[Dict[str, Any]], None]):
         self.status = status
         self.callback = callback
 
 
-class Presence(Dict[str, Any]):
+@with_config(ConfigDict(extra="allow"))
+class Presence(TypedDict):
     presence_ref: str
 
 
@@ -105,8 +182,8 @@ class RealtimeChannelPresenceConfig(TypedDict):
 
 
 class RealtimeChannelConfig(TypedDict):
-    broadcast: RealtimeChannelBroadcastConfig
-    presence: RealtimeChannelPresenceConfig
+    broadcast: Optional[RealtimeChannelBroadcastConfig]
+    presence: Optional[RealtimeChannelPresenceConfig]
     private: bool
 
 
@@ -114,9 +191,10 @@ class RealtimeChannelOptions(TypedDict):
     config: RealtimeChannelConfig
 
 
-class PresenceMeta(TypedDict, total=False):
-    phx_ref: str
-    phx_ref_prev: str
+@with_config(ConfigDict(extra="allow"))
+class PresenceMeta(TypedDict):
+    phx_ref: NotRequired[str]
+    phx_ref_prev: NotRequired[str]
 
 
 class RawPresenceStateEntry(TypedDict):
@@ -124,8 +202,8 @@ class RawPresenceStateEntry(TypedDict):
 
 
 # Custom types
-PresenceOnJoinCallback = Callable[[str, List[Any], List[Any]], None]
-PresenceOnLeaveCallback = Callable[[str, List[Any], List[Any]], None]
+PresenceOnJoinCallback = Callable[[str, List[Any], List[Presence]], None]
+PresenceOnLeaveCallback = Callable[[str, List[Any], List[Presence]], None]
 RealtimePresenceState = Dict[str, List[Presence]]
 RawPresenceState = Dict[str, RawPresenceStateEntry]
 
@@ -141,14 +219,14 @@ class PresenceDiff(TypedDict):
 
 
 # Specific payload types
-class RealtimePresenceJoinPayload(Dict[str, Any]):
+class RealtimePresenceJoinPayload(TypedDict):
     event: Literal[RealtimePresenceListenEvents.JOIN]
     key: str
     current_presences: List[Presence]
     new_presences: List[Presence]
 
 
-class RealtimePresenceLeavePayload(Dict[str, Any]):
+class RealtimePresenceLeavePayload(TypedDict):
     event: Literal[RealtimePresenceListenEvents.LEAVE]
     key: str
     current_presences: List[Presence]

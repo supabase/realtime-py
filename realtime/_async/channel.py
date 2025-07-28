@@ -3,24 +3,51 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Mapping, Optional
+
+from typing_extensions import assert_never
 
 from realtime.types import (
-    Binding,
+    BroadcastCallback,
+    BroadcastPayload,
     Callback,
     ChannelEvents,
     ChannelStates,
+    PostgresChangesCallback,
+    PostgresChangesData,
+    PresenceOnJoinCallback,
+    PresenceOnLeaveCallback,
+    RealtimeAcknowledgementStatus,
+    RealtimeChannelBroadcastConfig,
+    RealtimeChannelConfig,
     RealtimeChannelOptions,
+    RealtimeChannelPresenceConfig,
     RealtimePostgresChangesListenEvent,
     RealtimePresenceState,
     RealtimeSubscribeStates,
 )
 
+from ..message import (
+    BroadcastMessage,
+    ChannelCloseMessage,
+    ChannelErrorMessage,
+    HeartbeatMessage,
+    Message,
+    PostgresChangesMessage,
+    PostgresChangesPayload,
+    PostgresRowChange,
+    PresenceDiffMessage,
+    PresenceStateMessage,
+    ReplyMessage,
+    ReplyPostgresChanges,
+    ServerMessage,
+    SuccessReplyMessage,
+    SuccessSystemPayload,
+    SystemMessage,
+)
 from ..transformers import http_endpoint_url
 from .presence import (
     AsyncRealtimePresence,
-    PresenceOnJoinCallback,
-    PresenceOnLeaveCallback,
 )
 from .push import AsyncPush
 from .timer import AsyncTimer
@@ -52,37 +79,47 @@ class AsyncRealtimeChannel:
         :param params: Optional parameters for connection.
         """
         self.socket = socket
-        self.params = params or {}
-        if self.params.get("config") is None:
-            self.params["config"] = {
-                "broadcast": {"ack": False, "self": False},
-                "presence": {"key": ""},
-                "private": False,
+        self.params: RealtimeChannelOptions = (
+            params
+            if params
+            else {
+                "config": {
+                    "broadcast": {"ack": False, "self": False},
+                    "presence": {"key": ""},
+                    "private": False,
+                }
             }
-
+        )
         self.topic = topic
         self._joined_once = False
-        self.bindings: Dict[str, List[Binding]] = {}
-        self.presence = AsyncRealtimePresence(self)
+        self.presence: AsyncRealtimePresence = AsyncRealtimePresence()
         self.state = ChannelStates.CLOSED
-        self._push_buffer: List[AsyncPush] = []
+        self._push_buffer: list[AsyncPush] = []
         self.timeout = self.socket.timeout
 
-        self.join_push = AsyncPush(self, ChannelEvents.join, self.params)
+        self.join_push: AsyncPush = AsyncPush(self, ChannelEvents.join, self.params)
+        self.messages_waiting_for_ack: dict[str, AsyncPush] = {}
+        self.broadcast_callbacks: list[BroadcastCallback] = []
+        self.system_callbacks: list[Callable[[SuccessSystemPayload], None]] = []
+        self.postgres_changes_callbacks: list[PostgresChangesCallback] = []
+        self.subscribe_callback: Optional[
+            Callable[[RealtimeSubscribeStates, Optional[Exception]], None]
+        ] = None
+
         self.rejoin_timer = AsyncTimer(
             self._rejoin_until_connected, lambda tries: 2**tries
         )
 
         self.broadcast_endpoint_url = self._broadcast_endpoint_url()
 
-        def on_join_push_ok(payload: Dict[str, Any], *args):
+        def on_join_push_ok(payload: ReplyPostgresChanges):
             self.state = ChannelStates.JOINED
             self.rejoin_timer.reset()
             for push in self._push_buffer:
                 asyncio.create_task(push.send())
             self._push_buffer = []
 
-        def on_join_push_timeout(*args):
+        def on_join_push_timeout():
             if not self.is_joining:
                 return
 
@@ -90,31 +127,23 @@ class AsyncRealtimeChannel:
             self.state = ChannelStates.ERRORED
             self.rejoin_timer.schedule_timeout()
 
-        self.join_push.receive("ok", on_join_push_ok).receive(
-            "timeout", on_join_push_timeout
-        )
+        self.join_push.receive(
+            RealtimeAcknowledgementStatus.Ok, on_join_push_ok
+        ).receive(RealtimeAcknowledgementStatus.Timeout, on_join_push_timeout)
 
-        def on_close(*args):
-            logger.info(f"channel {self.topic} closed")
-            self.rejoin_timer.reset()
-            self.state = ChannelStates.CLOSED
-            self.socket._remove_channel(self)
+    def on_close(self):
+        logger.info(f"channel {self.topic} closed")
+        self.rejoin_timer.reset()
+        self.state = ChannelStates.CLOSED
+        self.socket._remove_channel(self)
 
-        def on_error(payload, *args):
-            if self.is_leaving or self.is_closed:
-                return
+    def on_error(self, payload: dict[str, Any]):
+        if self.is_leaving or self.is_closed:
+            return
 
-            logger.info(f"channel {self.topic} error: {payload}")
-            self.state = ChannelStates.ERRORED
-            self.rejoin_timer.schedule_timeout()
-
-        self._on("close", on_close)
-        self._on("error", on_error)
-
-        def on_reply(payload, ref):
-            self._trigger(self._reply_event_name(ref), payload)
-
-        self._on(ChannelEvents.reply, on_reply)
+        logger.info(f"channel {self.topic} error: {payload}")
+        self.state = ChannelStates.ERRORED
+        self.rejoin_timer.schedule_timeout()
 
     # Properties
     @property
@@ -136,10 +165,6 @@ class AsyncRealtimeChannel:
     @property
     def is_joined(self):
         return self.state == ChannelStates.JOINED
-
-    @property
-    def join_ref(self):
-        return self.join_push.ref
 
     # Core channel methods
     async def subscribe(
@@ -164,76 +189,64 @@ class AsyncRealtimeChannel:
                 "Tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance"
             )
         else:
-            config = self.params.get("config", {})
-            broadcast = config.get("broadcast", {})
-            presence = config.get("presence", {})
+            config: RealtimeChannelConfig = self.params["config"]
+            broadcast = config.get("broadcast")
+            presence = config.get("presence")
             private = config.get("private", False)
 
-            access_token_payload = {}
-            config = {
-                "broadcast": broadcast,
-                "presence": presence,
-                "private": private,
-                "postgres_changes": list(
-                    map(lambda x: x.filter, self.bindings.get("postgres_changes", []))
-                ),
+            config_payload: Dict[str, Any] = {
+                "config": {
+                    "broadcast": broadcast,
+                    "presence": presence,
+                    "private": private,
+                    "postgres_changes": [
+                        c.binding_filter for c in self.postgres_changes_callbacks
+                    ],
+                }
             }
 
             if self.socket.access_token:
-                access_token_payload["access_token"] = self.socket.access_token
+                config_payload["access_token"] = self.socket.access_token
 
-            self.join_push.update_payload(
-                {**{"config": config}, **access_token_payload}
-            )
+            self.join_push.update_payload(config_payload)
             self._joined_once = True
 
-            def on_join_push_ok(payload: Dict[str, Any]):
-                server_postgres_changes: List[Dict[str, Any]] = payload.get(
-                    "postgres_changes", []
-                )
+            def on_join_push_ok(payload: ReplyPostgresChanges):
+                server_postgres_changes = payload.postgres_changes
 
-                if len(server_postgres_changes) == 0:
-                    callback and callback(RealtimeSubscribeStates.SUBSCRIBED, None)
-                    return
-
-                client_postgres_changes = self.bindings.get("postgres_changes", [])
                 new_postgres_bindings = []
 
-                bindings_len = len(client_postgres_changes)
-
-                for i in range(bindings_len):
-                    client_binding = client_postgres_changes[i]
-                    event = client_binding.filter.get("event")
-                    schema = client_binding.filter.get("schema")
-                    table = client_binding.filter.get("table")
-                    filter = client_binding.filter.get("filter")
-
-                    server_binding = (
-                        server_postgres_changes[i]
-                        if i < len(server_postgres_changes)
-                        else None
-                    )
-
-                    if (
-                        server_binding
-                        and server_binding.get("event") == event
-                        and server_binding.get("schema") == schema
-                        and server_binding.get("table") == table
-                        and server_binding.get("filter") == filter
+                if server_postgres_changes:
+                    for i, postgres_callback in enumerate(
+                        self.postgres_changes_callbacks
                     ):
-                        client_binding.id = server_binding.get("id")
-                        new_postgres_bindings.append(client_binding)
-                    else:
-                        asyncio.create_task(self.unsubscribe())
-                        callback and callback(
-                            RealtimeSubscribeStates.CHANNEL_ERROR,
-                            Exception(
-                                "mismatch between server and client bindings for postgres changes"
-                            ),
+                        server_binding: Optional[PostgresRowChange] = (
+                            server_postgres_changes[i]
+                            if i < len(server_postgres_changes)
+                            else None
                         )
-                        return
+                        logger.info(f"{server_binding}, {postgres_callback}")
 
-                self.bindings["postgres_changes"] = new_postgres_bindings
+                        if (
+                            server_binding
+                            and server_binding.events == postgres_callback.event
+                            and server_binding.schema_ == postgres_callback.schema
+                            and server_binding.table == postgres_callback.table
+                            and server_binding.filter == postgres_callback.filter
+                        ):
+                            postgres_callback.id = server_binding.id
+                            new_postgres_bindings.append(postgres_callback)
+                        else:
+                            asyncio.create_task(self.unsubscribe())
+                            callback and callback(
+                                RealtimeSubscribeStates.CHANNEL_ERROR,
+                                Exception(
+                                    "mismatch between server and client bindings for postgres changes"
+                                ),
+                            )
+                            return
+
+                self.postgres_changes_callbacks = new_postgres_bindings
                 callback and callback(RealtimeSubscribeStates.SUBSCRIBED, None)
 
             def on_join_push_error(payload: Dict[str, Any]):
@@ -245,15 +258,17 @@ class AsyncRealtimeChannel:
             def on_join_push_timeout(*args):
                 callback and callback(RealtimeSubscribeStates.TIMED_OUT, None)
 
-            self.join_push.receive("ok", on_join_push_ok).receive(
-                "error", on_join_push_error
-            ).receive("timeout", on_join_push_timeout)
+            self.join_push.receive(
+                RealtimeAcknowledgementStatus.Ok, on_join_push_ok
+            ).receive(RealtimeAcknowledgementStatus.Error, on_join_push_error).receive(
+                RealtimeAcknowledgementStatus.Timeout, on_join_push_timeout
+            )
 
             await self._rejoin()
 
         return self
 
-    async def unsubscribe(self):
+    async def unsubscribe(self) -> None:
         """
         Unsubscribe from the channel and leave the topic.
         Sets channel state to LEAVING and cleans up timers and pushes.
@@ -263,17 +278,15 @@ class AsyncRealtimeChannel:
         self.rejoin_timer.reset()
         self.join_push.destroy()
 
-        def _close(*args):
+        def _close(*args) -> None:
             logger.info(f"channel {self.topic} leave")
-            self._trigger(ChannelEvents.close, "leave")
+            self.on_close()
 
         leave_push = AsyncPush(self, ChannelEvents.leave, {})
-        leave_push.receive("ok", _close).receive("timeout", _close)
-
+        leave_push.receive(RealtimeAcknowledgementStatus.Ok, _close).receive(
+            RealtimeAcknowledgementStatus.Error, _close
+        )
         await leave_push.send()
-
-        if not self._can_push():
-            leave_push.trigger("ok", {})
 
     async def push(
         self, event: str, payload: Dict[str, Any], timeout: Optional[int] = None
@@ -297,6 +310,7 @@ class AsyncRealtimeChannel:
         push = AsyncPush(self, event, payload, timeout)
         if self._can_push():
             await push.send()
+            assert push.ref is not None, "Sent AsyncPush should have a ref"
         else:
             push.start_timeout()
             self._push_buffer.append(push)
@@ -309,61 +323,32 @@ class AsyncRealtimeChannel:
 
         :return: Channel
         """
-        try:
-            await self.socket.send(
-                {
-                    "topic": self.topic,
-                    "event": "phx_join",
-                    "payload": {"config": self.params},
-                    "ref": None,
-                }
-            )
-        except Exception as e:
-            print(e)
-            return self
+        config = self.params["config"]
+        broadcast = config.get("broadcast")
+        presence = config.get("presence")
+        private = config.get("private", False)
 
-    # Event handling methods
-    def _on(
-        self, type: str, callback: Callback, filter: Optional[Dict[str, Any]] = None
-    ) -> AsyncRealtimeChannel:
-        """
-        Set up a listener for a specific event.
-
-        :param type: The type of the event to listen for.
-        :param filter: Additional parameters for the event.
-        :param callback: The callback function to execute when the event is received.
-        :return: The Channel instance for method chaining.
-        """
-
-        type_lowercase = type.lower()
-        binding = Binding(type=type_lowercase, filter=filter or {}, callback=callback)
-        self.bindings.setdefault(type_lowercase, []).append(binding)
-
-        return self
-
-    def _off(self, type: str, filter: Dict[str, Any]) -> AsyncRealtimeChannel:
-        """
-        Remove a listener for a specific event type and filter.
-
-        :param type: The type of the event to remove the listener for.
-        :param filter: The filter associated with the listener to remove.
-        :return: The Channel instance for method chaining.
-
-        This method removes all bindings for the specified event type that match
-        the given filter. If no matching bindings are found, the method does nothing.
-        """
-        type_lowercase = type.lower()
-
-        if type_lowercase in self.bindings:
-            self.bindings[type_lowercase] = [
-                binding
-                for binding in self.bindings[type_lowercase]
-                if binding.filter != filter
-            ]
+        config_payload: Dict[str, Any] = {
+            "config": {
+                "broadcast": broadcast,
+                "presence": presence,
+                "private": private,
+                "postgres_changes": [
+                    c.binding_filter for c in self.postgres_changes_callbacks
+                ],
+            }
+        }
+        message = Message(
+            topic=self.topic,
+            event=ChannelEvents.join,
+            payload={"config": config_payload},
+            ref=self.socket._make_ref(),
+        )
+        await self.socket.send(message)
         return self
 
     def on_broadcast(
-        self, event: str, callback: Callable[[Dict[str, Any]], None]
+        self, event: str, callback: Callable[[BroadcastPayload], None]
     ) -> AsyncRealtimeChannel:
         """
         Set up a listener for a specific broadcast event.
@@ -372,16 +357,15 @@ class AsyncRealtimeChannel:
         :param callback: Function called with the payload when a matching broadcast is received
         :return: The Channel instance for method chaining
         """
-        return self._on(
-            "broadcast",
-            filter={"event": event},
-            callback=lambda payload, _: callback(payload),
+        self.broadcast_callbacks.append(
+            BroadcastCallback(callback=callback, event=event)
         )
+        return self
 
     def on_postgres_changes(
         self,
         event: RealtimePostgresChangesListenEvent,
-        callback: Callable[[Dict[str, Any]], None],
+        callback: Callable[[PostgresChangesPayload], None],
         table: Optional[str] = None,
         schema: Optional[str] = None,
         filter: Optional[str] = None,
@@ -396,22 +380,14 @@ class AsyncRealtimeChannel:
         :param filter: Optional filter string to apply
         :return: The Channel instance for method chaining
         """
-
-        binding_filter = {"event": event, "table": table}
-        if schema:
-            binding_filter["schema"] = schema
-
-        if filter:
-            binding_filter["filter"] = filter
-
-        return self._on(
-            "postgres_changes",
-            filter=binding_filter,
-            callback=lambda payload, _: callback(payload),
+        callback = PostgresChangesCallback(
+            callback=callback, event=event, table=table, schema=schema, filter=filter
         )
+        self.postgres_changes_callbacks.append(callback)
+        return self
 
     def on_system(
-        self, callback: Callable[[Dict[str, Any], None]]
+        self, callback: Callable[[SuccessSystemPayload], None]
     ) -> AsyncRealtimeChannel:
         """
         Set up a listener for system events.
@@ -419,7 +395,8 @@ class AsyncRealtimeChannel:
         :param callback: The callback function to execute when a system event is received.
         :return: The Channel instance for method chaining.
         """
-        return self._on("system", callback=lambda payload, _: callback(payload))
+        self.system_callbacks.append(callback)
+        return self
 
     # Presence methods
     async def track(self, user_status: Dict[str, Any]) -> None:
@@ -508,62 +485,45 @@ class AsyncRealtimeChannel:
     async def send_presence(self, event: str, data: Any) -> None:
         await self.push(ChannelEvents.presence, {"event": event, "payload": data})
 
-    def _trigger(self, type: str, payload: Optional[Any], ref: Optional[str] = None):
-        type_lowercase = type.lower()
-        events = [
-            ChannelEvents.close,
-            ChannelEvents.error,
-            ChannelEvents.leave,
-            ChannelEvents.join,
-        ]
-
-        if ref is not None and type_lowercase in events and ref != self.join_push.ref:
+    def _handle_message(self, message: ServerMessage):
+        logger.info(f"{self.topic} : {message}")
+        if isinstance(message, SystemMessage):
+            if isinstance(message.payload, SuccessSystemPayload):
+                for callback in self.system_callbacks:
+                    callback(message.payload)
+            else:
+                self.on_error(dict(message.payload))
+        elif isinstance(message, ReplyMessage):
+            reply_payload = message.payload
+            if message.ref and (push := self.messages_waiting_for_ack.pop(message.ref)):
+                if reply_payload.status == "ok":
+                    push.trigger(
+                        RealtimeAcknowledgementStatus.Ok, reply_payload.response
+                    )
+                else:
+                    push.trigger(
+                        RealtimeAcknowledgementStatus.Error, reply_payload.response
+                    )
+        elif isinstance(message, BroadcastMessage):
+            broadcast_payload = message.payload
+            for broadcast_callback in self.broadcast_callbacks:
+                broadcast_callback(broadcast_payload)
+        elif isinstance(message, PresenceStateMessage):
+            self.presence._on_state_event(message.payload)
+        elif isinstance(message, PresenceDiffMessage):
+            self.presence._on_diff_event(message.payload)
+        elif isinstance(message, PostgresChangesMessage):
+            payload = message.payload
+            for postgres_callback in self.postgres_changes_callbacks:
+                postgres_callback(payload)
+        elif isinstance(message, ChannelErrorMessage):
+            self.on_error(message.payload)
+        elif isinstance(message, ChannelCloseMessage):
+            self.on_close()
+        elif isinstance(message, HeartbeatMessage):  # do nothing
             return
-
-        if type_lowercase in ["insert", "update", "delete"]:
-            postgres_changes = filter(
-                lambda binding: binding.filter.get("event", "").lower()
-                in [type_lowercase, "*"],
-                self.bindings.get("postgres_changes", []),
-            )
-            for binding in postgres_changes:
-                binding.callback(payload, ref)
         else:
-            bindings = self.bindings.get(type_lowercase, [])
-            for binding in bindings:
-                if type_lowercase in ["broadcast", "postgres_changes", "presence"]:
-                    bind_event = (
-                        binding.filter.get("event", "").lower()
-                        if binding.filter.get("event")
-                        else None
-                    )
-                    payload_event = (
-                        payload.get("event", "").lower()
-                        if payload and payload.get("event")
-                        else None
-                    )
-
-                    if hasattr(binding, "id") and binding.id is not None:
-                        bind_id = binding.id
-                        data_type = (
-                            payload.get("data", {}).get("type", "").lower()
-                            if payload and payload.get("data", {}).get("type")
-                            else None
-                        )
-
-                        if (
-                            bind_id
-                            and bind_id in payload.get("ids", [])
-                            and (bind_event == data_type or bind_event == "*")
-                        ):
-                            binding.callback(payload, ref)
-                    elif bind_event in [payload_event, "*"]:
-                        binding.callback(payload, ref)
-                elif binding.type == type_lowercase:
-                    binding.callback(payload, ref)
-
-    def _reply_event_name(self, ref: str):
-        return f"chan_reply_{ref}"
+            assert_never(message)
 
     async def _rejoin_until_connected(self):
         self.rejoin_timer.schedule_timeout()
