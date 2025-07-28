@@ -7,11 +7,12 @@ from typing import Any, Callable, Dict, List, Optional, Union
 from urllib.parse import urlencode, urlparse, urlunparse
 
 import websockets
+from pydantic import ValidationError
 from websockets import connect
 from websockets.asyncio.client import ClientConnection
 
 from ..exceptions import NotConnectedError
-from ..message import Message
+from ..message import Message, ServerMessageAdapter
 from ..transformers import http_endpoint_url
 from ..types import (
     DEFAULT_HEARTBEAT_INTERVAL,
@@ -99,13 +100,14 @@ class AsyncRealtimeClient:
             async for msg in self._ws_connection:
                 logger.info(f"receive: {msg!r}")
 
-                message = Message.model_validate_json(msg)
-                channel = self.channels.get(message.topic)
-
-                if channel:
-                    channel._trigger(
-                        message.event, dict(**message.payload), message.ref
-                    )
+                try:
+                    message = ServerMessageAdapter.validate_json(msg)
+                except ValidationError as e:
+                    logger.error(f"Unrecognized message format {msg!r}\n{e}")
+                    continue
+                logger.info(f"parsed message as {message}")
+                if channel := self.channels.get(message.topic):
+                    channel._handle_message(message)
         except websockets.exceptions.ConnectionClosedError as e:
             await self._on_connect_error(e)
 

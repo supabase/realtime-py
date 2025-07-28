@@ -7,6 +7,7 @@ import pytest
 from dotenv import load_dotenv
 
 from realtime import AsyncRealtimeChannel, AsyncRealtimeClient, AsyncRealtimePresence
+from realtime.types import RawPresenceState
 
 load_dotenv()
 
@@ -110,7 +111,7 @@ async def test_presence(socket: AsyncRealtimeClient):
 
 
 def test_transform_state_raw_presence_state():
-    raw_state = {
+    raw_state: RawPresenceState = {
         "user1": {
             "metas": [
                 {"phx_ref": "ABC123", "user_id": "user1", "status": "online"},
@@ -136,44 +137,6 @@ def test_transform_state_raw_presence_state():
     }
 
     result = AsyncRealtimePresence._transform_state(raw_state)
-    assert result == expected_output
-
-
-def test_transform_state_already_transformed():
-    transformed_state = {
-        "user1": [{"presence_ref": "ABC123", "user_id": "user1", "status": "online"}],
-        "user2": [{"presence_ref": "GHI789", "user_id": "user2", "status": "offline"}],
-    }
-
-    result = AsyncRealtimePresence._transform_state(transformed_state)
-    assert result == transformed_state
-
-
-def test_transform_state_mixed_input():
-    mixed_state = {
-        "user1": {
-            "metas": [
-                {"phx_ref": "ABC123", "user_id": "user1", "status": "online"},
-                {
-                    "phx_ref": "DEF456",
-                    "phx_ref_prev": "ABC123",
-                    "user_id": "user1",
-                    "status": "away",
-                },
-            ]
-        },
-        "user2": [{"user_id": "user2", "status": "offline"}],
-    }
-
-    expected_output = {
-        "user1": [
-            {"presence_ref": "ABC123", "user_id": "user1", "status": "online"},
-            {"presence_ref": "DEF456", "user_id": "user1", "status": "away"},
-        ],
-        "user2": [{"user_id": "user2", "status": "offline"}],
-    }
-
-    result = AsyncRealtimePresence._transform_state(mixed_state)
     assert result == expected_output
 
 
