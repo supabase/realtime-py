@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from realtime import AsyncRealtimeChannel, AsyncRealtimeClient, RealtimeSubscribeStates
 from realtime.message import Message
-from realtime.types import DEFAULT_HEARTBEAT_INTERVAL, DEFAULT_TIMEOUT
+from realtime.types import DEFAULT_HEARTBEAT_INTERVAL, DEFAULT_TIMEOUT, ChannelEvents
 
 load_dotenv()
 
@@ -424,7 +424,7 @@ async def test_send_message_reconnection(socket: AsyncRealtimeClient):
     # Try to send a message - this should trigger reconnection
     message = Message(
         topic="test-channel",
-        event="test-event",
+        event=ChannelEvents.broadcast,
         payload={"test": "data"},
     )
     await socket.send(message)
