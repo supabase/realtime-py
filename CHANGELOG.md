@@ -2,6 +2,13 @@
 
 
 
+## [2.7.0](https://github.com/supabase/realtime-py/compare/v2.6.0...v2.7.0) (2025-07-28)
+
+
+### Features
+
+* validate server message ([#345](https://github.com/supabase/realtime-py/issues/345)) ([8c6066e](https://github.com/supabase/realtime-py/commit/8c6066e6d7125a0762ca9311df97eb209442fcf4))
+
 ## [2.6.0](https://github.com/supabase/realtime-py/compare/v2.5.3...v2.6.0) (2025-07-10)
 
 
