@@ -1,3 +1,6 @@
+> [!WARNING]
+> This repository has been moved to the [supabase-py monorepo](https://github.com/supabase/supabase-py/tree/main/src/realtime). 
+
 <br />
 <p align="center">
   <a href="https://supabase.io">
